@@ -21,6 +21,9 @@
         display: flex;
         justify-content: space-between;
         align-items: center;
+        position: sticky;
+        top: 0;
+        z-index: 10;
     }
 
     nav ul {
@@ -43,13 +46,21 @@
     }
 
     main {
-        padding: 40px 20px;
+        padding: 100px 20px;
         text-align: center;
+        height: 200vh; /* so scrolling works */
+    }
+
+    .hero-text {
+        font-size: 60px;
+        font-weight: bold;
+        line-height: 1.2;
+        transition: transform 0.2s, font-size 0.2s;
     }
 
     button {
         padding: 10px 20px;
-        margin: 10px;
+        margin: 20px 10px;
         cursor: pointer;
         background-color: purple;
         color: white;
@@ -76,7 +87,7 @@
 </header>
 
 <main>
-    <h1>Welcome to Lupi-fy!</h1>
+    <h1 class="hero-text" id="heroText">Welcome to Lupi-fy!</h1>
     <p>Your place for stories, articles, and tips.</p>
     <button id="storyButton">Show a Random Story Tip</button>
     <p id="storyOutput"></p>
@@ -112,6 +123,15 @@
     storyBtn.addEventListener('click', () => {
         const randomTip = storyTips[Math.floor(Math.random() * storyTips.length)];
         storyOutput.textContent = randomTip;
+    });
+
+    // Scroll animation for hero text
+    const heroText = document.getElementById('heroText');
+    window.addEventListener('scroll', () => {
+        let scrollY = window.scrollY;
+        // text moves up and slightly shrinks as you scroll
+        heroText.style.transform = `translateY(${scrollY * 0.3}px)`;
+        heroText.style.fontSize = `${60 - scrollY * 0.05}px`;
     });
 </script>
 </body>
