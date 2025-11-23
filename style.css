@@ -1,5 +1,111 @@
-body {
-  background: #209CEE;
-  color: #FFDDAA;
-  font-family: Arial, sans-serif;
+/* Header and Navigation */
+.container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px;
+    flex-wrap: wrap;
+}
+
+ul.nav-links {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+}
+
+li {
+    list-style-type: none;
+}
+
+li a {
+    text-decoration: none;
+    color: #1A1A1A;
+    transition: color 0.3s;
+}
+
+li a:hover {
+    color: #1F9CEE;
+}
+
+.logo {
+    font-size: 24px;
+    font-weight: bold;
+    color: #1F9CEE;
+    text-decoration: none;
+}
+
+/* Hero Section */
+.hero {
+    height: 100vh; /* full viewport height */
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between; /* title top, button bottom */
+    align-items: center;
+    padding: 50px 20px;
+    box-sizing: border-box;
+    text-align: center;
+}
+
+.hero h1 {
+    font-size: 80px; /* LUPIFY title */
+    color: #1F9CEE;
+    margin-top: 50px;
+}
+
+.hero-subtitle {
+    font-size: 16px; /* normal-sized text */
+    color: #1A1A1A;
+    margin: 20px 0;
+}
+
+/* Start Writing Button */
+.start-button {
+    display: block;
+    padding: 15px 30px;
+    font-size: 18px;
+    color: #fff;
+    background-color: #1F9CEE;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    margin-bottom: 50px;
+    transition: background-color 0.3s;
+}
+
+.start-button:hover {
+    background-color: #1780b8;
+}
+
+/* Content Section */
+.content {
+    text-align: center;
+    padding: 50px 20px;
+}
+
+.content h2 {
+    font-size: 24px;
+    color: #1F9CEE;
+    margin-bottom: 20px;
+}
+
+.content p {
+    font-size: 16px;
+    color: #1A1A1A;
+}
+
+/* Footer */
+footer {
+    background-color: #f5f5f5;
+    padding: 20px;
+    text-align: center;
+}
+
+footer a {
+    color: #1A1A1A;
+    text-decoration: none;
+    margin: 0 10px;
+}
+
+footer a:hover {
+    color: #1F9CEE;
 }
