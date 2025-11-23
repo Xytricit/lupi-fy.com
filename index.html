@@ -1,41 +1,52 @@
 <!DOCTYPE html>
-<html>
-    <head>
-        <link rel="icon" type="image/png" href="favicon-32x32.png">
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Lupi-fy</title>
-        <link rel="stylesheet" href="style.css">
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lupify</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="icon" href="favicon.ico">
+</head>
+<body>
 
-
-    </head>
-
-    <body>
-        <header>
-            <h1>Lupify</h1>
-            <p>where oponions matter</p>
-            <nav>
-                <a href ="#">About us</a>
-                <a href ="#">Contact us</a>
-                <a href ="#">Write for us</a>
+    <header>
+        <div class="container">
+            <a class="logo" href="#" aria-label="Lupify home">Lupify</a>
+            <nav aria-label="Primary navigation">
+                <ul class="nav-links">
+                    <li><a href="#about">About</a></li>
+                    <li><a href="#contact">Contact</a></li>
+                    <li><a href="#categories">Categories</a></li>
+                    <li><a href="#read">Start reading</a></li>
+                    <li><a href="#write">Start writing</a></li>
+                    <li><a href="#sign-up">Sign Up</a></li>
+                </ul>
             </nav>
-        </header>
-        <main>
-            <section>
-                <h2>Trending stories</h2>
-                <p>My dog just <strong>died!</strong> send your comndolences...<a href = "#">Read more</a></p>
-            </section>
-            <section>
-                <h3>Categories</h3>
-                <a href ="#">Life</a><br>
-                <a href ="#">Science</a><br>
-                <a href ="#">Gaming</a><br>
-            </section>
-        </main>
-        <footer>
-            <p>Copyright 2024 Lupify</p>
-            <a href ="#">Privacy Policy</a>
-            <a href ="#">Terms of Service</a>
-        </footer>
-    </body>
+        </div>
+    </header>
+
+    <main id="main-content">
+        <section class="hero" aria-labelledby="hero-title">
+            <h1 id="hero-title">Lupify</h1>
+            <p class="hero-subtitle">Where opinions matter</p>
+            <button class="start-button">Start writing</button>
+        </section>
+
+        <section class="content" aria-labelledby="trending-title">
+            <h2 id="trending-title">Trending stories</h2>
+            <!-- Your trending content goes here -->
+        </section>
+    </main>
+
+    <footer>
+        <div class="container">
+            <p>&copy; 2024 Lupify. All rights reserved.</p>
+            <nav class="footer-nav" aria-label="Footer">
+                <a href="#">Privacy Policy</a>
+                <span aria-hidden="true">|</span>
+                <a href="#">Terms of Service</a>
+            </nav>
+        </div>
+    </footer>
+</body>
 </html>
