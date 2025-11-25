@@ -140,7 +140,6 @@ li a:hover {
     -webkit-mask-position: center;
     -webkit-mask-size: cover;
 }
-}
 
 .footer{
     grid-area : footer;
