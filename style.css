@@ -127,7 +127,7 @@ li a:hover {
 
 .sidebar{
     grid-area : sidebar;
-    background-color: #F6DEB3;
+    background-color:#FFFFFF ;
     padding : 20px;
 }
 
