@@ -134,6 +134,7 @@ li a:hover {
 .main_image{
     height : 100px;
     width : 100px;
+}
 
 .footer{
     grid-area : footer;
