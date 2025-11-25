@@ -131,6 +131,10 @@ li a:hover {
     padding : 20px;
 }
 
+.main_image{
+    height : 100px;
+    width : 100px;
+
 .footer{
     grid-area : footer;
     background-color:#1A1A1A;
