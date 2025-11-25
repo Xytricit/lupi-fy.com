@@ -132,8 +132,9 @@ li a:hover {
 }
 
 .main_image{
-    height : 100px;
-    width : 100px;
+    display : flex;
+    justify-content : center ;
+    align-items : center;
 }
 
 .footer{
