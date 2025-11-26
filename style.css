@@ -216,5 +216,8 @@ body{
     #main {
         padding: 10px; /* reduce main padding */
     }
+    .main_image {
+        -webkit-mask-size: 150%;
+    }
 }
 
