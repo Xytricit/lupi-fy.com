@@ -232,4 +232,33 @@ body{
     .main_image {
         -webkit-mask-size: 180%; /* your mask, just fits small screens */
     }
+    /* --- MOBILE (add this inside your mobile media query) --- */
+
+.hamburger {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    cursor: pointer;
+}
+
+.hamburger span {
+    width: 25px;
+    height: 3px;
+    background: #1A1A1A;
+    border-radius: 2px;
+}
+
+/* Hide links on mobile until hamburger is clicked */
+.links {
+    display: none;
+    flex-direction: column;
+    width: 100%;
+    background: #fff;
+    padding: 20px;
+}
+
+/* When active */
+.links.active {
+    display: flex;
+}
 }
