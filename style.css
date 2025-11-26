@@ -190,34 +190,46 @@ body{
 
 /* Mobile */
 @media (max-width: 599px) {
-    .layout{
+
+    .layout {
         grid-template-areas:
             "header"
             "main"
             "sidebar"
             "footer";
-        grid-template-columns: minmax(0, 1fr);
-        grid-template-rows: auto 5fr 3fr auto;
-        min-height: 100vh;
+        grid-template-columns: 1fr;
+        grid-template-rows: auto auto auto auto;
     }
+
+    .navbar {
+        flex-direction: column;
+        gap: 15px;
+    }
+
+    .links {
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 15px;
+    }
+
     .hero h1 {
-        font-size: 35px; /* scales with viewport width */
+        font-size: 50px; /* still your style, just fits mobile */
     }
 
     .hero-subtitle {
-        font-size: 25px; /* scales proportionally */
+        font-size: 28px;
     }
 
     .start-button {
-        padding: 12px 24px; /* smaller button for small screens */
         font-size: 16px;
+        padding: 12px 25px;
     }
 
-    #main {
-        padding: 10px; /* reduce main padding */
+    .sidebar {
+        padding: 10px;
     }
+
     .main_image {
-        -webkit-mask-size: 150%;
+        -webkit-mask-size: 180%; /* your mask, just fits small screens */
     }
 }
-
