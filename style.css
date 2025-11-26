@@ -131,6 +131,12 @@ li a:hover {
     background-color:#FFFFFF ;
     padding : 20px;
 }
+.sidebar img {
+    max-width: 100%;
+    height: auto;
+    object-fit: contain;
+}
+
 
 .main_image{
     display : flex;
