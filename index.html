@@ -8,65 +8,78 @@
     <script src="script.js" defer></script>
     <link rel="icon" href="favicon.ico">
 </head>
-<body class = layout>
-    <header class = header>
-        <nav class = navbar>
-            <!-- HAMBURGER BUTTON (mobile only) -->
-             <div class="hamburger">
+<body class="layout">
+    <header class="header">
+        <nav class="navbar">
+            <div class="hamburger">
                 <span></span>
                 <span></span>
                 <span></span>
             </div>
-            <h1 class = logo>Lupify</h1>
+            <h1 class="logo">Lupify</h1>
             <ul class="links">
-                <li>
-                    <a href="about.html">About</a>
-                </li>
-                <li>
-                    <a href="#contact">Contact</a>
-                </li>
-                <li class = dropdown>
+                <li><a href="about.html">About</a></li>
+                <li><a href="#contact">Contact</a></li>
+                <li class="dropdown">
                     <a href="#categories">Categories</a>
-                    <div class = dropdown-content>
+                    <div class="dropdown-content">
                         <a href="#fiction">Fiction</a>
                         <a href="#non-fiction">Non-Fiction</a>
                         <a href="#science">Science</a>
                         <a href="#history">History</a>
                         <a href="#life">Life</a>
-                        <a href = #technology>Technology</a>
+                        <a href="#technology">Technology</a>
                     </div>
                 </li>
-                <li>
-                    <a href="#read">Start reading</a>
-                </li>
-                <li>
-                    <a href="#write">Start writing</a>
-                </li>
-                <li>
-                    <a href="#sign-up">Sign Up</a>
-                </li>
+                <li><a href="#read">Start reading</a></li>
+                <li><a href="#write">Start writing</a></li>
+                <li><a href="#sign-up">Sign Up</a></li>
             </ul>
         </nav>
     </header>
-    <main id = main >
-        <section class="hero" aria-labelledby="hero-title">
-            <h1 class="hero-title">Lupify</h1>
-            <p class="hero-subtitle">Where opinions matter</p>
-            <button class="start-button">Start writing</button>
-        </section>
 
-    </main>
-    <aside class = sidebar>
-        <div class = main_image>
+    <!-- Mobile menu overlay -->
+    <div class="mobile-menu">
+        <h1 class="logo">Lupify</h1>
+        <ul class="links">
+            <li><a href="about.html">About</a></li>
+            <li><a href="#contact">Contact</a></li>
+            <li class="dropdown">
+                <a href="#categories">Categories</a>
+                <div class="dropdown-content">
+                    <a href="#fiction">Fiction</a>
+                    <a href="#non-fiction">Non-Fiction</a>
+                    <a href="#science">Science</a>
+                    <a href="#history">History</a>
+                    <a href="#life">Life</a>
+                    <a href="#technology">Technology</a>
+                </div>
+            </li>
+            <li><a href="#read">Start reading</a></li>
+            <li><a href="#write">Start writing</a></li>
+            <li><a href="#sign-up">Sign Up</a></li>
+        </ul>
+    </div>
+
+    <aside class="sidebar">
+        <div class="main_image">
             <picture>
                 <source media="(min-width: 1025px)" srcset="resized_lupify_image_600px.jpg">
                 <source media="(min-width: 600px)" srcset="resized_lupify_image_300px.png">
                 <img src="lupify_home_image_150px.png" alt="Main Image">
             </picture>
-
         </div>
     </aside>
-    <footer class = footer>
+
+    <main id="main">
+        <section class="hero" aria-labelledby="hero-title">
+            <h1 class="hero-title">Lupify</h1>
+            <p class="hero-subtitle">Where opinions matter</p>
+            <button class="start-button">Start writing</button>
+        </section>
+    </main>
+
+    <footer class="footer">
         <div class="container">
             <p>&copy; 2024 Lupify. All rights reserved.</p>
             <nav class="footer-nav" aria-label="Footer">
