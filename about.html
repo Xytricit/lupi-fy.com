@@ -5,35 +5,88 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>About Lupify</title>
     <link rel="stylesheet" href="style.css">
-    <link rel="icon" href="favicon.ico">
+    <script src="script.js" defer></script>
+    <link rel="icon" type="image/png" href="favicon.png">
 </head>
-<body>
 
-    <header>
-        <div class="container">
-            <a class="logo" href="index.html" aria-label="Lupify home">Lupify</a>
-            <nav aria-label="Primary navigation">
-                <ul class="nav-links">
-                    <li><a href="#about">About</a></li>
-                    <li><a href="#contact">Contact</a></li>
-                    <li><a href="#categories">Categories</a></li>
-                    <li><a href="#read">Start reading</a></li>
-                    <li><a href="#write">Start writing</a></li>
-                    <li><a href="#sign-up">Sign Up</a></li>
-                </ul>
-            </nav>
+<body class="layout">
+
+    <header class="header">
+        <nav class="navbar">
+            <a href="index.html" aria-label="Menu" class="logo">Lupify</a>
+
+            <div class="hamburger">
+                <span></span>
+                <span></span>
+                <span></span>
+            </div>
+
+            <ul class="links">
+                <li><a href="about.html">About</a></li>
+                <li><a href="#contact">Contact</a></li>
+                <li class="dropdown">
+                    <a href="#categories">Categories</a>
+                    <div class="dropdown-content">
+                        <a href="#fiction">Fiction</a>
+                        <a href="#non-fiction">Non-Fiction</a>
+                        <a href="#science">Science</a>
+                        <a href="#history">History</a>
+                        <a href="#life">Life</a>
+                        <a href="#technology">Technology</a>
+                    </div>
+                </li>
+                <li><a href="#read">Start reading</a></li>
+                <li><a href="#write">Start writing</a></li>
+                <li><a href="#sign-up">Sign Up</a></li>
+            </ul>
+        </nav>
+
+        <!-- MOBILE MENU -->
+        <div class="mobile-menu">
+            <a href="index.html" class="mobile-logo">Lupify</a>
+            <ul>
+                <li><a href="about.html">About</a></li>
+                <li><a href="#contact">Contact</a></li>
+                <li class="dropdown">
+                    <a href="#categories">Categories</a>
+                    <div class="dropdown-content">
+                        <a href="#fiction">Fiction</a>
+                        <a href="#non-fiction">Non-Fiction</a>
+                        <a href="#science">Science</a>
+                        <a href="#history">History</a>
+                        <a href="#life">Life</a>
+                        <a href="#technology">Technology</a>
+                    </div>
+                </li>
+                <li><a href="#read">Start reading</a></li>
+                <li><a href="#write">Start writing</a></li>
+                <li><a href="#sign-up">Sign Up</a></li>
+            </ul>
         </div>
+
+        <!-- OVERLAY -->
+        <div class="overlay"></div>
     </header>
 
-    <main id="main-content">
-        <section id="about">
+    <main id="main">
+        <section id="about" class="page-section">
             <h1>Welcome to Lupify</h1>
-            <p>Lupify is a platform where your opinions matter. We believe in the power of sharing thoughts and ideas to create a vibrant community. Whether you're here to read insightful articles or share your own stories, Lupify is the place for you.</p>
-            <p>Our mission is to provide a space where everyone can express themselves freely and connect with like-minded individuals. Join us today and start your journey with Lupify!</p>
+            <p>
+                Lupify is a platform where your opinions matter. 
+                We believe in the power of sharing thoughts and ideas to create a vibrant community.
+            </p>
+            <p>
+                Whether you're here to read insightful articles or share your own stories, this is your space.
+            </p>
+            <p>
+                Our mission is to provide a place where everyone can express themselves freely and connect with like-minded individuals.
+            </p>
         </section>
     </main>
 
-    <footer>
+    <aside class="sidebar"></aside>
+
+    <footer class="footer">
         <div class="container">
             <p>&copy; 2024 Lupify. All rights reserved.</p>
             <nav class="footer-nav" aria-label="Footer">
