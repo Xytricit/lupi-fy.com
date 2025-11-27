@@ -4,7 +4,7 @@
         "header header header"
         "main main sidebar"
         "footer footer footer";
-    grid-template-columns: 1fr 2fr 1fr; 
+    grid-template-columns: 1fr 2fr 1fr; /* symmetric left and right */
     grid-template-rows: 1fr 5fr 1fr;
     min-height: 100vh;
 }
@@ -76,35 +76,37 @@ li a:hover {
 
     display: flex;
     flex-direction: column;
-    justify-content: center;
-    align-items: center;
+    justify-content: center;  /* vertical center */
+    align-items: center;      /* horizontal center */
     text-align: center;
 }
 
+/* HERO FIXES */
 .hero {
     width: 100%;
     display: flex;
     flex-direction: column;
     justify-content: center;
     align-items: center;
-    padding: 40px 20px;
+
+    padding: 40px 20px; /* clean balanced spacing */
     box-sizing: border-box;
     text-align: center;
 }
 
 .hero h1 {
-    font-size: 80px;
+    font-size: 80px; /* fixed, like before */
     color: #1F9CEE;
-    margin: 0;
+    margin: 0; /* remove any margin that offsets it */
 }
 
 .hero-subtitle {
-    font-size: 50px;
+    font-size: 50px; /* fixed, like before */
     color: #1A1A1A;
     margin: 0; 
-    margin-top: 20px;
-}
+    margin-top: 20px; /* spacing from title */}
 
+/* START BUTTON NORMALIZED */
 .start-button {
     display: block;
     font-size: 18px;
@@ -113,9 +115,10 @@ li a:hover {
     border: none;
     border-radius: 5px;
     cursor: pointer;
+
     padding: 15px 30px; 
-    margin-top: 30px;    
-    margin-bottom: 30px; 
+    margin-top: 30px;    /* normal, not too big */
+    margin-bottom: 30px; /* clean spacing */
     transition: background-color 0.3s;
 }
 
@@ -133,6 +136,7 @@ li a:hover {
     height: auto;
     object-fit: contain;
 }
+
 
 .main_image{
     display : flex;
@@ -198,18 +202,18 @@ body{
     }
 
     .navbar {
-        flex-direction: row;
-        justify-content: space-between;
-        align-items: center;
-        gap: 0;
+        flex-direction: column;
+        gap: 15px;
     }
 
     .links {
-        display: none;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 15px;
     }
 
     .hero h1 {
-        font-size: 50px;
+        font-size: 50px; /* still your style, just fits mobile */
     }
 
     .hero-subtitle {
@@ -223,51 +227,38 @@ body{
 
     .sidebar {
         padding: 10px;
-        order: -1;
     }
 
     .main_image {
-        -webkit-mask-size: 180%;
+        -webkit-mask-size: 180%; /* your mask, just fits small screens */
     }
+    /* --- MOBILE (add this inside your mobile media query) --- */
 
-    /* --- Hamburger --- */
-    .hamburger {
-        display: flex;
-        flex-direction: column;
-        justify-content: space-between;
-        width: 25px;
-        height: 20px;
-        cursor: pointer;
-    }
+.hamburger {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    cursor: pointer;
+}
 
-    .hamburger span {
-        display: block;
-        height: 3px;
-        width: 100%;
-        background-color: #1F9CEE;
-        border-radius: 2px;
-    }
+.hamburger span {
+    width: 25px;
+    height: 3px;
+    background: #1A1A1A;
+    border-radius: 2px;
+}
 
-    .mobile-menu {
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 95%;
-        height: 100%;
-        background-color: white;
-        z-index: 10;
-        transform: translateX(-100%);
-        transition: transform 0.3s ease-in-out;
-        display: flex;
-        flex-direction: column;
-        padding: 20px;
-    }
+/* Hide links on mobile until hamburger is clicked */
+.links {
+    display: none;
+    flex-direction: column;
+    width: 100%;
+    background: #fff;
+    padding: 20px;
+}
 
-    .mobile-menu.active {
-        transform: translateX(0);
-    }
-
-    .mobile-menu .logo {
-        margin-bottom: 40px;
-    }
+/* When active */
+.links.active {
+    display: flex;
+}
 }
