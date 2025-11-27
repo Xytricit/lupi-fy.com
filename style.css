@@ -238,6 +238,7 @@ li a:hover {
 /* ------------------ SIDEBAR ------------------ */
 .sidebar {
     grid-area: sidebar;
+    display: none;
     background-color: #FFFFFF;
     padding: 20px;
 }
