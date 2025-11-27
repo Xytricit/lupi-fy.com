@@ -80,6 +80,8 @@ li a:hover {
     left: 0;
     z-index: 5;
 }
+.mobile-menu{
+    diplay: none;
 
 /* ------------------ MAIN ------------------ */
 #main {
