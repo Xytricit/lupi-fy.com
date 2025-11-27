@@ -231,6 +231,8 @@ li a:hover {
 .faq-item h3:hover {
     color: #005fa3;
 }
+.intro{
+    font-size : 35px
 
 /* ------------------ SIDEBAR ------------------ */
 .sidebar {
