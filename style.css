@@ -1,3 +1,4 @@
+
 /* ------------------ LAYOUT ------------------ */
 .layout {
     display: grid;
@@ -181,9 +182,6 @@ body {
     margin: 0;
     padding: 0;
 }
-.mobile-menu {
-    display: none;
-}
 
 /* ------------------ TABLET ------------------ */
 @media (min-width: 600px) and (max-width: 1024px) {
@@ -195,9 +193,6 @@ body {
         grid-template-columns: 2fr 1fr;
         grid-template-rows: auto 5fr auto;
         min-height: 100vh;
-    }
-    .mobile-menu {
-        display: none !important;
     }
 }
 
