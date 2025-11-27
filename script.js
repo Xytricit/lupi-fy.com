@@ -1,16 +1,17 @@
-const hamburger = document.querySelector(".hamburger");
-const mobileMenu = document.querySelector(".mobile-menu");
+document.addEventListener("DOMContentLoaded", () => {
+    const hamburger = document.querySelector('.hamburger');
+    const mobileMenu = document.querySelector('.mobile-menu');
+    const overlay = document.querySelector('.overlay');
 
-hamburger.addEventListener("click", () => {
-    mobileMenu.classList.toggle("active");
-});
+    hamburger.addEventListener('click', () => {
+        mobileMenu.classList.toggle('active');
+        overlay.classList.toggle('active');
+        hamburger.classList.toggle('hidden');
+    });
 
-document.addEventListener("click", (e) => {
-    if (
-        mobileMenu.classList.contains("active") &&
-        !mobileMenu.contains(e.target) &&
-        !hamburger.contains(e.target)
-    ) {
-        mobileMenu.classList.remove("active");
-    }
+    overlay.addEventListener('click', () => {
+        mobileMenu.classList.remove('active');
+        overlay.classList.remove('active');
+        hamburger.classList.remove('hidden');
+    });
 });
