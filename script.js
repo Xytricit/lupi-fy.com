@@ -1,14 +1,18 @@
 const hamburger = document.querySelector(".hamburger");
 const mobileMenu = document.querySelector(".mobile-menu");
-const logo = document.querySelector(".logo");
 
+// Toggle menu when hamburger is clicked
 hamburger.addEventListener("click", () => {
     mobileMenu.classList.toggle("active");
 });
 
-// clicking the logo closes menu (mobile only)
-logo.addEventListener("click", () => {
-    if (mobileMenu.classList.contains("active")) {
+// Close menu when clicking outside (not logo!)
+document.addEventListener("click", (e) => {
+    if (
+        mobileMenu.classList.contains("active") &&
+        !mobileMenu.contains(e.target) &&
+        !hamburger.contains(e.target)
+    ) {
         mobileMenu.classList.remove("active");
     }
 });
