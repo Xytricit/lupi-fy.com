@@ -1,35 +1,17 @@
-
-
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Lupify</title>
+    <title>lupify</title>
     <link rel="stylesheet" href="style.css">
     <script src="script.js" defer></script>
-    <link rel="icon" href="favicon.ico">
+    <link rel="icon" type="image/png" href="favicon.png">
 </head>
-<body class = "layout">
-    <header class="header">
-    <!-- MOBILE SLIDE MENU (hidden by default) -->
-    <div class="mobile-menu">
-        <!-- you can remove this h1 or keep a span for the logo -->
-        <span class="logo">Lupify</span>
-        <ul>
-            <li><a href="about.html">About</a></li>
-            <li><a href="#contact">Contact</a></li>
-            <li><a href="#categories">Categories</a></li>
-            <li><a href="#read">Start reading</a></li>
-            <li><a href="#write">Start writing</a></li>
-            <li><a href="#sign-up">Sign Up</a></li>
-        </ul>
-    </div>
-
-    <!-- NAVBAR -->
+<body class = layout>
+<header class="header">
     <nav class="navbar">
-        <h1 class="logo"><a href="/">Lupify</a></h1>
+        <a href="#" aria-label="Menu" class="logo">Lupify</a>
         <div class="hamburger">
             <span></span>
             <span></span>
@@ -54,26 +36,41 @@
             <li><a href="#sign-up">Sign Up</a></li>
         </ul>
     </nav>
+
+    <!-- MOBILE SLIDE MENU -->
+    <div class="mobile-menu">
+        <a href="#" class="mobile-logo">Lupify</a>
+        <ul>
+            <li><a href="about.html">About</a></li>
+            <li><a href="#contact">Contact</a></li>
+            <li class="dropdown">
+                <a href="#categories">Categories</a>
+                <div class="dropdown-content">
+                    <a href="#fiction">Fiction</a>
+                    <a href="#non-fiction">Non-Fiction</a>
+                    <a href="#science">Science</a>
+                    <a href="#history">History</a>
+                    <a href="#life">Life</a>
+                    <a href="#technology">Technology</a>
+                </div>
+            </li>
+            <li><a href="#read">Start reading</a></li>
+            <li><a href="#write">Start writing</a></li>
+            <li><a href="#sign-up">Sign Up</a></li>
+        </ul>
+    </div>
+
+    <!-- OVERLAY FOR MOBILE MENU -->
+    <div class="overlay"></div>
 </header>
-
-
-    <main id = "main" >
-        <section class="hero" aria-labelledby="hero-title">
+    <main id = "main">
+       <section class="hero" aria-labelledby="hero-title">
             <h1 class="hero-title">Lupify</h1>
             <p class="hero-subtitle">Where opinions matter</p>
             <button class="start-button">Start writing</button>
         </section>
-
     </main>
     <aside class = "sidebar">
-        <div class = "main_image">
-            <picture>
-                <source media="(min-width: 1025px)" srcset="resized_lupify_image_600px.jpg">
-                <source media="(min-width: 600px)" srcset="resized_lupify_image_300px.png">
-                <img src="lupify_home_image_150px.png" alt="Main Image">
-            </picture>
-
-        </div>
     </aside>
     <footer class = "footer">
         <div class="container">
