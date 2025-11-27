@@ -10,45 +10,52 @@
     <link rel="icon" href="favicon.ico">
 </head>
 <body class = layout>
-    <header class = header>
-        <nav class = navbar>
-            <!-- HAMBURGER BUTTON (mobile only) -->
-             <div class="hamburger">
-                <span></span>
-                <span></span>
-                <span></span>
-            </div>
-            <h1 class = logo>Lupify</h1>
-            <ul class="links">
-                <li>
-                    <a href="about.html">About</a>
-                </li>
-                <li>
-                    <a href="#contact">Contact</a>
-                </li>
-                <li class = dropdown>
-                    <a href="#categories">Categories</a>
-                    <div class = dropdown-content>
-                        <a href="#fiction">Fiction</a>
-                        <a href="#non-fiction">Non-Fiction</a>
-                        <a href="#science">Science</a>
-                        <a href="#history">History</a>
-                        <a href="#life">Life</a>
-                        <a href = #technology>Technology</a>
-                    </div>
-                </li>
-                <li>
-                    <a href="#read">Start reading</a>
-                </li>
-                <li>
-                    <a href="#write">Start writing</a>
-                </li>
-                <li>
-                    <a href="#sign-up">Sign Up</a>
-                </li>
-            </ul>
-        </nav>
-    </header>
+    <header class="header">
+    <!-- MOBILE SLIDE MENU (OUTSIDE NAV) -->
+    <div class="mobile-menu">
+        <h1 class="logo">Lupify</h1>
+        <ul>
+            <li><a href="about.html">About</a></li>
+            <li><a href="#contact">Contact</a></li>
+            <li><a href="#categories">Categories</a></li>
+            <li><a href="#read">Start reading</a></li>
+            <li><a href="#write">Start writing</a></li>
+            <li><a href="#sign-up">Sign Up</a></li>
+        </ul>
+    </div>
+
+    <nav class="navbar">
+        <div class="hamburger">
+            <span></span>
+            <span></span>
+            <span></span>
+        </div>
+
+        <h1 class="logo">Lupify</h1>
+
+        <ul class="links">
+            <li><a href="about.html">About</a></li>
+            <li><a href="#contact">Contact</a></li>
+
+            <li class="dropdown">
+                <a href="#categories">Categories</a>
+                <div class="dropdown-content">
+                    <a href="#fiction">Fiction</a>
+                    <a href="#non-fiction">Non-Fiction</a>
+                    <a href="#science">Science</a>
+                    <a href="#history">History</a>
+                    <a href="#life">Life</a>
+                    <a href="#technology">Technology</a>
+                </div>
+            </li>
+
+            <li><a href="#read">Start reading</a></li>
+            <li><a href="#write">Start writing</a></li>
+            <li><a href="#sign-up">Sign Up</a></li>
+        </ul>
+    </nav>
+</header>
+
     <main id = main >
         <section class="hero" aria-labelledby="hero-title">
             <h1 class="hero-title">Lupify</h1>
