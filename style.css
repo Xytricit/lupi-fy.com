@@ -368,6 +368,26 @@ footer a:hover {
     text-decoration: none;
     margin-bottom: 25px;
 }
+     .intro {
+        font-size: 30px;
+    }
+
+    .faq-item h3 {
+        font-size: 16px;
+    }
+
+    .contact-hero h1 {
+        font-size: 28px;
+    }
+
+    .contact-hero .subtitle {
+        font-size: 16px;
+    }
+
+    .start-button {
+        padding: 12px 20px;
+        font-size: 16px;
+    }
 }
 
 
