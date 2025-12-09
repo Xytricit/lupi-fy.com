@@ -569,6 +569,17 @@ body, html { overflow-x: hidden; }
 <div class="main-wrapper">
     {% block content %}
     <div class="feed" id="feed">
+        <!-- Trending chips (selectable bubbles) -->
+        {% if trending_posts %}
+        <div class="trending-chips" style="display:flex;gap:8px;overflow-x:auto;margin-bottom:14px;padding:8px 4px;">
+            <button class="trending-chip active" data-post-id="all">All</button>
+            {% for t in trending_posts %}
+                <button class="trending-chip" data-post-id="{{ t.id }}">{{ t.title|truncatechars:40 }}</button>
+            {% endfor %}
+        </div>
+
+        {% endif %}
+
         <div class="layout-grid" style="display:flex;gap:20px;align-items:flex-start;">
             <div class="main-feed" style="flex:1;">
                 {% if recent_posts %}

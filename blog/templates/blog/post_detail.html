@@ -20,11 +20,11 @@
                  alt="{{ post.author.username }}" class="creator-pfp">
             <div class="creator-details">
                 <strong>{{ post.author.username }}</strong>
-                <span>{{ post.author.followers.count }} Followers</span>
+                <span class="followers-count">{{ post.author.followers.count }} Followers</span>
             </div>
 
             <!-- Follow Button -->
-            <button class="follow-btn" data-author-id="{{ post.author.id }}">
+            <button type="button" class="follow-btn" data-author-id="{{ post.author.id }}">
                 {% if request.user in post.author.followers.all %}
                     Following
                 {% else %}
@@ -36,7 +36,7 @@
         <!-- Right: Post Actions -->
         <div class="post-actions">
             <!-- Like -->
-            <button class="post-like-action" data-post-id="{{ post.id }}">
+            <button type="button" class="post-like-action{% if request.user in post.likes.all %} liked{% endif %}" data-post-id="{{ post.id }}">
                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none"
                      stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <path d="M7 10v12"/>
@@ -46,7 +46,7 @@
             </button>
 
             <!-- Dislike -->
-            <button class="post-dislike-action" data-post-id="{{ post.id }}">
+            <button type="button" class="post-dislike-action{% if request.user in post.dislikes.all %} disliked{% endif %}" data-post-id="{{ post.id }}">
                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none"
                      stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <path d="M17 14V2"/>
@@ -56,7 +56,7 @@
             </button>
 
             <!-- Bookmark -->
-            <button class="bookmark-btn" data-post-id="{{ post.id }}">
+            <button type="button" class="bookmark-btn{% if request.user in post.bookmarks.all %} bookmarked{% endif %}" data-post-id="{{ post.id }}">
                 {% if request.user in post.bookmarks.all %}
                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none"
                          stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -73,9 +73,9 @@
             
             <!-- More / Report -->
             <div class="more-container">
-                <button class="more-btn">⋯</button>
+                <button type="button" class="more-btn">⋯</button>
                 <div class="more-menu">
-                    <button class="report-post-btn" data-post-id="{{ post.id }}">Report</button>
+                    <button type="button" class="report-post-btn" data-post-id="{{ post.id }}">Report</button>
                 </div>
             </div>
         </div>
@@ -91,7 +91,7 @@
         </form>
 
         <div id="commentsList">
-            {% for comment in post.comments.filter(parent__isnull=True).order_by('-created_at') %}
+            {% for comment in comments %}
             <div class="comment-box" data-comment-id="{{ comment.id }}">
                 <div class="comment-header">
                     <strong>{{ comment.user.username }}</strong>
@@ -99,12 +99,14 @@
                 </div>
                 <p class="comment-content">{{ comment.text }}</p>
                 <div class="comment-actions">
-                    <button class="comment-like-action" data-comment-id="{{ comment.id }}">
-                        👍 <span class="like-count">{{ comment.likes.count }}</span>
+                    <button class="comment-like-action{% if request.user in comment.likes.all %} liked{% endif %}" data-comment-id="{{ comment.id }}">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-thumbs-up-icon lucide-thumbs-up"><path d="M7 10v12"/><path d="M15 5.88 14 10h5.83a2 2 0 0 1 1.92 2.56l-2.33 8A2 2 0 0 1 17.5 22H4a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2h2.76a2 2 0 0 0 1.79-1.11L12 2a3.13 3.13 0 0 1 3 3.88Z"/></svg>
+                        <span class="like-count">{{ comment.likes.count }}</span>
                     </button>
 
-                    <button class="comment-dislike-action" data-comment-id="{{ comment.id }}">
-                        👎 <span class="dislike-count">{{ comment.dislikes.count }}</span>
+                    <button class="comment-dislike-action{% if request.user in comment.dislikes.all %} disliked{% endif %}" data-comment-id="{{ comment.id }}">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-thumbs-down-icon lucide-thumbs-down"><path d="M17 14V2"/><path d="M9 18.12 10 14H4.17a2 2 0 0 1-1.92-2.56l2.33-8A2 2 0 0 1 6.5 2H20a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-2.76a2 2 0 0 0-1.79 1.11L12 22a3.13 3.13 0 0 1-3-3.88Z"/></svg>
+                        <span class="dislike-count">{{ comment.dislikes.count }}</span>
                     </button>
 
                     <button class="comment-reply-btn" data-parent-id="{{ comment.id }}">Reply</button>
@@ -119,6 +121,17 @@
                             <span class="comment-date">{{ reply.created_at|date:"M d, Y H:i" }}</span>
                         </div>
                         <p class="comment-content">{{ reply.text }}</p>
+                        <div class="comment-actions">
+                            <button class="comment-like-action{% if request.user in reply.likes.all %} liked{% endif %}" data-comment-id="{{ reply.id }}">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-thumbs-up-icon lucide-thumbs-up"><path d="M7 10v12"/><path d="M15 5.88 14 10h5.83a2 2 0 0 1 1.92 2.56l-2.33 8A2 2 0 0 1 17.5 22H4a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2h2.76a2 2 0 0 0 1.79-1.11L12 2a3.13 3.13 0 0 1 3 3.88Z"/></svg>
+                                <span class="like-count">{{ reply.likes.count }}</span>
+                            </button>
+
+                            <button class="comment-dislike-action{% if request.user in reply.dislikes.all %} disliked{% endif %}" data-comment-id="{{ reply.id }}">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-thumbs-down-icon lucide-thumbs-down"><path d="M17 14V2"/><path d="M9 18.12 10 14H4.17a2 2 0 0 1-1.92-2.56l2.33-8A2 2 0 0 1 6.5 2H20a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-2.76a2 2 0 0 0-1.79 1.11L12 22a3.13 3.13 0 0 1-3-3.88Z"/></svg>
+                                <span class="dislike-count">{{ reply.dislikes.count }}</span>
+                            </button>
+                        </div>
                     </div>
                     {% endfor %}
                 </div>
@@ -143,6 +156,7 @@
 
 
 <style>
+    :root{ --primary: #0d6efd; }
 .post-header {
     display: flex;
     justify-content: space-between;
@@ -180,6 +194,22 @@
     cursor: pointer;
 }
 
+.more-btn {
+    background: none;
+    border: none;
+    font-size: 20px;
+    color: #000; /* black */
+    cursor: pointer;
+}
+.more-menu { min-width: 160px; }
+
+/* Mobile responsiveness tweaks */
+@media (max-width: 700px) {
+    .post-header { flex-direction: column; align-items: flex-start; gap: 12px; }
+    .post-actions { width: 100%; justify-content: flex-start; }
+    .creator-info { gap: 8px; }
+}
+
 .post-actions {
     display: flex;
     flex-direction: row; /* buttons in a row */
@@ -198,13 +228,15 @@
     color: blue;
     font-weight: bold;
 }
+                    <button class="comment-like-action" data-comment-id="{{ comment.id }}">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-thumbs-up-icon lucide-thumbs-up"><path d="M7 10v12"/><path d="M15 5.88 14 10h5.83a2 2 0 0 1 1.92 2.56l-2.33 8A2 2 0 0 1 17.5 22H4a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2h2.76a2 2 0 0 0 1.79-1.11L12 2a3.13 3.13 0 0 1 3 3.88Z"/></svg>
+                        <span class="like-count">{{ comment.likes.count }}</span>
+                    </button>
 
-
-.post-actions button svg {
-    vertical-align: middle;
-}
-.comments-section textarea {
-    width: 100%;
+                    <button class="comment-dislike-action" data-comment-id="{{ comment.id }}">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-thumbs-down-icon lucide-thumbs-down"><path d="M17 14V2"/><path d="M9 18.12 10 14H4.17a2 2 0 0 1-1.92-2.56l2.33-8A2 2 0 0 1 6.5 2H20a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-2.76a2 2 0 0 0-1.79 1.11L12 22a3.13 3.13 0 0 1-3-3.88Z"/></svg>
+                        <span class="dislike-count">{{ comment.dislikes.count }}</span>
+                    </button>
     min-height: 100px; /* taller input */
     padding: 16px;
     margin-bottom: 10px;
@@ -221,14 +253,34 @@
 .more-menu {
     display: none;
     position: absolute;
-    top: 30px;
+    top: 36px;
     right: 0;
     background: #fff;
-    border: 1px solid #ccc;
+    border: 1px solid #dcdcdc;
     border-radius: 8px;
-    box-shadow: 0 3px 6px rgba(0,0,0,0.1);
-    z-index: 10;
+    box-shadow: 0 6px 18px rgba(0,0,0,0.12);
+    z-index: 1000;
     flex-direction: column;
+    padding: 6px 0;
+    min-width: 160px;
+}
+
+/* Show when container has open class */
+.more-container.open .more-menu {
+    display: flex;
+}
+
+.more-menu button {
+    background: none;
+    border: none;
+    padding: 8px 12px;
+    text-align: left;
+    width: 100%;
+    color: #111;
+}
+
+.more-menu button.report-post-btn {
+    color: #c00;
 }
 
 .more-menu button {
@@ -380,6 +432,36 @@
     box-shadow: 0 4px 12px rgba(0,0,0,0.1);
 }
 
+/* Reply visual treatment */
+.reply-box {
+    margin-left: 28px;
+    background: linear-gradient(180deg, #ffffff, #fbfbfd);
+    border-left: 3px solid rgba(13,110,253,0.08);
+    padding: 12px 16px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+}
+
+.reply-box .comment-header strong { font-size: 0.95rem; }
+.reply-box .comment-content { color: #333; font-size: 0.96rem; }
+.reply-box .comment-actions button { background: transparent; }
+
+/* Reply form slide-down animation */
+.reply-form {
+    max-height: 0;
+    overflow: hidden;
+    opacity: 0;
+    transform: translateY(-6px);
+    transition: max-height 0.18s ease, opacity 0.18s ease, transform 0.18s ease;
+    margin-top: 0; /* will be applied when open */
+}
+.reply-form.open {
+    max-height: 360px;
+    opacity: 1;
+    transform: translateY(0);
+    margin-top: 12px;
+}
+
+
 /* Comment Header */
 .comment-header {
     display: flex;
@@ -416,6 +498,20 @@
     transition: background 0.2s;
     font-weight: bold;
     color: #333;
+}
+
+/* SVG fill states for liked/disliked */
+.post-like-action.liked svg, .comment-like-action.liked svg {
+    stroke: var(--primary);
+    fill: var(--primary);
+}
+.post-dislike-action.disliked svg, .comment-dislike-action.disliked svg {
+    stroke: #d9534f;
+    fill: #d9534f;
+}
+
+.post-like-action svg, .post-dislike-action svg, .comment-like-action svg, .comment-dislike-action svg {
+    transition: fill 0.15s ease, stroke 0.15s ease;
 }
 
 .comment-actions button:hover {
@@ -484,11 +580,30 @@ document.addEventListener('DOMContentLoaded', () => {
     container.addEventListener('click', async (e) => {
         const btn = e.target.closest('button');
         if (!btn) return;
-        e.preventDefault();
+        // allow buttons that are inside forms (submit buttons) to proceed
+        if (btn.closest('form')) return;
 
         const postId = btn.dataset.postId;
         const commentId = btn.dataset.commentId;
         const authorId = btn.dataset.authorId;
+
+        // Reply button: toggle reply form visibility
+        if (btn.classList.contains('comment-reply-btn')) {
+            const parentId = btn.dataset.parentId;
+            const form = container.querySelector(`.reply-form[data-parent-id="${parentId}"]`);
+            if (!form) return;
+            // toggle open class to animate slide
+            if (form.classList.contains('open')) {
+                form.classList.remove('open');
+                // after transition, hide to keep layout compact
+                setTimeout(() => { form.style.display = 'none'; }, 190);
+            } else {
+                form.style.display = 'block';
+                // small delay to trigger transition
+                setTimeout(() => { form.classList.add('open'); form.scrollIntoView({behavior: 'smooth', block: 'center'}); }, 10);
+            }
+            return;
+        }
 
         let url = '';
         if (btn.classList.contains('post-like-action')) url = `/posts/post/${postId}/like/`;
@@ -500,6 +615,8 @@ document.addEventListener('DOMContentLoaded', () => {
         else return;
 
         try {
+            // if we've determined a URL to call, prevent default behavior
+            e.preventDefault();
             const res = await fetch(url, {
                 method: 'POST',
                 headers: {
@@ -517,24 +634,54 @@ document.addEventListener('DOMContentLoaded', () => {
                 btn.querySelector('.like-count').textContent = data.likes_count;
                 const disBtn = btn.parentElement.querySelector('.post-dislike-action');
                 if (disBtn) disBtn.querySelector('.dislike-count').textContent = data.dislikes_count;
+                // toggle visual state
+                if (data.liked) {
+                    btn.classList.add('liked');
+                    if (disBtn) disBtn.classList.remove('disliked');
+                } else {
+                    btn.classList.remove('liked');
+                }
             } else if (btn.classList.contains('post-dislike-action')) {
                 btn.querySelector('.dislike-count').textContent = data.dislikes_count;
                 const likeBtn = btn.parentElement.querySelector('.post-like-action');
                 if (likeBtn) likeBtn.querySelector('.like-count').textContent = data.likes_count;
+                if (data.disliked) {
+                    btn.classList.add('disliked');
+                    if (likeBtn) likeBtn.classList.remove('liked');
+                } else {
+                    btn.classList.remove('disliked');
+                }
             } else if (btn.classList.contains('comment-like-action')) {
                 btn.querySelector('.like-count').textContent = data.likes_count;
                 const disBtn = btn.parentElement.querySelector('.comment-dislike-action');
                 if (disBtn) disBtn.querySelector('.dislike-count').textContent = data.dislikes_count;
+                if (data.liked) {
+                    btn.classList.add('liked');
+                    if (disBtn) disBtn.classList.remove('disliked');
+                } else {
+                    btn.classList.remove('liked');
+                }
             } else if (btn.classList.contains('comment-dislike-action')) {
                 btn.querySelector('.dislike-count').textContent = data.dislikes_count;
                 const likeBtn = btn.parentElement.querySelector('.comment-like-action');
                 if (likeBtn) likeBtn.querySelector('.like-count').textContent = data.likes_count;
+                if (data.disliked) {
+                    btn.classList.add('disliked');
+                    if (likeBtn) likeBtn.classList.remove('liked');
+                } else {
+                    btn.classList.remove('disliked');
+                }
             } else if (btn.classList.contains('bookmark-btn')) {
                 btn.innerHTML = data.bookmarked
                     ? `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2Z"/><path d="m9 10 2 2 4-4"/></svg>`
                     : `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z"/></svg>`;
             } else if (btn.classList.contains('follow-btn')) {
                 btn.textContent = data.status;
+                // update follower count display if provided
+                if (data.followers_count !== undefined) {
+                    const followersSpan = document.querySelector('.creator-details .followers-count');
+                    if (followersSpan) followersSpan.textContent = `${data.followers_count} Followers`;
+                }
             }
 
         } catch (err) {
@@ -545,6 +692,64 @@ document.addEventListener('DOMContentLoaded', () => {
     // ------------------------------
     // Handle Comment Submission
     // ------------------------------
+    // Reply form submission (AJAX) - ensure replies don't reload the page
+    document.addEventListener('submit', async (ev) => {
+        const replyForm = ev.target.closest('.reply-form');
+        if (!replyForm) return;
+        ev.preventDefault();
+        const parentId = replyForm.dataset.parentId;
+        const postId = commentForm.dataset.postId;
+        const textarea = replyForm.querySelector('textarea[name="text"]');
+        const text = textarea.value.trim();
+        if (!text) return;
+
+        try {
+            const res = await fetch(`/posts/post/${postId}/comment/`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': csrfToken(),
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'Content-Type': 'application/x-www-form-urlencoded'
+                },
+                body: new URLSearchParams({ text, parent_id: parentId })
+            });
+
+            if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+            const data = await res.json();
+
+            // append reply into replies container
+            const parentBox = document.querySelector(`[data-comment-id="${parentId}"]`);
+            if (!parentBox) return; // safety
+            const replies = parentBox.querySelector('.replies');
+            const node = document.createElement('div');
+            node.className = 'comment-box reply-box';
+            node.dataset.commentId = data.id;
+            node.innerHTML = `
+                <div class="comment-header">
+                    <strong>${data.user}</strong>
+                    <span class="comment-date">${data.created_at}</span>
+                </div>
+                <p class="comment-content">${data.text}</p>
+                <div class="comment-actions">
+                    <button class="comment-like-action" data-comment-id="${data.id}">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-thumbs-up-icon lucide-thumbs-up"><path d="M7 10v12"/><path d="M15 5.88 14 10h5.83a2 2 0 0 1 1.92 2.56l-2.33 8A2 2 0 0 1 17.5 22H4a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2h2.76a2 2 0 0 0 1.79-1.11L12 2a3.13 3.13 0 0 1 3 3.88Z"/></svg>
+                        <span class="like-count">0</span>
+                    </button>
+                    <button class="comment-dislike-action" data-comment-id="${data.id}">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-thumbs-down-icon lucide-thumbs-down"><path d="M17 14V2"/><path d="M9 18.12 10 14H4.17a2 2 0 0 1-1.92-2.56l2.33-8A2 2 0 0 1 6.5 2H20a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-2.76a2 2 0 0 0-1.79 1.11L12 22a3.13 3.13 0 0 1-3-3.88Z"/></svg>
+                        <span class="dislike-count">0</span>
+                    </button>
+                </div>
+            `;
+            replies.appendChild(node);
+            replyForm.style.display = 'none';
+            textarea.value = '';
+
+        } catch (err) {
+            console.error('Error posting reply:', err);
+        }
+    });
+
     commentForm.addEventListener('submit', async (e) => {
         e.preventDefault();
         const postId = commentForm.dataset.postId; // add data-post-id="{{ post.id }}" to form in template
@@ -572,6 +777,7 @@ document.addEventListener('DOMContentLoaded', () => {
             // Render new comment dynamically
             const newComment = document.createElement('div');
             newComment.classList.add('comment-box');
+            newComment.dataset.commentId = data.id;
             newComment.innerHTML = `
                 <div class="comment-header">
                     <strong>${data.user}</strong>
@@ -580,12 +786,21 @@ document.addEventListener('DOMContentLoaded', () => {
                 <p class="comment-content">${data.text}</p>
                 <div class="comment-actions">
                     <button class="comment-like-action" data-comment-id="${data.id}">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-thumbs-up-icon lucide-thumbs-up"><path d="M7 10v12"/><path d="M15 5.88 14 10h5.83a2 2 0 0 1 1.92 2.56l-2.33 8A2 2 0 0 1 17.5 22H4a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2h2.76a2 2 0 0 0 1.79-1.11L12 2a3.13 3.13 0 0 1 3 3.88Z"/></svg>
                         <span class="like-count">0</span>
                     </button>
                     <button class="comment-dislike-action" data-comment-id="${data.id}">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-thumbs-down-icon lucide-thumbs-down"><path d="M17 14V2"/><path d="M9 18.12 10 14H4.17a2 2 0 0 1-1.92-2.56l2.33-8A2 2 0 0 1 6.5 2H20a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-2.76a2 2 0 0 0-1.79 1.11L12 22a3.13 3.13 0 0 1-3-3.88Z"/></svg>
                         <span class="dislike-count">0</span>
                     </button>
+                    <button class="comment-reply-btn" data-parent-id="${data.id}">Reply</button>
                 </div>
+                <div class="replies"></div>
+                <form class="reply-form" data-parent-id="${data.id}" style="display:none; margin-top:8px;">
+                    <input type="hidden" name="csrfmiddlewaretoken" value="${document.querySelector('[name=csrfmiddlewaretoken]').value}">
+                    <textarea name="text" placeholder="Write a reply..." required></textarea>
+                    <button type="submit">Reply</button>
+                </form>
             `;
             commentsList.prepend(newComment);
 

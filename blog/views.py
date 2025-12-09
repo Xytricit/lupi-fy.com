@@ -106,7 +106,8 @@ def resolve_report(request, report_id):
 @login_required
 def post_detail_view(request, pk):
     post = get_object_or_404(Post, id=pk)
-    comments = Comment.objects.filter(post=post).order_by('-created_at')
+    # top-level comments (no parent) for display; replies available via comment.replies
+    comments = Comment.objects.filter(post=post, parent__isnull=True).order_by('-created_at')
 
     if request.method == "POST":
         form = CommentForm(request.POST)
@@ -274,17 +275,19 @@ def follow_user(request, author_id):
     else:
         author.followers.add(user)
         status = 'Following'
-
-    return JsonResponse({'status': status})
+    return JsonResponse({'status': status, 'followers_count': author.followers.count()})
 from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404
 from .models import Post, Comment
 
-@login_required
 def post_comment(request, post_id):
+    # Allow AJAX clients to receive JSON errors rather than redirects when not authenticated
     if request.method != "POST":
         return JsonResponse({"error": "POST request required."}, status=400)
+
+    if not request.user.is_authenticated:
+        return JsonResponse({"error": "Authentication required."}, status=401)
 
     post = get_object_or_404(Post, id=post_id)
     text = request.POST.get("text", "").strip()
@@ -312,10 +315,12 @@ def post_comment(request, post_id):
     })
 
 
-@login_required
 def report_post(request, post_id):
     if request.method != 'POST':
         return JsonResponse({'error': 'POST request required.'}, status=400)
+
+    if not request.user.is_authenticated:
+        return JsonResponse({'error': 'Authentication required.'}, status=401)
 
     post = get_object_or_404(Post, id=post_id)
     # create a moderation report for staff to review

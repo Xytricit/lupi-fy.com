@@ -21,14 +21,27 @@ function getCSRF() {
   return cookie ? cookie.split('=')[1] : null;
 }
 
+function handleResponseJSON(res) {
+  if (res.status === 401) {
+    // Not authenticated — redirect to login preserving current path
+    window.location.href = `/accounts/login/?next=${encodeURIComponent(window.location.pathname)}`;
+    return Promise.reject(new Error('Authentication required'));
+  }
+  if (!res.ok) return res.json().then(j => Promise.reject(new Error(j && j.error ? j.error : 'Request failed')));
+  return res.json();
+}
+
 document.addEventListener('click', (e) => {
-  // Toggle three-dot menus
+  // Toggle three-dot menus: add/remove 'open' class on container
   const moreBtn = e.target.closest('.more-btn');
   if (moreBtn) {
     const container = moreBtn.closest('.more-container');
-    const menu = container.querySelector('.more-menu');
-    menu.style.display = menu.style.display === 'flex' ? 'none' : 'flex';
+    if (container) container.classList.toggle('open');
     return;
+  }
+  // Clicks outside any open more-container should close them
+  if (!e.target.closest('.more-container')) {
+    document.querySelectorAll('.more-container.open').forEach(c => c.classList.remove('open'));
   }
   // Bookmark toggle
   const bookmarkBtn = e.target.closest('.bookmark-btn');
@@ -37,13 +50,13 @@ document.addEventListener('click', (e) => {
     fetch(`/posts/post/${postId}/bookmark/`, {
       method: 'POST',
       headers: { 'X-CSRFToken': getCSRF() }
-    }).then(r => r.json()).then(data => {
+    }).then(handleResponseJSON).then(data => {
       if (data.bookmarked) {
         bookmarkBtn.classList.add('bookmarked');
       } else {
         bookmarkBtn.classList.remove('bookmarked');
       }
-    });
+    }).catch(err => console.warn(err));
     return;
   }
 
@@ -55,66 +68,23 @@ document.addEventListener('click', (e) => {
     fetch(`/posts/post/${postId}/report/`, {
       method: 'POST',
       headers: { 'X-CSRFToken': getCSRF() }
-    }).then(r => r.json()).then(data => {
+    }).then(handleResponseJSON).then(data => {
       alert('Reported — thank you.');
-    });
+      // hide the menu if open
+      const container = reportBtn.closest('.more-container');
+      if (container) {
+        const menu = container.querySelector('.more-menu');
+        if (menu) menu.style.display = 'none';
+      }
+    }).catch(err => console.warn(err));
     return;
   }
 
 });
 
-// Comment posting (main form)
-const commentForm = document.getElementById('commentForm');
-if (commentForm) {
-  commentForm.addEventListener('submit', (ev) => {
-    ev.preventDefault();
-    const postId = commentForm.dataset.postId;
-    const text = commentForm.querySelector('textarea[name="text"]').value.trim();
-    if (!text) return alert('Comment cannot be empty.');
+// main comment posting is handled in the inline template script to ensure DOM elements and CSRF are present
 
-    fetch(`/posts/post/${postId}/comment/`, {
-      method: 'POST',
-      headers: { 'X-CSRFToken': getCSRF(), 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: `text=${encodeURIComponent(text)}`
-    }).then(r => r.json()).then(data => {
-      if (data.error) return alert(data.error);
-      // prepend new comment
-      const list = document.getElementById('commentsList');
-      const node = document.createElement('div');
-      node.className = 'comment-box';
-      node.innerHTML = `<div class="comment-header"><strong>${data.user}</strong><span class="comment-date">${data.created_at}</span></div><p class="comment-content">${data.text}</p>`;
-      list.prepend(node);
-      commentForm.querySelector('textarea[name="text"]').value = '';
-    });
-  });
-}
-
-// Reply forms: delegate submit
-document.addEventListener('submit', (ev) => {
-  const form = ev.target.closest('.reply-form');
-  if (!form) return;
-  ev.preventDefault();
-  const parentId = form.dataset.parentId;
-  const text = form.querySelector('textarea[name="text"]').value.trim();
-  const postId = document.getElementById('commentForm') ? document.getElementById('commentForm').dataset.postId : null;
-  if (!text) return alert('Reply cannot be empty.');
-  fetch(`/posts/post/${postId}/comment/`, {
-    method: 'POST',
-    headers: { 'X-CSRFToken': getCSRF(), 'Content-Type': 'application/x-www-form-urlencoded' },
-    body: `text=${encodeURIComponent(text)}&parent_id=${parentId}`
-  }).then(r => r.json()).then(data => {
-    if (data.error) return alert(data.error);
-    // append reply into replies container
-    const parentBox = document.querySelector(`[data-comment-id='${parentId}']`);
-    const replies = parentBox.querySelector('.replies');
-    const node = document.createElement('div');
-    node.className = 'comment-box reply-box';
-    node.innerHTML = `<div class="comment-header"><strong>${data.user}</strong><span class="comment-date">${data.created_at}</span></div><p class="comment-content">${data.text}</p>`;
-    replies.appendChild(node);
-    form.style.display = 'none';
-    form.querySelector('textarea[name="text"]').value = '';
-  });
-});
+// Reply submissions are handled inline in the post_detail template to avoid duplicate handlers
 
 // Toggle showing reply form
 document.addEventListener('click', (ev) => {
@@ -123,4 +93,25 @@ document.addEventListener('click', (ev) => {
   const parentId = btn.dataset.parentId;
   const form = document.querySelector(`.reply-form[data-parent-id='${parentId}']`);
   if (form) form.style.display = form.style.display === 'none' ? 'block' : 'none';
+});
+
+// Trending chips behaviour: filter main feed by selected chip
+document.addEventListener('click', (ev) => {
+  const chip = ev.target.closest('.trending-chip');
+  if (!chip) return;
+  const postId = chip.dataset.postId;
+  const chips = document.querySelectorAll('.trending-chip');
+  chips.forEach(c => c.classList.remove('active'));
+  chip.classList.add('active');
+
+  const posts = document.querySelectorAll('.main-feed .post-card');
+  if (postId === 'all') {
+    posts.forEach(p => p.style.display = 'block');
+    return;
+  }
+
+  posts.forEach(p => {
+    const pid = p.querySelector('.bookmark-btn') ? p.querySelector('.bookmark-btn').dataset.postId : null;
+    if (pid === postId) p.style.display = 'block'; else p.style.display = 'none';
+  });
 });

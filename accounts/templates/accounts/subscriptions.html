@@ -25,7 +25,7 @@
             {% elif sub.author %}
                 <h4>{{ sub.author.username }}</h4>
                 <p>Author</p>
-                <a class="unsubscribe-btn" href="{% url 'toggle_subscription' sub.author.id %}">Unsubscribe</a>
+                <a class="unsubscribe-btn" href="{% url 'toggle_subscription_author' sub.author.id %}">Unsubscribe</a>
             {% endif %}
         </div>
         {% endfor %}

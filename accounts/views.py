@@ -126,11 +126,15 @@ def subscriptions_view(request):
     community_posts = CommunityPost.objects.filter(community_id__in=community_ids)
     author_posts = Post.objects.filter(author_id__in=author_ids)
 
+    # Provide vars the template expects (subs, subscribed_communities/authors)
     return render(request, "accounts/subscriptions.html", {
         "communities": communities,
         "authors": authors,
         "community_posts": community_posts,
         "author_posts": author_posts,
+        "subs": subs,
+        "subscribed_communities": communities,
+        "subscribed_authors": authors,
     })
 
 

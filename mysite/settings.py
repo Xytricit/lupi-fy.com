@@ -141,9 +141,10 @@ MEDIA_ROOT = BASE_DIR / 'media'
 # AUTHENTICATION
 # ---------------------------
 AUTH_USER_MODEL = 'accounts.CustomUser'
-LOGIN_URL = '/login/'
+# point to the accounts app login urls
+LOGIN_URL = '/accounts/login/'
 LOGIN_REDIRECT_URL = '/dashboard/'
-LOGOUT_REDIRECT_URL = '/login/'
+LOGOUT_REDIRECT_URL = '/accounts/login/'
 
 
 # ---------------------------
