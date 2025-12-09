@@ -1,0 +1,140 @@
+{% extends "dashboardhome.html" %}
+
+{% block title %}Blogs - Lupify{% endblock %}
+
+{% block content %}
+<div class="feed">
+    <!-- Top card / info -->
+    <div class="post-card">
+        <h4>Blogs</h4>
+        <p>View posts here.</p>
+    </div>
+
+    <!-- Loop through posts -->
+    {% for post in posts %}
+        <div class="post-card">
+            <h5>{{ post.title }}</h5>
+            <p>
+    <a href="{% url 'post_detail' post.id %}" class="post-link">
+        {{ post.content|truncatewords:30 }}…
+    </a>
+</p>
+            <p><strong>Author:</strong> {{ post.author.username }}</p>
+            {% if post.category %}
+                <p><strong>Category:</strong> {{ post.category.name }}</p>
+            {% endif %}
+            {% if post.tags.all %}
+                <p><strong>Tags:</strong> 
+                    {% for tag in post.tags.all %}
+                        {{ tag.name }}{% if not forloop.last %}, {% endif %}
+                    {% endfor %}
+                </p>
+            {% endif %}
+            <p><em>Created on {{ post.created|date:"M d, Y H:i" }}</em></p>
+
+            <!-- Options menu inside the same post-card -->
+            <div class="post-footer">
+                <!-- Options Menu Trigger -->
+                <div class="options-menu-trigger">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                        class="lucide lucide-ellipsis-icon">
+                        <circle cx="12" cy="12" r="1" />
+                        <circle cx="19" cy="12" r="1" />
+                        <circle cx="5" cy="12" r="1" />
+                    </svg>
+                </div>
+
+                <!-- Hidden menu -->
+                <div class="options-menu">
+                    <button class="bookmark-btn">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+                            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                            class="lucide lucide-bookmark-icon">
+                            <path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z" />
+                        </svg>
+                        Bookmark
+                    </button>
+                    <button class="report-btn">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+                            stroke="red" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                            class="lucide lucide-flag-icon">
+                            <path d="M4 22V2l16 4-4 4 4 4-16 4z" />
+                        </svg>
+                        Report
+                    </button>
+                </div>
+            </div>
+        </div>
+    {% empty %}
+        <p>No blog posts yet.</p>
+    {% endfor %}
+</div>
+
+<style>
+.post-card {
+    position: relative;
+    padding: 15px;
+    border: 1px solid #ddd;
+    border-radius: 12px;
+    margin-bottom: 20px;
+    background: #fff;
+}
+
+.post-footer {
+    position: relative;
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 10px;
+}
+
+.options-menu-trigger {
+    cursor: pointer;
+}
+
+.options-menu {
+    display: none;
+    position: absolute;
+    bottom: 35px;
+    right: 0;
+    background: #fff;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    padding: 5px;
+    flex-direction: column;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    z-index: 10;
+}
+
+.options-menu button {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    padding: 5px 10px;
+    border: none;
+    background: none;
+    cursor: pointer;
+}
+
+.options-menu button:hover {
+    background: #f0f0f0;
+    border-radius: 5px;
+}
+</style>
+
+<script>
+document.querySelectorAll('.options-menu-trigger').forEach(trigger => {
+    trigger.addEventListener('click', (e) => {
+        e.stopPropagation(); // prevent closing immediately
+        const menu = trigger.nextElementSibling;
+        menu.style.display = menu.style.display === 'flex' ? 'none' : 'flex';
+        menu.style.flexDirection = 'column';
+    });
+});
+
+// Close menu if clicking outside
+document.addEventListener('click', e => {
+    document.querySelectorAll('.options-menu').forEach(menu => menu.style.display = 'none');
+});
+</script>
+{% endblock %}

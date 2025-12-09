@@ -1,0 +1,130 @@
+{% extends "dashboardhome.html" %}
+
+{% block title %}Create Post{% endblock %}
+
+{% block content %}
+<div class="create-wrapper" style="position:relative; max-width:600px; margin:20px auto; padding:20px; background:#fff; border-radius:10px; box-shadow:0 2px 8px rgba(0,0,0,0.1);">
+    <h2 style="text-align:center; margin-bottom:20px;">Create a Post</h2>
+    <form method="post" enctype="multipart/form-data" style="display:flex; flex-direction:column; gap:15px;">
+        {% csrf_token %}
+
+        <!-- Community Selector -->
+        <div style="position:relative;">
+            <label for="id_community_input" style="font-weight:bold;">Community</label>
+            <input type="text" id="id_community_input" placeholder="Type to search..." autocomplete="off" class="form-control" required
+                   style="width:100%; padding:8px; border-radius:5px; border:1px solid #ccc;"
+                   value="{% if selected_community %}{{ selected_community.name }}{% endif %}">
+            <input type="hidden" id="id_community_select" name="community" required
+                   value="{% if selected_community %}{{ selected_community.id }}{% endif %}">
+            <div id="community_suggestions" 
+                 style="border:1px solid #ccc; max-height:200px; overflow-y:auto; display:none; position:absolute; background:white; width:100%; z-index:10; border-radius:5px;">
+            </div>
+        </div>
+
+        <!-- Post Title -->
+        <div>
+            {{ form.title.label_tag }}<br>
+            {{ form.title }}
+        </div>
+
+        <!-- Post Content -->
+        <div>
+            {{ form.content.label_tag }}<br>
+            {{ form.content }}
+        </div>
+
+        <!-- Post Image -->
+        <div>
+            {{ form.image.label_tag }}<br>
+            {{ form.image }}
+            <img id="imagePreview" src="#" alt="Image Preview" style="display:none; max-width:100%; margin-top:10px; border-radius:5px;"/>
+        </div>
+
+        <button type="submit" class="btn success" style="padding:10px 20px; border:none; background:#1f9cee; color:white; border-radius:5px; cursor:pointer; font-weight:bold;">
+            Post
+        </button>
+    </form>
+</div>
+
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+    // Community search
+    const input = document.getElementById("id_community_input");
+    const hiddenInput = document.getElementById("id_community_select");
+    const suggestionsContainer = document.getElementById("community_suggestions");
+
+    const communities = [
+        {% for c in communities %}
+        { id: "{{ c.id }}", name: "{{ c.name|escapejs }}" }{% if not forloop.last %},{% endif %}
+        {% endfor %}
+    ];
+
+    function filterCommunities(query) {
+        if (!query) return [];
+        const normalizedQuery = query.toLowerCase().replace(/\s+/g, '');
+        return communities.filter(c => c.name.toLowerCase().replace(/\s+/g, '').includes(normalizedQuery)).slice(0, 5);
+    }
+
+    function showSuggestions(matches) {
+        suggestionsContainer.innerHTML = "";
+        if (matches.length === 0) {
+            suggestionsContainer.style.display = "none";
+            return;
+        }
+
+        matches.forEach(c => {
+            const div = document.createElement("div");
+            div.className = "suggestion-item";
+            div.textContent = c.name;
+            div.style.padding = "8px 10px";
+            div.style.cursor = "pointer";
+            div.style.borderBottom = "1px solid #eee";
+
+            div.addEventListener("click", () => {
+                input.value = c.name;
+                hiddenInput.value = c.id;
+                suggestionsContainer.innerHTML = "";
+                suggestionsContainer.style.display = "none";
+            });
+
+            suggestionsContainer.appendChild(div);
+        });
+
+        suggestionsContainer.style.display = "block";
+    }
+
+    input.addEventListener("input", () => {
+        const matches = filterCommunities(input.value);
+        showSuggestions(matches);
+    });
+
+    document.addEventListener("click", (e) => {
+        if (!suggestionsContainer.contains(e.target) && e.target !== input) {
+            suggestionsContainer.innerHTML = "";
+            suggestionsContainer.style.display = "none";
+        }
+    });
+
+    // Image preview
+    const imageInput = document.getElementById("id_image");
+    const preview = document.getElementById("imagePreview");
+
+    if (imageInput) {
+        imageInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (!file) {
+                preview.style.display = 'none';
+                preview.src = "#";
+                return;
+            }
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                preview.src = event.target.result;
+                preview.style.display = 'block';
+            };
+            reader.readAsDataURL(file);
+        });
+    }
+});
+</script>
+{% endblock %}

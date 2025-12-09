@@ -1,0 +1,164 @@
+{% extends "dashboardhome.html" %}
+
+{% block title %}Subscriptions - Lupify{% endblock %}
+
+{% block content %}
+<div class="feed-wrapper">
+
+    <!-- Header -->
+    <div class="feed-header">
+        <h2>Your Subscriptions</h2>
+        <div class="subscription-tabs">
+            <button class="tab-btn active" data-target="community-posts">Community Posts</button>
+            <button class="tab-btn" data-target="blog-posts">Blogs</button>
+        </div>
+    </div>
+
+    {% if subscribed_communities or subscribed_authors %}
+    <div class="subscription-list">
+        {% for sub in subs %}
+        <div class="subscription-card">
+            {% if sub.community %}
+                <h4>{{ sub.community.name }}</h4>
+                <p>{{ sub.community.members.count }} members</p>
+                <a class="unsubscribe-btn" href="{% url 'toggle_subscription' sub.community.id %}">Unsubscribe</a>
+            {% elif sub.author %}
+                <h4>{{ sub.author.username }}</h4>
+                <p>Author</p>
+                <a class="unsubscribe-btn" href="{% url 'toggle_subscription' sub.author.id %}">Unsubscribe</a>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Tab Content -->
+    <div class="tab-content">
+        <div id="community-posts" class="tab-panel active">
+            {% if community_posts %}
+                {% for post in community_posts %}
+                <div class="post-card">
+                    <h4>{{ post.title }}</h4>
+                    <p>{{ post.content|truncatewords:25 }}</p>
+                    <a href="{% url 'community_post_detail' post.id %}">Read More</a>
+                </div>
+                {% endfor %}
+            {% else %}
+                <p class="no-subs">No posts from your subscribed communities.</p>
+            {% endif %}
+        </div>
+
+        <div id="blog-posts" class="tab-panel">
+            {% if author_posts %}
+                {% for blog in author_posts %}
+                <div class="post-card">
+                    <h4>{{ blog.title }}</h4>
+                    <p>By {{ blog.author.username }}</p>
+                    <p>{{ blog.content|truncatewords:25 }}</p>
+                    <a href="{% url 'post_detail' blog.id %}">Read More</a>
+                </div>
+                {% endfor %}
+            {% else %}
+                <p class="no-subs">No blogs from your subscribed authors.</p>
+            {% endif %}
+        </div>
+    </div>
+
+    {% else %}
+    <p class="no-subs">You haven't subscribed to any communities or authors yet.</p>
+    {% endif %}
+</div>
+
+<style>
+/* Tabs */
+.subscription-tabs {
+    display: flex;
+    gap: 1rem;
+    margin-top: 0.5rem;
+    margin-bottom: 1rem;
+}
+
+.tab-btn {
+    padding: 0.6rem 1.2rem;
+    background: var(--card-bg);
+    border: 1px solid var(--primary);
+    border-radius: 10px;
+    cursor: pointer;
+    font-weight: 600;
+    transition: background 0.2s;
+}
+
+.tab-btn.active {
+    background: var(--primary);
+    color: #fff;
+}
+
+.tab-btn:hover {
+    background: var(--primary-dark);
+    color: #fff;
+}
+
+.tab-panel { display: none; }
+.tab-panel.active { display: block; }
+
+.subscription-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.subscription-card {
+    background: var(--card-bg);
+    box-shadow: var(--card-shadow);
+    padding: 1.2rem 1.5rem;
+    border-radius: 12px;
+    flex: 1 1 250px;
+    min-width: 250px;
+}
+
+.unsubscribe-btn {
+    padding: 0.5rem 1rem;
+    background: var(--primary);
+    color: #fff;
+    border-radius: 8px;
+    text-decoration: none;
+    font-weight: bold;
+}
+
+.post-card { 
+    background: var(--card-bg);
+    box-shadow: var(--card-shadow);
+    padding: 1rem 1.2rem;
+    margin-bottom: 1rem;
+    border-radius: 12px;
+}
+.post-card h4 { margin-bottom: 0.5rem; }
+.post-card p { color: var(--secondary-text); margin-bottom: 0.5rem; }
+.post-card a { color: var(--primary); font-weight: 600; text-decoration: none; }
+
+.no-subs {
+    font-size: 1rem;
+    color: var(--secondary-text);
+    text-align: center;
+    margin-top: 1rem;
+}
+</style>
+
+<script>
+// Tab switcher
+const tabs = document.querySelectorAll('.tab-btn');
+const panels = document.querySelectorAll('.tab-panel');
+
+tabs.forEach(tab => {
+    tab.addEventListener('click', () => {
+        tabs.forEach(t => t.classList.remove('active'));
+        tab.classList.add('active');
+
+        const target = tab.dataset.target;
+        panels.forEach(panel => {
+            panel.classList.toggle('active', panel.id === target);
+        });
+    });
+});
+</script>
+{% endblock %}

@@ -1,0 +1,797 @@
+
+/*================ Modern Transitions =================*/
+
+/* Fade in up */
+.fade-in-up { 
+    opacity: 0; 
+    transform: translateY(30px); 
+    transition: all 0.8s ease-out; 
+}
+.fade-in-up.visible { 
+    opacity: 1; 
+    transform: translateY(0); 
+}
+
+/* Fade in left */
+.fade-in-left { 
+    opacity: 0; 
+    transform: translateX(-30px); 
+    transition: all 0.8s ease-out; 
+}
+.fade-in-left.visible { 
+    opacity: 1; 
+    transform: translateX(0); 
+}
+
+/* Fade in right */
+.fade-in-right { 
+    opacity: 0; 
+    transform: translateX(30px); 
+    transition: all 0.8s ease-out; 
+}
+.fade-in-right.visible { 
+    opacity: 1; 
+    transform: translateX(0); 
+}
+
+/* Zoom in slightly */
+.fade-in-scale { 
+    opacity: 0; 
+    transform: scale(0.95); 
+    transition: all 0.8s ease-out; 
+}
+.fade-in-scale.visible { 
+    opacity: 1; 
+    transform: scale(1); 
+}
+
+/*================ Card and Icon Effects =================*/
+
+/* General card hover effect */
+.community-card, .feature-item, .featured-card, .experience-card {
+    transition: transform 0.4s cubic-bezier(0.25, 1, 0.5, 1),
+                box-shadow 0.4s cubic-bezier(0.25, 1, 0.5, 1),
+                background-color 0.4s ease,
+                border 0.3s ease,
+                color 0.3s ease;
+}
+
+/* Hover "goldy pop" effect */
+.community-card:hover, .feature-item:hover, .featured-card:hover, .experience-card:hover {
+    transform: translateY(-10px) scale(1.03);
+    box-shadow: 0 20px 35px rgba(0, 0, 0, 0.15);
+    background: linear-gradient(140deg, #fff8e7, #fff4d5);
+}
+.community-explore-link {
+    text-decoration: none;
+    color: inherit;
+    display: block;
+}
+
+/* Icon glow effect */
+.feature-icon, .community-icon {
+    transition: transform 0.4s ease, background 0.4s ease, box-shadow 0.4s ease, color 0.4s ease;
+}
+
+.feature-icon:hover, .community-icon:hover {
+    transform: scale(1.25) rotate(4deg);
+    box-shadow: 0 10px 18px rgba(255, 223, 171, 0.5);
+    background: #ffe8b2;
+    color: #ffb600;
+}
+
+/* Buttons upgrade */
+.btn-primary, .btn-secondary {
+    transition: transform 0.3s cubic-bezier(0.25, 1, 0.5, 1), 
+                box-shadow 0.3s cubic-bezier(0.25, 1, 0.5, 1),
+                background 0.3s ease,
+                color 0.3s ease;
+}
+
+.btn-primary:hover {
+    transform: scale(1.08) rotate(-1deg);
+    box-shadow: 0 10px 20px rgba(255, 223, 171, 0.4);
+    background: linear-gradient(125deg, #fbe8a6, #f6dfb3);
+}
+
+/* Slight tilt on featured cards */
+.featured-card:hover {
+    transform: translateY(-8px) rotate(-0.5deg) scale(1.02);
+    box-shadow: 0 18px 28px rgba(0,0,0,0.14);
+}
+
+/* Optional: smooth text color transition */
+.community-card h3, .feature-item h3, .experience-card h2 {
+    transition: color 0.3s ease;
+}
+
+.community-card:hover h3, .feature-item:hover h3, .experience-card:hover h2 {
+    color: #d49b3f; /* golden text on hover */
+}
+
+/*================ Base Styles =================*/
+html, body {
+    height: 100%;
+    margin: 0;
+    font-family: 'Inter', sans-serif;
+    line-height: 1.5;
+    background-color: #fefefe;
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+ul { list-style: none; }
+
+ul li a {
+    text-decoration: none;
+    color: #1f9cee;
+    font-weight: 600;
+}
+
+/*================ Layout =================*/
+.layout {
+    display: grid;
+    grid-template-areas: 
+        "header"
+        "hero"
+        "features"
+        "featured-posts"
+        "explore-communities"
+        "experience"
+        "footer";
+    grid-template-columns: 1fr;
+    grid-template-rows: auto;
+    row-gap: 0;
+}
+
+/*================ Header =================*/
+.site-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1rem 3rem;
+    height: 70px;
+    background-color: white;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+    position: fixed; /* change from sticky to fixed */
+    top: 0;
+    left: 0;
+    width: 100%;
+    z-index: 9999;
+}
+
+.logo { color: #209dec; font-size: 1.8rem; font-weight: 700; }
+
+.nav-links { display: flex; gap: 2rem; }
+
+.nav-links a:hover { color: #1f8cd6; }
+
+/*================ Buttons =================*/
+.btn-primary, .btn-secondary {
+    padding: 0.9rem 2.2rem;
+    border-radius: 12px;
+    cursor: pointer;
+    outline: none;
+    box-shadow: none;
+    font-weight: 600;
+}
+
+.btn-primary {
+    background-color: #f5dfb1 !important;
+    color: #333 !important;
+    border: none !important;
+}
+
+.btn-primary:hover {
+    transform: scale(1.06);
+    background: linear-gradient(120deg, #fbe8a6, #f5dfb1);
+}
+
+.btn-secondary {
+    background-color: #1f9cee;
+    color: white;
+    border: 2px solid white;
+}
+
+.btn-secondary:hover {
+    background-color: #4fb0ff;
+    transform: scale(1.05);
+}
+
+/*================ Hero Section =================*/
+.hero-section {
+    grid-area: hero;
+    min-height: 75vh;
+    background: linear-gradient(160deg, #1e9ee8, #1c88d4);
+    color: white;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    gap: 2.5rem;
+    padding: 3rem 2rem;
+    text-align: center;
+}
+
+.hero-title {
+    font-size: clamp(2.2rem, 5vw, 4.2rem);
+    font-weight: 700;
+    line-height: 1.2;
+}
+
+.hero-subtitle {
+    font-size: clamp(1rem, 2.5vw, 1.5rem);
+    max-width: 720px;
+    color: #f0f8ff;
+    line-height: 1.4;
+}
+
+.hero-section-buttons {
+    display: flex;
+    gap: 1.5rem;
+    flex-wrap: wrap;
+}
+
+/*================ Hero Buttons Upgrade =================*/
+.hero-section .btn-primary,
+.hero-section .btn-secondary {
+    padding: 1.2rem 2.8rem; /* bigger height and width */
+    font-size: 1.1rem;      /* slightly larger text */
+    border-radius: 14px;    /* keep it smooth */
+    transition: transform 0.3s ease, box-shadow 0.3s ease, background 0.3s ease;
+}
+
+.hero-section .btn-primary:hover {
+    transform: scale(1.1) rotate(-1deg);
+    box-shadow: 0 12px 24px rgba(255, 223, 171, 0.4);
+}
+
+.hero-section .btn-secondary:hover {
+    transform: scale(1.08);
+    box-shadow: 0 10px 22px rgba(0, 159, 238, 0.35);
+}
+/*================ Features Section =================*/
+.features-overview {
+    grid-area: features;
+    display: flex;
+    justify-content: space-around;
+    align-items: stretch;
+    gap: 4rem;
+    padding: 80px 25px;
+    background-color: #f5fafd;
+    flex-wrap: wrap;
+}
+
+.feature-item {
+    background-color: #ffffff; /* pure white so it pops */
+    flex: 1 1 220px;
+    max-width: 260px;
+    padding: 32px;
+    border-radius: 16px;
+    text-align: center;
+    box-shadow: 0 3px 10px rgba(0,0,0,0.08);
+    transition: transform 0.4s cubic-bezier(0.25,1,0.5,1), 
+                box-shadow 0.4s cubic-bezier(0.25,1,0.5,1),
+                background-color 0.3s ease,
+                border 0.3s ease,
+                color 0.3s ease;
+}
+
+.feature-item:hover {
+    transform: translateY(-9px);
+    box-shadow: 0 18px 28px rgba(0,0,0,0.12);
+}
+
+.feature-icon {
+    width: 72px;
+    height: 72px;
+    margin: 0 auto 20px;
+    border-radius: 50%;
+    background-color: #eef7ff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.feature-icon svg { width: 42px; height: 42px; stroke: #1f9cee; }
+
+.feature-item:hover .feature-icon {
+    transform: scale(1.22);
+    background-color: #d6edff;
+}
+
+/* feature text tweaks */
+.feature-toptext { font-weight: 600; color: #1f9cee; margin-bottom: 6px; }
+.feature-text { font-size: 1.22rem; font-weight: 700; margin-bottom: 6px; }
+.feature-subtext { font-size: 0.92rem; color: #555; }
+
+/* Responsive Features */
+@media (max-width: 900px) {
+    .features-overview { justify-content: center; gap: 2.2rem; }
+}
+
+/*================ Featured Posts =================*/
+.featured-posts {
+    grid-area: featured-posts;
+    padding: 80px 22px;
+    background-color: #ffffff;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 42px;
+}
+
+/*================ Featured Posts Cards =================*/
+.featured-posts{
+   display: none;
+}
+.featured-posts .cards-container {
+    display: flex;
+    justify-content: center;
+    flex-direction: row;
+    gap: 22px;
+    flex-wrap: wrap;
+}
+
+.featured-card {
+    width: 100%;
+    max-width: 360px;
+    height: 210px;
+    background-color: #ffffff;
+    border-radius: 16px;
+    box-shadow: 0 3px 10px rgba(0,0,0,0.08);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin: 12px;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.featured-card:hover {
+    transform: translateY(-7px) rotate(-0.2deg) scale(1.03);
+    box-shadow: 0 20px 35px rgba(0,0,0,0.12);
+}
+
+/* Responsive Featured Posts */
+@media (max-width: 900px) {
+    .featured-posts .cards-container { flex-direction: column; align-items: center; }
+    .featured-card { max-width: 90%; height: 190px; }
+}
+/*================ Communities =================*/
+.community-explore {
+    grid-area: explore-communities;
+    background-color: #f9fafc;
+    padding: 70px 0;
+}
+
+.section-content {
+    max-width: 1120px;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 42px;
+}
+
+.community-cards {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 32px;
+    width: 100%;
+    max-width: 1240px;
+    margin: 0 auto;
+}
+
+.community-card {
+    width: 100%;
+    background-color: #ffffff;
+    padding: 32px;
+    border-radius: 16px;
+    box-shadow: 0 3px 8px rgba(0,0,0,0.08);
+    text-align: center;
+    transition: transform 0.3s ease, box-shadow 0.3s ease, background 0.3s ease;
+}
+
+.community-card:hover {
+    transform: translateY(-8px) scale(1.025);
+    box-shadow: 0 18px 28px rgba(0,0,0,0.13);
+    background: linear-gradient(135deg, #fff9e8, #fff5d3);
+}
+
+.community-icon {
+    background: #eef7ff;
+    width: 72px;
+    height: 72px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 18px;
+    transition: transform 0.3s ease, background 0.3s ease, box-shadow 0.3s ease;
+}
+
+.community-icon svg {
+    width: 34px;
+    height: 34px;
+    color: #1f9cee;
+}
+
+.community-card:hover .community-icon {
+    transform: scale(1.2) rotate(3deg);
+    background-color: #d7edff;
+}
+
+/* Responsive Communities */
+@media (max-width: 1200px) { .community-cards { grid-template-columns: repeat(3, 1fr); } }
+@media (max-width: 900px)  { .community-cards { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 600px)  { .community-cards { grid-template-columns: 1fr; } }
+
+/*================ Experience Section =================*/
+.experience-section {
+    grid-area: experience;
+    padding: 85px 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    background-color: #e6f2f9;
+}
+
+.experience-section .section-title {
+    font-size: 2.1rem;
+    margin-bottom: 45px;
+    font-weight: 700;
+}
+
+.experiences {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 42px;
+    width: 100%;
+    max-width: 1220px;
+}
+
+.experience-card {
+    background-color: white;
+    padding: 42px 32px;
+    border-radius: 16px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.08);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    text-align: left;
+}
+
+.experience-card:hover {
+    transform: translateY(-8px);
+    box-shadow: 0 14px 25px rgba(0,0,0,0.14);
+}
+
+.experience-card h2 {
+    margin-bottom: 18px;
+}
+
+.btn-link {
+    display: inline-block;
+    margin-top: 22px;
+    color: #1f9cee;
+    font-weight: 600;
+    text-decoration: none;
+}
+
+.cta-join { margin-top: 45px; }
+.link-member { margin-top: 18px; }
+/*================ Footer =================*/
+.footer-site {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: flex-start;
+    padding: 45px 65px;
+    background-color: #111;
+    color: #fff;
+    gap: 62px;
+}
+
+.footer-maintext,
+.footer-links > div,
+.icon-stuff {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 210px;
+    gap: 16px;
+}
+
+.footer-links {
+    display: flex;
+    gap: 62px;
+}
+
+.footer-nav ul {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.social-icons {
+    display: flex;
+    gap: 16px;
+}
+
+.footer-sub-text {
+    width: 100%;
+    text-align: center;
+    margin-top: 24px;
+    font-size: 0.9rem;
+    color: #bbb;
+}
+
+/* Footer Feature Icon */
+.footer-feature-icon {
+    width: auto;
+    height: auto;
+    background: none;
+    border-radius: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0;
+    fill: #1f9cee;
+}
+
+.footer-feature-icon svg {
+    width: 34px;
+    height: 34px;
+    color: #1f9cee;
+    stroke: #1f9cee;
+}
+
+/* Responsive Footer */
+@media (max-width: 900px) {
+    .footer-site {
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+    }
+    .footer-links {
+        flex-direction: column;
+        gap: 32px;
+        align-items: center;
+    }
+    .footer-maintext,
+    .icon-stuff {
+        align-items: center;
+    }
+}
+
+.footer-maintext .footer-brand {
+    font-size: 1.8rem;
+    font-weight: 700;
+    color: #209dec;
+}
+
+.footer-maintext .footer-description {
+    font-size: 0.95rem;
+    line-height: 1.5;
+    color: white;
+}
+
+.footer-separator {
+    width: 100%;
+    height: 1px;
+    position: relative;
+    margin: 20px 0;
+    background-color: rgba(255, 255, 255, 0.3);
+}
+
+.footer-separator::before,
+.footer-separator::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    width: 50px;
+    height: 1px;
+    border-top: 1px dashed rgba(255, 255, 255, 0.6);
+    background: transparent;
+}
+
+.footer-separator::before { left: 0; }
+.footer-separator::after  { right: 0; }
+
+/*================ Additional Utility Classes =================*/
+.text-center { text-align: center; }
+.text-left   { text-align: left; }
+.mb-10       { margin-bottom: 10px; }
+.mb-20       { margin-bottom: 20px; }
+.mt-20       { margin-top: 20px; }
+.mt-40       { margin-top: 40px; }
+.p-20        { padding: 20px; }
+.p-30        { padding: 30px; }
+.p-40        { padding: 40px; }
+.rounded-lg  { border-radius: 15px; }
+.shadow-sm   { box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+.shadow-md   { box-shadow: 0 12px 20px rgba(0,0,0,0.12); }
+
+/*================ Misc Transitions =================*/
+.transition-fast { transition: all 0.2s ease-in-out; }
+.transition-medium { transition: all 0.35s cubic-bezier(0.25,1,0.5,1); }
+.transition-slow { transition: all 0.5s ease-out; }
+
+.scale-hover:hover { transform: scale(1.05); }
+
+/* Links & buttons extras */
+ul li a {
+    text-decoration: none;
+    color: #5eaae0;
+    font-weight: 600;
+    transition: color 0.25s ease;
+}
+
+ul li a:hover { color: #1b7dc9; }
+
+.btn-primary {
+    background-color: #209dec;
+    color: white;
+    font-weight: 700;
+    padding: 1.3rem 3rem;
+    font-size: 1.2rem;
+    border-radius: 14px;
+    border: none;
+    cursor: pointer;
+    transition: transform 0.3s ease, box-shadow 0.3s ease, background 0.3s ease;
+}
+
+.btn-primary:hover {
+    background-color: #1c8adf;
+    transform: scale(1.08);
+    box-shadow: 0 12px 22px rgba(32,157,236,0.4);
+}
+
+/*================ Mobile Overrides =================*/
+
+/* General scaling for very small screens */
+@media (max-width: 600px) {
+    html { font-size: 14px; } /* smaller base font */
+    
+    /* Hero Section */
+    .hero-section {
+        min-height: 60vh;
+        padding: 2rem 1rem;
+        gap: 1.8rem;
+    }
+    .hero-title {
+        font-size: 2rem;
+    }
+    .hero-subtitle {
+        font-size: 1rem;
+        max-width: 90%;
+    }
+    .hero-section-buttons {
+        flex-direction: column;
+        gap: 1rem;
+    }
+    .hero-section .btn-primary,
+    .hero-section .btn-secondary {
+        padding: 1rem 2rem;
+        font-size: 1rem;
+    }
+
+    /* Features Section */
+    .features-overview {
+        flex-direction: column;
+        gap: 1.8rem;
+        padding: 40px 15px;
+    }
+    .feature-item {
+        max-width: 100%;
+        padding: 20px;
+    }
+    .feature-icon {
+        width: 60px;
+        height: 60px;
+    }
+    .feature-icon svg {
+        width: 32px;
+        height: 32px;
+    }
+    .feature-text { font-size: 1.1rem; }
+    .feature-subtext { font-size: 0.85rem; }
+
+    /* Featured Posts */
+    .featured-posts .cards-container {
+        flex-direction: column;
+        gap: 16px;
+        align-items: center;
+    }
+    .featured-card {
+        max-width: 95%;
+        height: 180px;
+    }
+
+    /* Communities Section */
+    .community-cards {
+        grid-template-columns: 1fr; /* single column */
+        gap: 16px;
+    }
+    .community-card {
+        padding: 20px;
+    }
+    .community-icon {
+        width: 60px;
+        height: 60px;
+    }
+    .community-icon svg {
+        width: 28px;
+        height: 28px;
+    }
+
+    /* Experience Section */
+    .experience-section {
+        padding: 50px 15px;
+    }
+    .experiences {
+        gap: 30px;
+    }
+    .experience-card {
+        padding: 25px 20px;
+    }
+    .experience-card h2 { font-size: 1.2rem; }
+
+    /* Footer Section */
+    .footer-site {
+        padding: 30px 15px;
+        gap: 30px;
+    }
+    .footer-links {
+        gap: 20px;
+    }
+    .footer-maintext .footer-brand { font-size: 1.5rem; }
+    .footer-maintext .footer-description { font-size: 0.85rem; }
+    .footer-sub-text { font-size: 0.8rem; }
+}
+
+/* Optional: very small phones (<400px) extra tweaks */
+@media (max-width: 400px) {
+    .hero-title { font-size: 1.7rem; }
+    .hero-subtitle { font-size: 0.9rem; }
+    .hero-section-buttons .btn-primary,
+    .hero-section-buttons .btn-secondary { padding: 0.9rem 1.8rem; font-size: 0.95rem; }
+    .feature-item, .community-card, .experience-card { padding: 18px; }
+}
+/*================ MOBILE SCROLL FIX =================*/
+@media (max-width: 600px) {
+    html, body { overflow-x: hidden; }
+
+    /* Header padding shrink */
+    .site-header { padding: 1rem 1.2rem; }
+
+    /* Hero section full width */
+    .hero-section { padding: 2rem 1rem; max-width: 100%; }
+
+    /* Features section stacking */
+    .features-overview { 
+        flex-direction: column; 
+        gap: 1.5rem; 
+        padding: 30px 10px; 
+        max-width: 100%;
+    }
+    .feature-item { flex: 1 1 100%; max-width: 100%; }
+
+    /* Featured cards full width */
+    .featured-card { max-width: 100%; margin: 8px 0; }
+
+    /* Communities grid single column, no overflow */
+    .community-cards { grid-template-columns: 1fr; gap: 16px; width: 100%; max-width: 100%; }
+    .community-card { width: 100%; max-width: 100%; }
+
+    /* Experiences section stacking */
+    .experiences { grid-template-columns: 1fr; gap: 20px; width: 100%; max-width: 100%; }
+    .experience-card { width: 100%; max-width: 100%; }
+
+    /* Footer compact */
+    .footer-site { padding: 20px 10px; width: 100%; max-width: 100%; }
+}
+
+/*================ END OF CSS =================*/

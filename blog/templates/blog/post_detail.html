@@ -1,0 +1,601 @@
+{% extends "dashboardhome.html" %}
+
+{% block title %}{{ post.title }} - Lupify{% endblock %}
+
+{% block content %}
+{% load static %}
+<div class="single-post">
+    <h2>{{ post.title }}</h2>
+    <p><strong>Author:</strong> {{ post.author.username }}</p>
+    {% if post.category %}
+        <p><strong>Category:</strong> {{ post.category.name }}</p>
+    {% endif %}
+    <p>{{ post.content }}</p>
+
+    <!-- Post Header + Actions -->
+    <div class="post-header">
+        <!-- Left: Creator Info -->
+        <div class="creator-info">
+            <img src="{% if post.author.avatar %}{{ post.author.avatar.url }}{% else %}{% static 'avatars/default.png' %}{% endif %}" 
+                 alt="{{ post.author.username }}" class="creator-pfp">
+            <div class="creator-details">
+                <strong>{{ post.author.username }}</strong>
+                <span>{{ post.author.followers.count }} Followers</span>
+            </div>
+
+            <!-- Follow Button -->
+            <button class="follow-btn" data-author-id="{{ post.author.id }}">
+                {% if request.user in post.author.followers.all %}
+                    Following
+                {% else %}
+                    Follow
+                {% endif %}
+            </button>
+        </div>
+
+        <!-- Right: Post Actions -->
+        <div class="post-actions">
+            <!-- Like -->
+            <button class="post-like-action" data-post-id="{{ post.id }}">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none"
+                     stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M7 10v12"/>
+                    <path d="M15 5.88 14 10h5.83a2 2 0 0 1 1.92 2.56l-2.33 8A2 2 0 0 1 17.5 22H4a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2h2.76a2 2 0 0 0 1.79-1.11L12 2a3.13 3.13 0 0 1 3 3.88Z"/>
+                </svg>
+                <span class="like-count">{{ post.likes.count }}</span>
+            </button>
+
+            <!-- Dislike -->
+            <button class="post-dislike-action" data-post-id="{{ post.id }}">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none"
+                     stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M17 14V2"/>
+                    <path d="M9 18.12 10 14H4.17a2 2 0 0 1-1.92-2.56l2.33-8A2 2 0 0 1 6.5 2H20a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-2.76a2 2 0 0 0-1.79 1.11L12 22a3.13 3.13 0 0 1-3-3.88Z"/>
+                </svg>
+                <span class="dislike-count">{{ post.dislikes.count }}</span>
+            </button>
+
+            <!-- Bookmark -->
+            <button class="bookmark-btn" data-post-id="{{ post.id }}">
+                {% if request.user in post.bookmarks.all %}
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none"
+                         stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2Z"/>
+                        <path d="m9 10 2 2 4-4"/>
+                    </svg>
+                {% else %}
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none"
+                         stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z"/>
+                    </svg>
+                {% endif %}
+            </button>
+            
+            <!-- More / Report -->
+            <div class="more-container">
+                <button class="more-btn">⋯</button>
+                <div class="more-menu">
+                    <button class="report-post-btn" data-post-id="{{ post.id }}">Report</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Comments Section -->
+    <div class="comments-section">
+        <h3>Comments</h3>
+        <form method="POST" id="commentForm" data-post-id="{{ post.id }}">
+            {% csrf_token %}
+            <textarea name="text" placeholder="Write a comment..." required></textarea>
+            <button type="submit">Post Comment</button>
+        </form>
+
+        <div id="commentsList">
+            {% for comment in post.comments.filter(parent__isnull=True).order_by('-created_at') %}
+            <div class="comment-box" data-comment-id="{{ comment.id }}">
+                <div class="comment-header">
+                    <strong>{{ comment.user.username }}</strong>
+                    <span class="comment-date">{{ comment.created_at|date:"M d, Y H:i" }}</span>
+                </div>
+                <p class="comment-content">{{ comment.text }}</p>
+                <div class="comment-actions">
+                    <button class="comment-like-action" data-comment-id="{{ comment.id }}">
+                        👍 <span class="like-count">{{ comment.likes.count }}</span>
+                    </button>
+
+                    <button class="comment-dislike-action" data-comment-id="{{ comment.id }}">
+                        👎 <span class="dislike-count">{{ comment.dislikes.count }}</span>
+                    </button>
+
+                    <button class="comment-reply-btn" data-parent-id="{{ comment.id }}">Reply</button>
+                </div>
+
+                <!-- Replies -->
+                <div class="replies">
+                    {% for reply in comment.replies.all %}
+                    <div class="comment-box reply-box" data-comment-id="{{ reply.id }}">
+                        <div class="comment-header">
+                            <strong>{{ reply.user.username }}</strong>
+                            <span class="comment-date">{{ reply.created_at|date:"M d, Y H:i" }}</span>
+                        </div>
+                        <p class="comment-content">{{ reply.text }}</p>
+                    </div>
+                    {% endfor %}
+                </div>
+
+                <!-- Reply form (hidden, toggled by JS) -->
+                <form class="reply-form" data-parent-id="{{ comment.id }}" style="display:none; margin-top:8px;">
+                    {% csrf_token %}
+                    <textarea name="text" placeholder="Write a reply..." required></textarea>
+                    <button type="submit">Reply</button>
+                </form>
+
+            </div>
+            {% empty %}
+                <p>No comments yet. Be the first to comment!</p>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+
+
+
+
+<style>
+.post-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+}
+
+.creator-info {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.creator-pfp {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    object-fit: cover;
+}
+
+.creator-details {
+    display: flex;
+    flex-direction: column;
+}
+
+.follow-btn {
+    padding: 5px 10px;
+    border: none;
+    background-color: #0d6efd;
+    color: white;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    border-radius: 8px;
+    cursor: pointer;
+}
+
+.post-actions {
+    display: flex;
+    flex-direction: row; /* buttons in a row */
+    gap: 12px; /* space between buttons */
+    align-items: center;
+}
+
+
+.post-actions button {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+    border: none;
+    background: none;
+    color: blue;
+    font-weight: bold;
+}
+
+
+.post-actions button svg {
+    vertical-align: middle;
+}
+.comments-section textarea {
+    width: 100%;
+    min-height: 100px; /* taller input */
+    padding: 16px;
+    margin-bottom: 10px;
+    border-radius: 12px;
+    border: 1px solid #ccc;
+    resize: vertical; /* user can expand */
+    font-size: 1rem;
+}
+.more-container {
+    position: relative;
+    display: inline-block;
+}
+
+.more-menu {
+    display: none;
+    position: absolute;
+    top: 30px;
+    right: 0;
+    background: #fff;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    box-shadow: 0 3px 6px rgba(0,0,0,0.1);
+    z-index: 10;
+    flex-direction: column;
+}
+
+.more-menu button {
+    display: block;
+    width: 100%;
+    padding: 6px 12px;
+    border: none;
+    background: none;
+    text-align: left;
+    cursor: pointer;
+}
+
+.more-menu button:hover {
+    background-color: #f0f0f0;
+}
+.post-info-box {
+    border: 1px solid #ddd;
+    border-radius: 10px;
+    padding: 15px;
+    margin-bottom: 20px;
+    background-color: #f9f9f9;
+}
+
+.post-meta {
+    display: flex;
+    justify-content: flex-start;
+    gap: 15px;
+    font-size: 0.9rem;
+    color: #555;
+    margin-bottom: 10px;
+}
+
+.post-description p {
+    margin: 0 0 5px 0;
+}
+
+.description-toggle {
+    border: none;
+    background: none;
+    color: #0d6efd;
+    cursor: pointer;
+    font-size: 0.9rem;
+    padding: 0;
+}
+
+.comments-section {
+    margin-top: 30px;
+}
+
+.comment-box {
+    background: #f8f8f8;
+    padding: 15px;
+    border-radius: 10px;
+    margin-bottom: 15px;
+}
+
+.comment-header {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.9rem;
+    color: #666;
+    margin-bottom: 8px;
+}
+
+.comment-content {
+    font-size: 1rem;
+    margin-bottom: 10px;
+}
+
+.comment-actions a {
+    margin-right: 15px;
+    font-size: 1rem;
+    text-decoration: none;
+}
+
+.like-btn {
+    color: #2b8a3e;
+    font-weight: bold;
+}
+
+.dislike-btn {
+    color: #b02a37;
+    font-weight: bold;
+}
+
+/* Unified Comment Section Styling */
+.comments-section {
+    margin-top: 30px;
+}
+
+.comments-section h3 {
+    font-size: 1.8rem;
+    margin-bottom: 15px;
+    color: #333;
+}
+
+/* Comment Form */
+.comments-section form {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-bottom: 20px;
+}
+
+.comments-section textarea {
+    width: 100%;
+    min-height: 80px;
+    padding: 12px 16px;
+    border-radius: 12px;
+    border: 1px solid #ccc;
+    font-size: 1rem;
+    resize: vertical;
+    transition: border 0.2s;
+}
+
+.comments-section textarea:focus {
+    border-color: #0d6efd;
+    outline: none;
+}
+
+.comments-section form button {
+    align-self: flex-end;
+    padding: 8px 18px;
+    background-color: #0d6efd;
+    color: white;
+    border: none;
+    border-radius: 10px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.comments-section form button:hover {
+    background-color: #0956c2;
+}
+
+/* Comment Box */
+.comment-box {
+    background-color: #f8f9fa;
+    border-radius: 12px;
+    padding: 15px 20px;
+    margin-bottom: 15px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+    transition: transform 0.1s, box-shadow 0.2s;
+}
+
+.comment-box:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+/* Comment Header */
+.comment-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+    font-size: 0.9rem;
+    color: #555;
+}
+
+/* Comment Content */
+.comment-content {
+    font-size: 1rem;
+    margin-bottom: 12px;
+    line-height: 1.5;
+    color: #333;
+}
+
+/* Comment Actions */
+.comment-actions {
+    display: flex;
+    gap: 12px;
+}
+
+.comment-actions button {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 8px;
+    border-radius: 8px;
+    border: none;
+    background-color: #e9ecef;
+    cursor: pointer;
+    transition: background 0.2s;
+    font-weight: bold;
+    color: #333;
+}
+
+.comment-actions button:hover {
+    background-color: #d6d8db;
+}
+
+.comment-actions svg {
+    stroke: #0d6efd; /* Blue for icons */
+    width: 20px;
+    height: 20px;
+}
+
+.like-count, .dislike-count {
+    font-size: 0.9rem;
+}
+
+/* Responsive adjustments */
+@media (max-width: 480px) {
+    .comment-box {
+        padding: 12px 15px;
+    }
+
+    .comment-actions button {
+        gap: 4px;
+        padding: 3px 6px;
+    }
+
+    .comments-section h3 {
+        font-size: 1.5rem;
+    }
+}
+.post-actions svg,
+.comment-actions svg {
+    width: 24px;        /* consistent size */
+    height: 24px;
+    display: inline-block;
+    vertical-align: middle;
+    cursor: pointer;    /* makes it feel clickable */
+    overflow: visible;  /* ensures it isn’t clipped */
+}
+.post-actions,
+.comment-actions {
+    display: flex;
+    gap: 12px;         /* space between icons */
+    align-items: center;
+}
+
+.comment-actions {
+    margin-top: 6px;   /* small spacing from comment text */
+}
+
+
+</style>
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const csrfToken = () => document.querySelector('[name=csrfmiddlewaretoken]').value;
+
+    const container = document.querySelector('.single-post');
+    const commentsList = document.getElementById('commentsList');
+    const commentForm = document.getElementById('commentForm');
+    const commentTextarea = commentForm.querySelector('textarea');
+
+    // ------------------------------
+    // Handle button clicks
+    // ------------------------------
+    container.addEventListener('click', async (e) => {
+        const btn = e.target.closest('button');
+        if (!btn) return;
+        e.preventDefault();
+
+        const postId = btn.dataset.postId;
+        const commentId = btn.dataset.commentId;
+        const authorId = btn.dataset.authorId;
+
+        let url = '';
+        if (btn.classList.contains('post-like-action')) url = `/posts/post/${postId}/like/`;
+        else if (btn.classList.contains('post-dislike-action')) url = `/posts/post/${postId}/dislike/`;
+        else if (btn.classList.contains('bookmark-btn')) url = `/posts/post/${postId}/bookmark/`;
+        else if (btn.classList.contains('comment-like-action')) url = `/posts/comment/${commentId}/like/`;
+        else if (btn.classList.contains('comment-dislike-action')) url = `/posts/comment/${commentId}/dislike/`;
+        else if (btn.classList.contains('follow-btn')) url = `/posts/users/${authorId}/follow/`;
+        else return;
+
+        try {
+            const res = await fetch(url, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': csrfToken(),
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+            });
+            if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+            const data = await res.json();
+
+            // ------------------------------
+            // Update UI dynamically
+            // ------------------------------
+            if (btn.classList.contains('post-like-action')) {
+                btn.querySelector('.like-count').textContent = data.likes_count;
+                const disBtn = btn.parentElement.querySelector('.post-dislike-action');
+                if (disBtn) disBtn.querySelector('.dislike-count').textContent = data.dislikes_count;
+            } else if (btn.classList.contains('post-dislike-action')) {
+                btn.querySelector('.dislike-count').textContent = data.dislikes_count;
+                const likeBtn = btn.parentElement.querySelector('.post-like-action');
+                if (likeBtn) likeBtn.querySelector('.like-count').textContent = data.likes_count;
+            } else if (btn.classList.contains('comment-like-action')) {
+                btn.querySelector('.like-count').textContent = data.likes_count;
+                const disBtn = btn.parentElement.querySelector('.comment-dislike-action');
+                if (disBtn) disBtn.querySelector('.dislike-count').textContent = data.dislikes_count;
+            } else if (btn.classList.contains('comment-dislike-action')) {
+                btn.querySelector('.dislike-count').textContent = data.dislikes_count;
+                const likeBtn = btn.parentElement.querySelector('.comment-like-action');
+                if (likeBtn) likeBtn.querySelector('.like-count').textContent = data.likes_count;
+            } else if (btn.classList.contains('bookmark-btn')) {
+                btn.innerHTML = data.bookmarked
+                    ? `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2Z"/><path d="m9 10 2 2 4-4"/></svg>`
+                    : `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z"/></svg>`;
+            } else if (btn.classList.contains('follow-btn')) {
+                btn.textContent = data.status;
+            }
+
+        } catch (err) {
+            console.error('Error:', err);
+        }
+    });
+
+    // ------------------------------
+    // Handle Comment Submission
+    // ------------------------------
+    commentForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const postId = commentForm.dataset.postId; // add data-post-id="{{ post.id }}" to form in template
+        const text = commentTextarea.value.trim();
+
+        if (!text) return;
+
+        try {
+            const res = await fetch(`/posts/post/${postId}/comment/`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': csrfToken(),
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'Content-Type': 'application/x-www-form-urlencoded'
+                },
+                body: new URLSearchParams({ text })
+            });
+
+            if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+            const data = await res.json();
+
+            // Clear textarea
+            commentTextarea.value = '';
+
+            // Render new comment dynamically
+            const newComment = document.createElement('div');
+            newComment.classList.add('comment-box');
+            newComment.innerHTML = `
+                <div class="comment-header">
+                    <strong>${data.user}</strong>
+                    <span class="comment-date">${data.created_at}</span>
+                </div>
+                <p class="comment-content">${data.text}</p>
+                <div class="comment-actions">
+                    <button class="comment-like-action" data-comment-id="${data.id}">
+                        <span class="like-count">0</span>
+                    </button>
+                    <button class="comment-dislike-action" data-comment-id="${data.id}">
+                        <span class="dislike-count">0</span>
+                    </button>
+                </div>
+            `;
+            commentsList.prepend(newComment);
+
+        } catch (err) {
+            console.error('Error posting comment:', err);
+        }
+    });
+});
+</script>
+
+
+
+{% endblock %}

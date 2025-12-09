@@ -1,0 +1,262 @@
+{% extends "dashboardhome.html" %}
+{% block title %}Create Community{% endblock %}
+<link href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.css" rel="stylesheet"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.js"></script>
+
+{% block content %}
+<style>
+/* Wrapper */
+.create-wrapper {
+    max-width:700px;
+    margin:40px auto;
+    padding:35px;
+    background:#fff;
+    border-radius:14px;
+    box-shadow:0 4px 15px rgba(0,0,0,0.08);
+    font-family:"Inter",sans-serif;
+}
+.create-wrapper h2 {
+    font-size:2rem;
+    font-weight:600;
+    text-align:center;
+    margin-bottom:30px;
+}
+
+/* Banner & Logo */
+.banner-preview {
+    position:relative;
+    width:100%;
+    height:220px;
+    border-radius:14px;
+    overflow:visible; /* allow logo to overflow */
+    background:linear-gradient(135deg,#dfe9ff,#c9d9ff);
+    margin-bottom:60px;
+}
+.banner-preview img { width:100%; height:100%; object-fit:cover; }
+.logo-preview {
+    position:absolute;
+    bottom:-20px;
+    left:20px;
+    width:100px;
+    height:100px;
+    border-radius:20px;
+    border:4px solid #fff;
+    box-shadow:0 6px 20px rgba(0,0,0,0.15);
+    overflow:hidden;
+    background:#fff;
+}
+.logo-preview img { width:100%; height:100%; object-fit:cover; }
+
+/* Form fields */
+.create-wrapper form p { margin-bottom:18px; }
+.create-wrapper input, .create-wrapper select, .create-wrapper textarea {
+    width:100%;
+    padding:14px;
+    border:1.5px solid #d9d9d9;
+    border-radius:10px;
+    font-size:1rem;
+    transition:0.2s;
+}
+.create-wrapper input:focus, .create-wrapper select:focus, .create-wrapper textarea:focus {
+    border-color:#1f9cee;
+    outline:none;
+    box-shadow:0 0 4px rgba(31,156,238,0.3);
+}
+
+/* Buttons */
+button {
+    padding:12px 20px;
+    border:none;
+    border-radius:10px;
+    cursor:pointer;
+    font-weight:600;
+    transition:0.2s;
+}
+button:hover { opacity:0.9; }
+.create-wrapper button { width:100%; background:#1f9cee; color:#fff; margin-top:20px; }
+.create-wrapper button:hover { background:#0e82ce; }
+.btn.success { background:#1f9cee; color:#fff; margin:5px; }
+.btn.success:hover { background:#0e82ce; }
+.btn.danger { background:#ff5a5f; color:#fff; margin:5px; }
+.btn.danger:hover { background:#e04848; }
+
+/* Crop Modal */
+#cropModal {
+    display:none;
+    position:fixed; top:0; left:0;
+    width:100%; height:100%;
+    background:rgba(0,0,0,0.8);
+    justify-content:center; align-items:center;
+    z-index:9999;
+}
+#cropModal .modal-content {
+    background:#fff;
+    padding:20px;
+    border-radius:12px;
+    max-width:800px;
+    width:90%;
+    max-height:90%;
+    text-align:center;
+}
+#cropModal img { display:block; max-width:100%; max-height:70vh; }
+
+/* Responsive */
+@media(max-width:768px){
+    .banner-preview { height:160px; margin-bottom:50px; }
+    .logo-preview { width:80px; height:80px; bottom:-30px; left:calc(50% - 40px); }
+}
+</style>
+
+<d<div class="create-wrapper">
+    <h2>Create a Community</h2>
+    <form method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+
+        <div class="banner-preview" id="bannerPreview"></div>
+        <div class="logo-preview" id="logoPreview"></div>
+
+        <p><label for="id_name">Community Name:</label><br>{{ form.name }}</p>
+        <p><label for="id_category">Category:</label><br>{{ form.category }}</p>
+        <p><label for="id_description">Description:</label><br>{{ form.description }}</p>
+        <p><label for="id_rules">Rules:</label><br>{{ form.rules }}</p>
+
+        <p><label for="id_banner_image">Banner Image:</label><br>{{ form.banner_image }}</p>
+        <p><label for="id_community_image">Community Profile Picture:</label><br>{{ form.community_image }}</p>
+
+        <button type="submit">Create Community</button>
+    </form>
+</div>
+
+<!-- Crop Modal -->
+<div id="cropModal">
+    <div class="modal-content">
+        <h3>Crop Image</h3>
+
+        <!-- MUST MATCH JS -->
+        <img id="cropper-image"/>
+
+        <br><br>
+
+        <!-- MUST MATCH JS -->
+        <button type="button" id="savePreviewBtn" class="btn success">
+            Crop & Save
+        </button>
+
+        <button type="button" id="cropCancel" class="btn danger">
+            Cancel
+        </button>
+    </div>
+</div>
+
+
+<div id="cropModal">
+    <div class="modal-content">
+        <h3>Crop Image</h3>
+        <img id="cropper-image" />
+        <br><br>
+        <button type="button" id="cropConfirm" class="btn success">Crop & Save</button>
+        <button type="button" id="cropCancel" class="btn danger">Cancel</button>
+    </div>
+</div>
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+    let cropper = null;
+    let activeTarget = null; // "banner" or "logo"
+
+    const cropModal = document.getElementById("cropModal");
+    const cropImage = document.getElementById("cropper-image");
+    const saveBtn = document.getElementById("savePreviewBtn");
+    const cancelBtn = document.getElementById("cropCancel");
+
+    const bannerInput = document.getElementById("id_banner_image");
+    const logoInput = document.getElementById("id_community_image");
+
+    const bannerPreview = document.getElementById("bannerPreview");
+    const logoPreview = document.getElementById("logoPreview");
+
+    // -----------------------------
+    // Helper: open modal & load cropper
+    // -----------------------------
+    function openCropper(file, target) {
+        activeTarget = target;
+
+        const reader = new FileReader();
+        reader.onload = function (e) {
+            cropImage.src = e.target.result;
+
+            cropModal.style.display = "block";
+
+            // Kill old cropper if exists
+            if (cropper) cropper.destroy();
+
+            cropper = new Cropper(cropImage, {
+                aspectRatio: 1,
+                viewMode: 1,
+                responsive: true,
+                autoCropArea: 1.0
+            });
+        };
+        reader.readAsDataURL(file);
+    }
+
+    // -----------------------------
+    // Detect image inputs
+    // -----------------------------
+    bannerInput.addEventListener("change", function () {
+        if (this.files.length) {
+            openCropper(this.files[0], "banner");
+        }
+    });
+
+    logoInput.addEventListener("change", function () {
+        if (this.files.length) {
+            openCropper(this.files[0], "logo");
+        }
+    });
+
+    // -----------------------------
+    // Save Cropped Image
+    // -----------------------------
+    saveBtn.addEventListener("click", () => {
+        if (!cropper) {
+            alert("Cropper not ready!");
+            return;
+        }
+
+        const canvas = cropper.getCroppedCanvas({
+            width: 600,
+            height: 600
+        });
+
+        const croppedDataUrl = canvas.toDataURL();
+
+        // Apply to correct preview box
+        if (activeTarget === "banner") {
+            bannerPreview.style.backgroundImage = `url(${croppedDataUrl})`;
+        } else if (activeTarget === "logo") {
+            logoPreview.style.backgroundImage = `url(${croppedDataUrl})`;
+        }
+
+        // Close modal
+        cropModal.style.display = "none";
+
+        // Destroy cropper instance
+        cropper.destroy();
+        cropper = null;
+    });
+
+    // -----------------------------
+    // Cancel Crop
+    // -----------------------------
+    cancelBtn.addEventListener("click", () => {
+        cropModal.style.display = "none";
+        if (cropper) {
+            cropper.destroy();
+            cropper = null;
+        }
+    });
+});
+
+</script>
+
+{% endblock %}

@@ -1,0 +1,233 @@
+{% load static %}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Register | Lupify</title>
+<link rel="stylesheet" href="{% static 'style.css' %}">
+<style>
+    /* -------------------------
+       Page & Background
+       ------------------------- */
+    body {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        min-height: 100vh;
+        background: linear-gradient(135deg, #1f9cee, #fec76f, #ffffff);
+        font-family: 'Arial', sans-serif;
+        margin: 0;
+        padding: 20px;
+        box-sizing: border-box;
+    }
+
+    /* -------------------------
+       Register Box
+       ------------------------- */
+    .register-box {
+        background: #ffffff;
+        padding: 40px 50px;
+        border-radius: 16px;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        width: 100%;
+        max-width: 400px;
+        text-align: center;
+        transition: transform 0.3s ease;
+    }
+
+    .register-box:hover {
+        transform: translateY(-3px);
+    }
+
+    .register-box h2 {
+        margin-bottom: 25px;
+        color: #1f9cee;
+        font-size: 28px;
+    }
+
+    /* -------------------------
+       Input Fields
+       ------------------------- */
+    .register-box input[type="text"],
+    .register-box input[type="email"],
+    .register-box input[type="password"] {
+        width: 100%;
+        padding: 14px 15px;
+        margin: 10px 0;
+        border: 1px solid #1f9cee;
+        border-radius: 10px;
+        outline: none;
+        font-size: 16px;
+        box-sizing: border-box;
+        transition: border-color 0.3s, box-shadow 0.3s;
+    }
+
+    .register-box input:focus {
+        border-color: #fec76f;
+        box-shadow: 0 0 8px #fec76f;
+    }
+
+    .password-wrapper {
+        position: relative;
+    }
+
+    .toggle-password {
+        position: absolute;
+        right: 12px;
+        top: 50%;
+        transform: translateY(-50%);
+        cursor: pointer;
+        font-size: 0.95rem;
+        color: #1f9cee;
+        user-select: none;
+    }
+
+    /* -------------------------
+       Buttons
+       ------------------------- */
+    .register-box button {
+        width: 100%;
+        padding: 14px;
+        margin-top: 15px;
+        border: none;
+        border-radius: 10px;
+        cursor: pointer;
+        font-weight: bold;
+        font-size: 16px;
+        transition: background 0.3s, transform 0.2s;
+        background: linear-gradient(135deg, #1f9cee, #fec76f);
+        color: #fff;
+    }
+
+    .register-box button:hover {
+        transform: translateY(-1px);
+        background: linear-gradient(135deg, #fec76f, #1f9cee);
+    }
+
+    /* -------------------------
+       Links & Text
+       ------------------------- */
+    .register-box p {
+        margin-top: 20px;
+        font-size: 15px;
+        color: #111827;
+    }
+
+    .register-box a {
+        color: #1f9cee;
+        text-decoration: none;
+        font-weight: bold;
+    }
+
+    .register-box a:hover {
+        text-decoration: underline;
+    }
+
+    /* -------------------------
+       Error Message
+       ------------------------- */
+    .error-msg {
+        color: #c53030;
+        font-size: 0.85rem;
+        margin: 4px 0 0 0;
+        text-align: left;
+    }
+
+    /* -------------------------
+       Mobile Responsive
+       ------------------------- */
+    @media (max-width: 480px) {
+        .register-box {
+            width: 90vw;       /* fill most of screen width */
+            padding: 45px 35px;
+        }
+
+        .register-box h2 {
+            font-size: 30px;
+            margin-bottom: 30px;
+        }
+
+        .register-box input[type="text"],
+        .register-box input[type="email"],
+        .register-box input[type="password"] {
+            padding: 16px 15px;
+            font-size: 18px;
+        }
+
+        .register-box button {
+            padding: 16px;
+            font-size: 18px;
+            margin-top: 20px;
+        }
+
+        .register-box p {
+            font-size: 16px;
+            margin-top: 25px;
+        }
+
+        .toggle-password {
+            font-size: 1.1rem;
+        }
+    }
+</style>
+</head>
+<body>
+
+<div class="register-box">
+    <h2>Create an Account</h2>
+    <form id="register-form" method="POST">
+        {% csrf_token %}
+        <input type="text" name="username" placeholder="Username" required>
+        <input type="email" name="email" placeholder="Email" required>
+        <div class="password-wrapper">
+            <input type="password" name="password1" placeholder="Password" id="password1" required>
+            <span class="toggle-password" data-target="password1">Show</span>
+        </div>
+        <div class="password-wrapper">
+            <input type="password" name="password2" placeholder="Confirm Password" id="password2" required>
+            <span class="toggle-password" data-target="password2">Show</span>
+        </div>
+        <div id="password-error" class="error-msg"></div>
+        <button class="btn-register" type="submit">Register</button>
+    </form>
+    <p>Already have an account? <a href="{% url 'login' %}">Login</a></p>
+</div>
+
+<script>
+    // Password Show/Hide Toggle
+    const togglePasswordButtons = document.querySelectorAll('.toggle-password');
+    togglePasswordButtons.forEach(btn => {
+        btn.addEventListener('click', () => {
+            const targetId = btn.getAttribute('data-target');
+            const input = document.getElementById(targetId);
+            if (input.type === 'password') {
+                input.type = 'text';
+                btn.textContent = 'Hide';
+            } else {
+                input.type = 'password';
+                btn.textContent = 'Show';
+            }
+        });
+    });
+
+    // Password Match Validation
+    const form = document.getElementById('register-form');
+    const password1 = document.getElementById('password1');
+    const password2 = document.getElementById('password2');
+    const passwordError = document.getElementById('password-error');
+
+    form.addEventListener('submit', e => {
+        if (password1.value !== password2.value) {
+            e.preventDefault();
+            passwordError.textContent = "Passwords do not match!";
+            password2.focus();
+        } else {
+            passwordError.textContent = "";
+        }
+    });
+</script>
+
+</body>
+</html>

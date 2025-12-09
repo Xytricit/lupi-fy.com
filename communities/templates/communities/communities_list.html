@@ -1,0 +1,179 @@
+{% extends "dashboardhome.html" %}
+
+{% block title %}Communities - Lupify{% endblock %}
+
+{% block content %}
+<div class="feed communities-page">
+
+    <!-- Top Header + Create Button -->
+    <div class="communities-header">
+        <h2>Communities</h2>
+        {% if user.is_authenticated %}
+        <a href="{% url 'create_community' %}" class="create-community-btn">+ Create Community</a>
+        {% endif %}
+    </div>
+
+    <!-- Horizontal Category Bubble Scroller (Ellipses) -->
+    <div class="community-bubble-scroll">
+        <!-- ALL first -->
+        <div class="community-bubble" data-filter="all">
+            <div class="bubble-ellipse">All</div>
+        </div>
+
+        <!-- Then all categories -->
+        {% for code, name in categories %}
+        <div class="community-bubble" data-filter="{{ code }}">
+            <div class="bubble-ellipse">{{ name }}</div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Category Blocks -->
+    {% for code, name in categories %}
+    <div class="community-category-block" data-category="{{ code }}">
+        <h3 class="category-title">{{ name }}</h3>
+        <div class="community-grid">
+            {% for community in communities %}
+                {% if community.category == code %}
+                <a href="{% url 'community_detail' community.id %}" class="community-card-link">
+                    <div class="community-card">
+                        <div class="community-info">
+                            <h4 class="community-name">{{ community.name }}</h4>
+                            <p class="community-members">{{ community.members.count }} members</p>
+                            {% if community.description %}
+                                <p class="community-desc">{{ community.description|truncatechars:100 }}</p>
+                            {% endif %}
+                        </div>
+                        {% if user.is_authenticated %}
+                        <a href="{% url 'toggle_join_community' community.id %}"
+                           class="join-btn {% if user in community.members.all %}leave{% endif %}">
+                            {% if user in community.members.all %}Leave{% else %}Join{% endif %}
+                        </a>
+                        {% endif %}
+                    </div>
+                </a>
+                {% endif %}
+            {% endfor %}
+        </div>
+    </div>
+    {% endfor %}
+
+</div>
+
+<style>
+.communities-page { padding: 20px; }
+
+/* Header */
+.communities-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+/* Create button */
+.create-community-btn {
+    background: var(--primary);
+    color: #fff;
+    padding: 10px 18px;
+    border-radius: 10px;
+    font-weight: 600;
+    text-decoration: none;
+    transition: 0.2s;
+}
+.create-community-btn:hover { opacity: 0.85; }
+
+/* COMMUNITY BUBBLE SCROLLER (ELLIPSES) */
+.community-bubble-scroll {
+    display: flex;
+    overflow-x: auto;
+    gap: 12px;
+    padding: 8px 0;
+    margin-bottom: 15px;
+    scrollbar-width: none;
+}
+.community-bubble-scroll::-webkit-scrollbar { display: none; }
+
+.community-bubble {
+    text-align: center;
+    flex-shrink: 0;
+    cursor: pointer;
+}
+
+.bubble-ellipse {
+    padding: 8px 18px;
+    background: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 50px; /* ellipse shape */
+    font-weight: 600;
+    cursor: pointer;
+    transition: 0.2s;
+    white-space: nowrap;
+}
+
+.bubble-ellipse:hover { border-color: var(--primary); }
+.bubble-ellipse.active {
+    background: var(--primary);
+    color: #fff;
+    border-color: var(--primary);
+}
+
+/* Category grid */
+.community-grid {
+    display: grid;
+    gap: 15px;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+}
+
+.community-card-link { text-decoration: none; color: inherit; }
+
+.community-card {
+    background: var(--card-bg);
+    border: 1px solid var(--border-color);
+    padding: 15px;
+    border-radius: 12px;
+    transition: 0.2s;
+}
+.community-card:hover {
+    border-color: var(--primary);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+}
+
+.join-btn {
+    display: block;
+    text-align: center;
+    padding: 8px;
+    background: var(--primary);
+    color: white;
+    border-radius: 8px;
+    text-decoration: none;
+    margin-top: 14px;
+    font-weight: 600;
+}
+.join-btn.leave { background: #d9534f; }
+
+/* Mobile tweaks */
+@media (max-width: 480px) {
+    .bubble-ellipse { padding: 6px 12px; font-size: 0.9rem; }
+}
+</style>
+
+<script>
+document.querySelectorAll('.community-bubble').forEach(bubble => {
+    bubble.addEventListener('click', () => {
+        // Remove active from all
+        document.querySelectorAll('.bubble-ellipse').forEach(el => el.classList.remove('active'));
+        // Add active to clicked
+        bubble.querySelector('.bubble-ellipse').classList.add('active');
+
+        const filter = bubble.dataset.filter;
+        document.querySelectorAll('.community-category-block').forEach(block => {
+            block.style.display = (filter === "all" || block.dataset.category === filter) ? "block" : "none";
+        });
+    });
+});
+
+// Activate "All" category by default
+document.querySelector('.community-bubble[data-filter="all"] .bubble-ellipse').classList.add('active');
+</script>
+{% endblock %}

@@ -1,0 +1,14 @@
+{% extends "dashboardhome.html" %}
+
+{% block title %}{{ post.title }} - {{ post.community.name }}{% endblock %}
+
+{% block content %}
+<article class="community-post-detail card">
+    <h1>{{ post.title }}</h1>
+    <p class="meta">by {{ post.author.username }} • {{ post.created_at }}</p>
+    {% if post.image %}
+        <img src="{{ post.image.url }}" alt="{{ post.title }}" class="post-image">
+    {% endif %}
+    <div class="content">{{ post.content|linebreaks }}</div>
+</article>
+{% endblock %}

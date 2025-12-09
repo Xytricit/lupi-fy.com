@@ -1,0 +1,781 @@
+{% load static %}
+
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{% block title %}Lupify - Dashboard{% endblock %}</title>
+<link rel="stylesheet" href="{% static 'css/main.css' %}">
+<style>
+:root {
+    --primary: #1f9cee;
+    --primary-dark: #167ac6;
+    --accent: #fec76f;
+    --bg: #f8f9fa;
+    --card-bg: #ffffff;
+    --text-dark: #111827;
+    --secondary-text: #6b7280;
+    --icon-default: #6b7280;
+    --card-shadow: 0 6px 18px rgba(0,0,0,0.05);
+}
+
+/* ---------- Base Body ---------- */
+body {
+font-family: 'Segoe UI', sans-serif;
+margin: 0;
+background: var(--bg);
+color: var(--text-dark);
+overflow-x: hidden;
+}
+
+/* ---------- Header ---------- */
+header {
+    background: #fff;
+    padding: 10px 20px; /* slightly smaller */
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    height: 80px; 
+}
+.toc {
+display: none;
+align-items: center;
+justify-content: center;
+cursor: pointer;
+gap: 6px;
+}
+
+.toc svg {
+width: 24px;
+height: 24px;
+stroke: var(--icon-default);
+}
+
+.logo {
+font-size: 1.8rem;
+font-weight: 700;
+color: var(--primary);
+min-width: 120px;
+margin-right: 20px;
+}
+
+.search-wrapper {
+flex: 1;
+display: flex;
+justify-content: center;
+position: relative;
+}
+
+.search-bar {
+width: 60%;
+max-width: 550px;
+display: flex;
+align-items: center;
+background: #fff;
+border: 2px solid var(--primary);
+border-radius: 50px;
+padding: 8px 14px;
+transition: all 0.3s ease;
+}
+
+.search-bar svg {
+width: 20px;
+height: 20px;
+margin-right: 8px;
+stroke: var(--text-dark);
+cursor: pointer;
+}
+
+.search-bar input {
+flex: 1;
+border: none;
+outline: none;
+font-size: 1rem;
+padding: 5px 10px;
+background: none;
+color: var(--text-dark);
+}
+.search-bar.collapsed input {
+    width: 0;
+    opacity: 0;
+    padding: 0;
+    transition: all 0.3s ease;
+}
+
+.search-bar.expanded input {
+    width: 100%;
+    opacity: 1;
+    padding: 5px 10px;
+    pointer-events: auto; /* now works for all screen sizes */
+    display: block;
+}
+
+
+
+/* Nav Actions */
+.nav-actions {
+    display: flex;
+    align-items: center;
+    gap: 24px;
+    flex-shrink: 0;  /* prevent shrinking */
+}
+
+.icon-btn {
+width: 38px;
+height: 38px;
+display: flex;
+align-items: center;
+justify-content: center;
+background: var(--card-bg);
+border-radius: 50%;
+cursor: pointer;
+transition: 0.2s;
+border: 1px solid rgba(0,0,0,0.08);
+position: relative;
+}
+
+.icon-btn:hover {
+background: var(--accent);
+}
+
+.create-btn {
+padding: 8px 14px;
+background: var(--primary);
+color: #fff;
+border-radius: 8px;
+font-weight: 600;
+cursor: pointer;
+transition: 0.2s;
+}
+
+.create-btn:hover {
+background: var(--primary-dark);
+}
+
+/* Sidebar */
+.sidebar {
+position: fixed;
+left: 0;
+top: 0;
+bottom: 0;
+width: 60px;
+background: var(--card-bg);
+display: flex;
+flex-direction: column;
+align-items: center;
+padding-top: 100px;
+box-shadow: 2px 0 6px rgba(0,0,0,0.05);
+z-index: 10;
+transition: transform 0.3s ease-in-out;
+}
+
+.sidebar ul {
+list-style: none;
+padding: 0;
+margin: 0;
+width: 100%;
+}
+
+.sidebar ul li {
+width: 100%;
+height: 60px;
+display: flex;
+align-items: center;
+justify-content: center;
+cursor: pointer;
+border-radius: 12px;
+transition: background 0.2s, transform 0.2s;
+}
+
+.sidebar ul li.active {
+background: var(--primary);
+}
+
+.sidebar ul li.active svg {
+stroke: #fff;
+}
+
+.sidebar ul li svg {
+width: 28px;
+height: 28px;
+stroke: var(--icon-default);
+}
+
+.sidebar ul li:hover {
+background: var(--accent);
+transform: translateX(4px);
+}
+
+.sidebar ul li:hover svg {
+stroke: #111827;
+}
+
+.sidebar ul li a {
+display: flex;
+align-items: center;
+justify-content: center;
+width: 100%;
+height: 100%;
+text-decoration: none;
+}
+
+/* Slide-in mobile sidebar */
+/* Slide-in mobile sidebar */
+.sidebar.mobile {
+    width: 250px; /* percentage works too, but fixed px is safer for clicks */
+    transform: translateX(-100%);
+    padding-top: 80px;
+    z-index: 1000; /* above overlay */
+    transition: transform 0.3s ease-in-out;
+    display: flex;
+}
+
+.sidebar.mobile.active {
+    transform: translateX(0);
+}
+
+
+/* Overlay for mobile sidebar */
+#sidebarOverlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.2);
+    z-index: 90;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s ease;
+}
+
+#sidebarOverlay.active {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+
+
+/* Main wrapper */
+.main-wrapper {
+display: flex;
+margin-left: 60px;
+padding: 20px 30px;
+flex-direction: column;
+gap: 20px;
+transition: margin-left 0.3s;
+}
+
+.feed {
+flex: 1;
+display: flex;
+flex-direction: column;
+gap: 20px;
+}
+
+/* Post Cards */
+.post-card {
+background: var(--card-bg);
+padding: 18px 20px;
+border-radius: 12px;
+box-shadow: var(--card-shadow);
+transition: transform 0.2s;
+}
+
+.post-card:hover {
+transform: translateY(-4px);
+}
+
+/* Avatar */
+.pfp, .pfp-fallback {
+width: 38px;
+height: 38px;
+border-radius: 50%;
+display: flex;
+align-items: center;
+justify-content: center;
+font-weight: bold;
+color: #fff;
+font-size: 1rem;
+}
+
+.pfp {
+object-fit: cover;
+}
+
+.avatar-wrapper {
+position: relative;
+cursor: pointer;
+}
+
+.avatar-menu {
+    position: fixed;       /* float above everything */
+    top: 90px;             /* just below header (adjust to match header height) */
+    right: 30px;           /* aligns with the avatar */
+    display: none;         /* still hidden by default */
+    flex-direction: column;
+    background: #fff;
+    border: 1px solid rgba(0,0,0,0.15);
+    border-radius: 8px;
+    padding: 8px 0;
+    min-width: 150px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    z-index: 9999;
+    overflow: visible;
+}
+
+
+.avatar-menu a, .avatar-menu p {
+display: block;
+padding: 10px 16px;
+font-size: 0.95rem;
+color: var(--text-dark);
+text-decoration: none;
+cursor: pointer;
+transition: background 0.2s;
+}
+
+.avatar-menu a:hover, .avatar-menu p:hover {
+background: var(--accent);
+color: var(--text-dark);
+}
+
+/* Modal */
+.create-modal {
+display: none;
+position: fixed;
+inset: 0;
+background: rgba(0,0,0,0.5);
+backdrop-filter: blur(3px);
+z-index: 100;
+align-items: center;
+justify-content: center;
+}
+
+.create-modal .modal-content {
+background: #fff;
+padding: 30px 40px;
+border-radius: 12px;
+text-align: center;
+min-width: 300px;
+box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+}
+
+.create-modal .modal-content h3 {
+margin-bottom: 20px;
+font-size: 1.3rem;
+color: var(--primary);
+}
+
+.create-modal .modal-options {
+display: flex;
+gap: 20px;
+justify-content: center;
+flex-wrap: wrap;
+}
+
+.create-modal .modal-option {
+padding: 12px 20px;
+border-radius: 10px;
+background: var(--primary);
+color: #fff;
+cursor: pointer;
+font-weight: 600;
+transition: 0.2s;
+}
+
+.create-modal .modal-option:hover {
+background: var(--accent);
+color: #111827;
+}
+
+/* ---------- MOBILE ---------- */
+@media (max-width: 992px) {
+.main-wrapper { margin-left: 0; padding: 12px 16px; }
+.search-bar { width: 90%; }
+.avatar-menu {
+        position: fixed;
+        top: 60px;      /* adjust for header */
+        right: 10px;    /* align nicely */
+        max-height: 50vh;
+        overflow-y: auto;
+    }
+
+}
+
+@media (max-width: 768px) {
+header { flex-wrap: nowrap; height: 60px; padding: 8px 12px; }
+.toc { display: flex; }
+.search-bar { width: 40px; padding: 6px; border-radius: 50%; margin: 0; }
+.search-bar.expanded { width: 80%; padding: 8px 14px; border-radius: 50px; }
+.nav-actions { gap: 16px; transition: 0.3s; }
+.sidebar { display: none; }
+.pfp, .pfp-fallback { width: 32px; height: 32px; }
+.create-btn { padding: 6px 12px; font-size: 0.9rem; }
+.post-card { padding: 14px 16px; font-size: 0.95rem; }
+.main-wrapper { margin-left: 0; padding: 12px; }
+}
+
+/* Collapsible Search on Mobile */
+.search-bar.collapsed input { display: none; }
+.search-bar.expanded input { display: block; width: 100%; }
+.nav-actions.hide-on-search { display: none !important; }
+
+@media (max-width: 480px) {
+.logo { font-size: 1.4rem; margin-right: 10px; }
+.icon-btn { width: 32px; height: 32px; }
+.search-bar input { font-size: 0.9rem; }
+.search-bar {
+    background: transparent; /* default: no bubble */
+    border: none;
+}
+
+.search-bar.expanded {
+    background: #fff; /* show bubble only when expanded */
+    border: 2px solid var(--primary);
+    border-radius: 50px;
+    padding: 8px 14px;
+}
+}
+
+/* Prevent horizontal scroll on mobile */
+body, html { overflow-x: hidden; }
+
+/* Sidebar mobile logo */
+.sidebar-logo {
+    display: none; /* hidden by default */
+    width: 100%;
+    text-align: center;
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--primary);
+    padding: 10px 0; /* small padding for spacing */
+}
+
+/* Show logo only on mobile */
+@media (max-width: 768px) {
+    .sidebar-logo {
+        display: block;
+        margin: 0;         /* remove default margin */
+    }
+}
+@media (max-width: 768px) {
+    .sidebar.mobile {
+        padding-top: 10px;  /* instead of 80px or 100px */
+    }
+}
+
+</style>
+
+</head>
+<body>
+
+<!-- Header -->
+
+<header>
+    <span class="toc" id="mobileTOC">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M4 6h16M4 12h16M4 18h16"/>
+        </svg>
+    </span>
+    <h1 class="logo">Lupify</h1>
+    <div class="search-wrapper">
+        <div class="search-bar collapsed" id="mobileSearch">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                <circle cx="11" cy="11" r="8"/>
+                <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+            </svg>
+            <input type="text" placeholder="Search Lupify...">
+        </div>
+    </div>
+    <div class="nav-actions">
+        <div class="create-btn">Create</div>
+        <div class="icon-btn avatar-wrapper">
+            {% if user.avatar %}
+                <img src="{{ user.avatar.url }}" class="pfp">
+            {% else %}
+                <div class="pfp-fallback" style="background: {{ user.color|default:'#999' }}">
+                    {{ user.username|slice:":1"|upper }}
+                </div>
+            {% endif %}
+            <div class="avatar-menu">
+                <a href="{% url 'account_dashboard' %}">Accounts</a>
+                <a href="#">Creators</a>
+                <a href="#">Appearance</a>
+                <p id="logout">Logout</p>
+            </div>
+        </div>
+    </div>
+</header>
+
+<!-- Sidebar -->
+
+<aside class="sidebar" id="sidebar">
+    <!-- Mobile-only logo -->
+    <div class="sidebar-logo">
+        <h2>Lupify</h2>
+    </div>
+    <ul>
+        <li class="{% if request.resolver_match.url_name == 'dashboard_home' %}active{% endif %}" title="Home">
+            <a href="{% url 'dashboard_home' %}">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                    <path d="M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8"/>
+                    <path d="M3 10a2 2 0 0 1 .709-1.528l7-6a2 2 0 0 1 2.582 0l7 6A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+                </svg>
+            </a>
+        </li>
+        <li class="{% if request.resolver_match.url_name == 'blogs' %}active{% endif %}" title="Blogs">
+            <a href="{% url 'blogs' %}">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                    <path d="M12 7v14"/>
+                    <path d="M16 12h2"/>
+                    <path d="M16 8h2"/>
+                    <path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"/>
+                    <path d="M6 12h2"/>
+                    <path d="M6 8h2"/>
+                </svg>
+            </a>
+        </li>
+        <li class="{% if request.resolver_match.url_name == 'communities' %}active{% endif %}" title="Communities">
+            <a href="{% url 'communities' %}">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                    <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/>
+                    <path d="M16 3.128a4 4 0 0 1 0 7.744"/>
+                    <path d="M22 21v-2a4 4 0 0 0-3-3.87"/>
+                    <circle cx="9" cy="7" r="4"/>
+                </svg>
+            </a>
+        </li>
+        <li class="{% if request.resolver_match.url_name == 'subscriptions' %}active{% endif %}" title="Subscriptions">
+            <a href="{% url 'subscriptions' %}">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                    <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/>
+                    <circle cx="9" cy="7" r="4"/>
+                    <line x1="19" x2="19" y1="8" y2="14"/>
+                    <line x1="22" x2="16" y1="11" y2="11"/>
+                </svg>
+            </a>
+        </li>
+    </ul>
+</aside>
+
+<div id="sidebarOverlay"></div>
+
+<!-- Main wrapper -->
+
+<div class="main-wrapper">
+    {% block content %}
+    <div class="feed" id="feed">
+        <div class="layout-grid" style="display:flex;gap:20px;align-items:flex-start;">
+            <div class="main-feed" style="flex:1;">
+                {% if recent_posts %}
+                    {% for post in recent_posts %}
+                    <div class="post-card">
+                        <div style="display:flex;justify-content:space-between;align-items:center;">
+                            <div>
+                                <a href="{% url 'post_detail' post.id %}"><h4>{{ post.title }}</h4></a>
+                                <p style="margin:0;color:var(--secondary-text);">by {{ post.author.username }} • {{ post.created|date:'M d, Y' }}</p>
+                            </div>
+                            <div style="display:flex;gap:8px;align-items:center;">
+                                <button class="bookmark-btn" data-post-id="{{ post.id }}">{% if request.user in post.bookmarks.all %}★{% else %}☆{% endif %}</button>
+                                <button class="more-btn">⋯</button>
+                                <div class="more-menu" style="display:none;position:absolute;">
+                                    <button class="report-post-btn" data-post-id="{{ post.id }}">Report</button>
+                                </div>
+                            </div>
+                        </div>
+                        <p style="color:var(--secondary-text);">{{ post.content|truncatewords:30 }}</p>
+                        <a href="{% url 'post_detail' post.id %}">Read more</a>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="post-card">No posts to show yet.</div>
+                {% endif %}
+            </div>
+
+            <aside style="width:320px;">
+                <div class="post-card">
+                    <h4>Trending</h4>
+                    {% if trending_posts %}
+                        {% for t in trending_posts %}
+                            <div style="padding:8px 0;border-bottom:1px solid #eee;">
+                                <a href="{% url 'post_detail' t.id %}">{{ t.title }}</a>
+                                <div style="color:var(--secondary-text);font-size:0.9rem;">{{ t.likes.count }} likes • {{ t.created|date:'M d' }}</div>
+                            </div>
+                        {% endfor %}
+                    {% else %}
+                        <p>No trending posts yet.</p>
+                    {% endif %}
+                </div>
+
+                <div class="post-card" style="margin-top:12px;">
+                    <h4>Popular Communities</h4>
+                    {% if popular_communities %}
+                        <ul style="list-style:none;padding:0;margin:0;">
+                        {% for c in popular_communities %}
+                            <li style="padding:8px 0;border-bottom:1px solid #eee;">
+                                <a href="{% url 'community_detail' c.id %}">{{ c.name }}</a>
+                                <div style="color:var(--secondary-text);font-size:0.9rem;">{{ c.members.count }} members</div>
+                            </li>
+                        {% endfor %}
+                        </ul>
+                    {% else %}
+                        <p>No communities yet.</p>
+                    {% endif %}
+                </div>
+            </aside>
+        </div>
+    </div>
+    {% endblock %}
+</div>
+
+<!-- Create Modal -->
+
+<div class="create-modal" id="createModal">
+    <div class="modal-content">
+        <h3>Select post type</h3>
+        <div class="modal-options">
+            <div class="modal-option" id="community-post">Community Post</div>
+            <div class="modal-option" id="blog-post">Blog Post</div>
+        </div>
+    </div>
+</div>
+
+<form id="logout-form" method="POST" action="{% url 'logout' %}" style="display: none;">
+    {% csrf_token %}
+</form>
+
+<script>
+// ----------------------------------------------------
+// AVATAR DROPDOWN
+// ----------------------------------------------------
+const avatarWrapper = document.querySelector('.avatar-wrapper');
+const avatarMenu = document.querySelector('.avatar-menu');
+
+avatarWrapper.addEventListener('click', e => {
+    e.stopPropagation();
+    avatarMenu.style.display = avatarMenu.style.display === 'flex' ? 'none' : 'flex';
+});
+
+document.addEventListener('click', () => { 
+    avatarMenu.style.display = 'none';
+});
+
+// ----------------------------------------------------
+// LOGOUT
+// ----------------------------------------------------
+document.getElementById('logout').addEventListener('click', () => {
+    document.getElementById('logout-form').submit();
+});
+
+// ----------------------------------------------------
+// CREATE MODAL
+// ----------------------------------------------------
+const createBtn = document.querySelector('.create-btn');
+const createModal = document.getElementById('createModal');
+
+const blogPostBtn = document.getElementById('blog-post');          // Create Post
+const communityPostBtn = document.getElementById('community-post'); // Create Community
+
+// Open modal
+createBtn.addEventListener('click', () => { 
+    createModal.style.display = 'flex'; 
+});
+
+// Close modal by clicking outside
+createModal.addEventListener('click', e => { 
+    if (e.target === createModal) {
+        createModal.style.display = 'none';
+    }
+});
+
+// Redirect: Create Post
+blogPostBtn.addEventListener('click', () => { 
+    window.location.href = "{% url 'create_post' %}";
+});
+
+// Redirect: Create Community (REPLACED ALERT)
+// Redirect: Create Community Post
+communityPostBtn.addEventListener('click', () => { 
+    window.location.href = "{% url 'create_community_post_generic' %}";
+});
+
+
+
+
+// ----------------------------------------------------
+// SEARCH BAR EXPAND/COLLAPSE (PC + MOBILE)
+// ----------------------------------------------------
+const searchBar = document.getElementById('mobileSearch');
+const searchInput = searchBar.querySelector('input');
+const searchIcon = searchBar.querySelector('svg');
+const navActions = document.querySelector('.nav-actions');
+
+const toggleSearch = (e) => {
+    e.stopPropagation();
+    searchBar.classList.toggle('expanded');
+    searchBar.classList.toggle('collapsed');
+
+    // Hide nav actions ONLY on mobile
+    if (searchBar.classList.contains('expanded') && window.innerWidth <= 768) {
+        searchInput.focus();
+        navActions.classList.add('hide-on-search');
+    } else {
+        navActions.classList.remove('hide-on-search');
+        searchInput.focus();
+    }
+};
+
+searchIcon.addEventListener('click', toggleSearch);
+searchBar.addEventListener('click', toggleSearch);
+
+// Close search when clicking outside
+document.addEventListener('click', (e) => {
+    if (!searchBar.contains(e.target)) {
+        searchBar.classList.remove('expanded');
+        searchBar.classList.add('collapsed');
+        navActions.classList.remove('hide-on-search');
+    }
+});
+
+// ----------------------------------------------------
+// SIDEBAR TOGGLE FOR MOBILE
+// ----------------------------------------------------
+const tocBtn = document.getElementById('mobileTOC');
+const sidebar = document.getElementById('sidebar');
+const sidebarOverlay = document.getElementById('sidebarOverlay');
+
+// Add "mobile" sidebar class on load
+if (window.innerWidth <= 768) sidebar.classList.add('mobile');
+
+// Open sidebar
+tocBtn.addEventListener('click', () => {
+    if (window.innerWidth <= 768) {
+        sidebar.classList.toggle('active');
+        sidebarOverlay.classList.toggle('active');
+    }
+});
+
+// Close when clicking overlay
+sidebarOverlay.addEventListener('click', () => {
+    sidebar.classList.remove('active');
+    sidebarOverlay.classList.remove('active');
+});
+
+// Auto reset on resize
+window.addEventListener('resize', () => {
+    if (window.innerWidth > 768) {
+        sidebar.classList.remove('active');
+        sidebarOverlay.classList.remove('active');
+    } else {
+        sidebar.classList.add('mobile');
+    }
+});
+</script>
+
+
+</body>
+</html>

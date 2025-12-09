@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Create Post - Lupify</title>
+<style>
+/* ===================== Wrapper ===================== */
+.post-wrapper {
+    width: 90%;
+    max-width: 900px;
+    margin: 50px auto;
+    background: #fff;
+    padding: 35px;
+    border-radius: 12px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+    box-sizing: border-box;
+}
+
+/* ===================== Titles ===================== */
+.post-wrapper h2 {
+    color: #1f9cee;
+    margin-bottom: 25px;
+    font-weight: 700;
+    font-size: 1.8rem;
+}
+
+/* ===================== Inputs ===================== */
+.post-wrapper label {
+    display: block;
+    margin-top: 15px;
+    margin-bottom: 5px;
+    font-weight: 600;
+}
+
+.post-wrapper input,
+.post-wrapper textarea,
+.post-wrapper select {
+    width: 100%;
+    padding: 12px 15px;
+    margin-bottom: 20px;
+    border-radius: 10px;
+    border: 1px solid #ccc;
+    font-size: 1rem;
+    font-family: inherit;
+    box-sizing: border-box;
+}
+
+.post-wrapper textarea {
+    height: 250px;
+    resize: vertical;
+}
+
+/* ===================== Buttons ===================== */
+.btn-primary {
+    background: #1f9cee;
+    color: white;
+    padding: 12px 18px;
+    border-radius: 8px;
+    border: none;
+    font-weight: bold;
+    cursor: pointer;
+    transition: 0.2s;
+}
+.btn-primary:hover {
+    background: #fec76f;
+    color: #111827;
+}
+
+/* ===================== Link Preview ===================== */
+.link-preview-container {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    margin-bottom: 20px;
+}
+
+.link-preview {
+    position: relative;
+    border-radius: 10px;
+    overflow: hidden;
+    border: 1px solid #ccc;
+    padding: 10px;
+    background: #f8f9fa;
+}
+
+.link-preview img {
+    max-width: 100%;
+    border-radius: 8px;
+}
+
+.link-preview button {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    background: rgba(0,0,0,0.5);
+    color: #fff;
+    border: none;
+    padding: 4px 8px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 0.8rem;
+}
+
+.link-preview button:hover {
+    background: #fec76f;
+    color: #111827;
+}
+
+/* ===================== Popup ===================== */
+.popup {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    background: #fec76f;
+    color: #111827;
+    padding: 12px 18px;
+    border-radius: 8px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+    cursor: pointer;
+    z-index: 1000;
+    display: none;
+}
+
+/* ===================== Warning Box ===================== */
+#warningBox {
+    display: none;
+    background: #f44336;
+    color: white;
+    padding: 15px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+    font-weight: bold;
+    font-size: 1.2rem;
+}
+
+/* ===================== MOBILE RESPONSIVE ===================== */
+@media (max-width: 768px) {
+    .post-wrapper {
+        width: 95%;
+        margin: 30px auto;
+        padding: 20px;
+    }
+
+    .post-wrapper h2 {
+        font-size: 1.5rem;
+        margin-bottom: 20px;
+    }
+
+    .post-wrapper input,
+    .post-wrapper textarea,
+    .post-wrapper select {
+        padding: 10px 12px;
+        font-size: 0.95rem;
+    }
+
+    .post-wrapper textarea {
+        height: 180px;
+    }
+
+    .btn-primary {
+        padding: 10px 16px;
+        font-size: 0.95rem;
+    }
+
+    .link-preview button {
+        font-size: 0.75rem;
+        padding: 3px 6px;
+    }
+
+    #warningBox {
+        font-size: 1rem;
+        padding: 12px;
+    }
+}
+
+@media (max-width: 480px) {
+    .post-wrapper {
+        width: 100%;
+        margin: 20px 0;
+        padding: 15px;
+        border-radius: 0;
+        box-shadow: none;
+    }
+
+    .post-wrapper h2 {
+        font-size: 1.3rem;
+        margin-bottom: 15px;
+    }
+
+    .btn-primary {
+        width: 100%;
+        padding: 12px 0;
+        font-size: 0.9rem;
+    }
+
+    .link-preview {
+        padding: 8px;
+    }
+
+    .link-preview img {
+        width: 100%;
+        height: auto;
+    }
+}
+</style>
+</head>
+<body>
+
+<div class="post-wrapper">
+    <h2>Create a New Post</h2>
+
+    <!-- Image preview container -->
+    <div class="link-preview-container" id="linkPreviewContainer"></div>
+
+    <!-- Popup message -->
+    <div class="popup" id="popupMessage">Only images are allowed!</div>
+
+    <form method="POST" enctype="multipart/form-data">
+        {% csrf_token %}
+        {{ form.non_field_errors }}
+
+        <!-- Warning box -->
+        <div id="warningBox"></div>
+
+        <!-- Title -->
+        <label for="{{ form.title.id_for_label }}">Title</label>
+        {{ form.title.errors }}
+        {{ form.title }}
+
+        <!-- Content -->
+        <label for="{{ form.content.id_for_label }}">Content</label>
+        {{ form.content.errors }}
+        {{ form.content }}
+
+        <!-- Category -->
+        <label for="{{ form.category.id_for_label }}">Category</label>
+        {{ form.category.errors }}
+        {{ form.category }}
+        <!-- Description -->
+        <label for="{{ form.description.id_for_label }}">Description</label>
+        {{ form.description }}
+
+        <!-- Hidden file input for multiple images -->
+        {{ form.images.errors }}
+        <input type="file" name="images" id="imageInput" accept="image/*" multiple style="display:none">
+
+        <!-- Add Image Button -->
+        <button type="button" id="addImageBtn" class="btn-primary">Add Image</button>
+
+        <!-- Submit Button -->
+        <button type="submit" class="btn-primary">Publish</button>
+    </form>
+</div>
+
+
+
+<!-- JSON banned words for JS -->
+{{ banned_words|json_script:"bannedWordsJSON" }}
+
+<script>
+// ===================== Variables =====================
+const addImageBtn = document.getElementById('addImageBtn');
+const imageInput = document.getElementById('imageInput');
+const previewContainer = document.getElementById('linkPreviewContainer');
+const popupMessage = document.getElementById('popupMessage');
+const warningBox = document.getElementById('warningBox');
+const form = document.querySelector('form');
+const bannedWordsList = JSON.parse(document.getElementById('bannedWordsJSON').textContent);
+const textarea = document.getElementById("id_content");
+const descriptionField = form.querySelector('[name="description"]');
+
+// ===================== Allowed Extensions =====================
+const allowedExtensions = ['jpg','jpeg','png','gif','webp'];
+
+// ===================== Show File Selector =====================
+addImageBtn.addEventListener('click', () => {
+    imageInput.click();
+});
+
+// ===================== Handle File Selection =====================
+imageInput.addEventListener('change', () => {
+    Array.from(imageInput.files).forEach(file => {
+        const extension = file.name.split('.').pop().toLowerCase();
+        if (!allowedExtensions.includes(extension)) {
+            showPopup();
+            return;
+        }
+
+        const div = document.createElement('div');
+        div.classList.add('link-preview');
+
+        const img = document.createElement('img');
+        img.src = URL.createObjectURL(file);
+        div.appendChild(img);
+
+        const removeBtn = document.createElement('button');
+        removeBtn.textContent = 'Remove';
+        removeBtn.addEventListener('click', () => div.remove());
+        div.appendChild(removeBtn);
+
+        previewContainer.appendChild(div);
+    });
+
+    imageInput.value = '';
+});
+
+// ===================== Popup Function =====================
+function showPopup() {
+    popupMessage.style.display = 'block';
+    const timeout = setTimeout(() => {
+        popupMessage.style.display = 'none';
+    }, 3000);
+
+    popupMessage.onclick = () => {
+        popupMessage.style.display = 'none';
+        clearTimeout(timeout);
+    };
+}
+
+// ===================== Real-time Banned Words Detection =====================
+textarea.addEventListener("input", () => {
+    let text = textarea.value.toLowerCase();
+    let foundWords = bannedWordsList.filter(word => text.includes(word));
+
+    if(foundWords.length > 0){
+        warningBox.innerHTML = `Banned words detected: <strong>${foundWords.join(", ")}</strong>`;
+        warningBox.style.display = "block";
+    } else {
+        warningBox.style.display = "none";
+    }
+});
+
+// ===================== Form Submission Check =====================
+form.addEventListener('submit', (e) => {
+    let found = false;
+
+    const fields = [
+        form.querySelector('#id_title') || form.querySelector('[name="title"]'),
+        textarea,
+        form.querySelector('#id_tags') || form.querySelector('[name="tags"]')
+    ];
+
+    // Check banned words
+    fields.forEach(field => {
+        if (!field) return;
+        const lines = field.value.split(/\n/);
+        lines.forEach(line => {
+            bannedWordsList.forEach(word => {
+                const regex = new RegExp(`\\b${word}\\b`, 'i');
+                if (regex.test(line)) {
+                    found = true;
+                }
+            });
+        });
+    });
+
+    // Check description
+    if (!descriptionField.value.trim()) {
+        e.preventDefault();
+        warningBox.innerHTML = "Please enter a description for your post.";
+        warningBox.style.display = "block";
+        descriptionField.focus();
+        return;
+    }
+
+    if(found){
+        e.preventDefault();
+        warningBox.innerHTML = `
+            Your post contains content that is not allowed on this website. Please review our 
+            <a href="/terms-of-service" style="color:white; text-decoration:underline;">Terms of Service</a> 
+            and avoid using inappropriate language. 
+
+            <strong>If you continue, the following may happen:</strong>
+            <ul style="margin-top: 8px; padding-left: 20px;">
+                <li>Your post may be removed by moderators.</li>
+                <li>Your account could be temporarily suspended.</li>
+                <li>Repeated violations may lead to permanent banning.</li>
+            </ul>
+        `;
+        warningBox.style.display = 'block';
+        warningBox.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        return false;
+    } else {
+        warningBox.style.display = 'none';
+    }
+});
+</script>
+
+
+</body>
+</html>

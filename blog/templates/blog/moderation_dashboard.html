@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Moderator Dashboard</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #121212;
+            color: white;
+            padding: 40px;
+        }
+        h1 {
+            margin-bottom: 30px;
+            color: #1f9cee;
+        }
+        .report-card {
+            padding: 16px;
+            border-radius: 10px;
+            background: #1e1e1e;
+            border: 1px solid #333;
+            margin-bottom: 20px;
+        }
+        .report-card h3 {
+            margin: 0 0 8px 0;
+        }
+        .report-card p {
+            margin: 4px 0;
+        }
+        .resolve-btn {
+            background: #10b981;
+            padding: 8px 12px;
+            border-radius: 6px;
+            border: none;
+            cursor: pointer;
+            color: white;
+            margin-top: 10px;
+        }
+        .resolve-btn:hover {
+            background: #0f8e6a;
+        }
+    </style>
+</head>
+<body>
+
+<h1>Moderator Dashboard</h1>
+
+<div id="reports-container">
+    {% for report in reports %}
+    <div class="report-card">
+        <h3>User: {{ report.user.username }}</h3>
+        <p><strong>Banned Words Found:</strong> {{ report.banned_words_found }}</p>
+        <p><strong>Post Content:</strong> {{ report.post_content }}</p>
+        <p><small>{{ report.timestamp }}</small></p>
+
+        <form action="{% url 'resolve_report' report.id %}" method="post">
+            {% csrf_token %}
+            <button type="submit" class="resolve-btn">Mark as Resolved</button>
+        </form>
+    </div>
+    {% empty %}
+    <p>No pending reports 🎉</p>
+    {% endfor %}
+</div>
+
+</body>
+</html>

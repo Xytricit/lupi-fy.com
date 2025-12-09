@@ -9,4 +9,5 @@ urlpatterns = [
     path('<int:community_id>/save/', views.save_community, name='save_community'),
     path('create-post/', views.create_community_post_generic, name='create_community_post_generic'),
     path('<int:community_id>/create-post/', views.create_community_post, name='create_community_post'),
+    path('post/<int:post_id>/', views.community_post_detail, name='community_post_detail'),
 ]

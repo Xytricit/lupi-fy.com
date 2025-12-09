@@ -1,0 +1,347 @@
+{% extends "dashboardhome.html" %}
+{% block title %}{{ community.name }} - Lupify{% endblock %}
+
+{% block content %}
+<div class="community-wrapper">
+    <div class="community-page">
+
+        <!-- Top section: Banner + Sidebar -->
+        <div class="community-top">
+
+            <!-- Left column: Banner + Posts -->
+            <div class="left-column">
+
+                <!-- Banner + controls -->
+                <div class="banner-column">
+                    <div class="community-banner">
+                        {% if community.banner_image %}
+                            <img src="{{ community.banner_image.url }}" alt="Banner">
+                        {% else %}
+                            <div class="banner-placeholder"></div>
+                        {% endif %}
+                        <div class="community-logo">
+                            {% if community.community_image %}
+                                <img src="{{ community.community_image.url }}" alt="{{ community.name }}">
+                            {% else %}
+                                <div class="logo-placeholder"></div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <div class="community-controls">
+                        {% if user.is_authenticated %}
+                            <a href="{% url 'create_community_post' community.id %}" class="btn primary">Create Post</a>
+                            <a href="{% url 'toggle_join_community' community.id %}" 
+                               class="btn {% if user in community.members.all %}danger{% else %}success{% endif %}">
+                                {% if user in community.members.all %}Leave{% else %}Join{% endif %}
+                            </a>
+                            <form method="POST" action="{% url 'save_community' community.id %}" style="display:inline;">
+                                {% csrf_token %}
+                                <button type="submit" class="btn {% if community in user.saved_communities.all %}danger{% else %}success{% endif %}">
+                                    {% if community in user.saved_communities.all %}Saved{% else %}Save{% endif %}
+                                </button>
+                            </form>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Posts Feed -->
+                <section class="posts-feed">
+                    {% if community.posts.exists %}
+                        {% for post in community.posts.all %}
+                            <div class="community-post card">
+
+                                {% if post.image %}
+                                    <div class="post-image-wrapper">
+                                        <div class="post-image-bg" style="background-image: url('{{ post.image.url }}');"></div>
+                                        <img src="{{ post.image.url }}" alt="Post image" class="post-image reddit-style">
+                                    </div>
+                                {% endif %}
+
+                                <div class="post-text">
+                                    <h4>{{ post.title }}</h4>
+                                    <p>{{ post.content|truncatechars:250 }}</p>
+                                    <span class="post-meta">by {{ post.author.username }} • {{ post.created_at }}</span>
+                                </div>
+
+                            </div>
+                        {% endfor %}
+                    {% else %}
+                        <p class="empty">No posts yet.</p>
+                    {% endif %}
+                </section>
+
+            </div>
+
+            <!-- Right Sidebar -->
+            <aside class="community-sidebar card">
+                <h3>{{ community.name }}</h3>
+                <p class="desc">{{ community.description }}</p>
+                <hr>
+                <h4>Stats</h4>
+                <ul class="stat-list">
+                    <li><strong>Weekly Visits:</strong> {{ community.weekly_visits }}</li>
+                    <li><strong>Weekly Contributions:</strong> {{ community.weekly_contributions }}</li>
+                    <li><strong>Total Members:</strong> {{ community.members.count }}</li>
+                </ul>
+                <hr>
+                <h4>Rules</h4>
+                <p class="rules">{{ community.rules|linebreaks }}</p>
+                <hr>
+                <h4>Moderators</h4>
+                <ul class="moderators">
+                    <li>{{ community.creator.username }} (Admin)</li>
+                </ul>
+            </aside>
+
+        </div>
+
+    </div>
+</div>
+
+<style>
+/* Wrapper */
+.community-wrapper {
+    display: flex;
+    justify-content: center;
+    width: 100%;
+    padding: 0 15px;
+}
+.community-page {
+    width: 100%;
+    max-width: 1100px;
+    font-family: "Inter", sans-serif;
+}
+
+/* Top section: left + right layout */
+.community-top {
+    display: flex;
+    gap: 20px;
+    align-items: flex-start;
+}
+.left-column {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+.community-sidebar {
+    width: 280px;
+    flex-shrink: 0;
+    padding: 12px;
+}
+.community-sidebar h3,
+.community-sidebar h4,
+.community-sidebar p,
+.community-sidebar li { color: #333; }
+.community-sidebar .stat-list li strong,
+.community-sidebar .moderators li { color: #1f9cee; }
+.community-sidebar .rules { color: #555; }
+.community-sidebar .stat-list li,
+.community-sidebar .moderators li { margin-bottom: 6px; }
+
+/* Banner */
+.community-banner {
+    position: relative;
+    width: 100%;
+    height: 280px;       /* desktop height */
+    border-radius: 20px;
+    overflow: visible;   /* allow logo to overflow without cutting */
+    padding-bottom: 0;   /* no extra padding needed now */
+}
+
+.community-banner img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+.banner-placeholder {
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(135deg, #dfe9ff, #c9d9ff);
+}
+.community-logo {
+    width: 120px;
+    height: 120px;
+    border-radius: 20px;
+    border: 4px solid white;
+    position: absolute;
+    bottom: 0;           /* place logo at bottom of banner */
+    left: 20px;
+    box-shadow: 0 6px 20px rgba(0,0,0,0.15);
+    z-index: 5;
+}
+.community-logo img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+/* Buttons */
+.btn {
+    padding: 8px 18px;
+    border-radius: 10px;
+    font-weight: 600;
+    font-size: 0.9rem;
+    color: #fff;
+    text-decoration: none;
+    transition: 0.2s;
+    cursor: pointer;
+}
+.primary { background: #1f9cee; }
+.success { background: #10b981; }
+.danger { background: #d9534f; }
+.btn:hover { opacity: 0.9; transform: translateY(-1px); }
+.community-controls {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+/* Posts Feed */
+.posts-feed {
+    margin-top: 40px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    align-items: center;
+}
+.empty {
+    font-size: 0.95rem;
+    opacity: 0.7;
+    text-align: center;
+    width: 100%;
+}
+
+/* Cards / Posts */
+.card {
+    background: #fff;
+    border-radius: 16px;
+    padding: 18px 22px;
+    box-shadow: 0 6px 20px rgba(0,0,0,0.06);
+    transition: 0.25s ease;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+.card:hover { box-shadow: 0 10px 25px rgba(0,0,0,0.1); }
+
+.community-post {
+    width: 70%;
+    max-width: 600px;
+    padding: 20px;
+}
+.community-post h4 { margin-bottom: 8px; }
+.community-post p { margin-bottom: 12px; }
+.post-meta { font-size: 0.8rem; opacity: 0.7; }
+
+/* Post images */
+.post-image-wrapper {
+    position: relative;
+    width: 100%;
+    border-radius: 12px;
+    overflow: hidden;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin-bottom: 12px;
+    background: #f0f0f0;
+}
+.post-image-bg {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-size: cover;
+    background-position: center;
+    filter: blur(20px) brightness(0.5);
+    z-index: 1;
+    transform: scale(1.1);
+}
+.community-post img.reddit-style {
+    width: 100%;
+    max-width: 400px;
+    aspect-ratio: 1 / 1;
+    object-fit: cover;
+    border-radius: 12px;
+    z-index: 2;
+    position: relative;
+    display: block;
+    margin: 10px auto;
+}
+
+/* Post text overlay */
+.post-text {
+    position: relative;
+    z-index: 3;
+    width: 100%;
+    padding: 12px;
+    margin-top: -20px;
+    background: linear-gradient(to bottom, rgba(255,255,255,0.9), rgba(255,255,255,0.95));
+    border-top: 2px solid rgba(0,0,0,0.08);
+    border-radius: 0 0 12px 12px;
+    backdrop-filter: blur(5px);
+}
+
+/* Dropdown menu */
+.dropdown { position: relative; }
+.three-dots { width: 26px; cursor: pointer; stroke-width: 2.4; }
+.dropdown-content {
+    position: absolute;
+    right: 0;
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: 0 6px 20px rgba(0,0,0,0.1);
+    padding: 10px 0;
+    display: none;
+    min-width: 160px;
+    z-index: 20;
+}
+.dropdown-content a {
+    padding: 10px 16px;
+    display: block;
+    font-size: 0.9rem;
+    color: #333;
+}
+.dropdown-content a:hover { background: #f3f5ff; }
+
+/* Responsive */
+@media (max-width: 1024px) {
+    .community-page { max-width: 95%; }
+    .community-top { gap: 10px; }
+}
+@media (max-width: 768px) {
+    .community-page { max-width: 100%; padding: 0; }
+    .community-top { flex-direction: column; }
+    .community-controls { justify-content: center; margin-top: 15px; gap: 10px; }
+    .community-banner {
+        height: 160px;
+        border-radius: 12px;
+        padding-bottom: 0;
+    }
+    .community-logo { display: none; }
+    .community-sidebar { width: 95%; margin: 15px auto 30px auto; }
+    .community-post img.reddit-style { width: 100%; aspect-ratio: auto; border-radius: 12px 12px 0 0; }
+    .post-text { margin-top: 0; border-top: none; border-radius: 0 0 12px 12px; }
+    .post-image-bg { filter: blur(15px) brightness(0.5); }
+}
+</style>
+
+
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+    const toggle = document.getElementById("dropdown-toggle");
+    const menu = document.querySelector(".dropdown-content");
+
+    toggle.addEventListener("click", e => {
+        e.stopPropagation();
+        menu.style.display = menu.style.display === "block" ? "none" : "block";
+    });
+
+    document.addEventListener("click", () => menu.style.display = "none");
+});
+</script>
+{% endblock %}
