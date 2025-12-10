@@ -17,11 +17,17 @@
     {% if subscribed_communities or subscribed_authors %}
     <div class="subscription-list">
         {% for sub in subs %}
-        <div class="subscription-card">
+        <div class="subscription-card" data-type="{% if sub.community %}community{% elif sub.author %}author{% endif %}">
             {% if sub.community %}
                 <h4>{{ sub.community.name }}</h4>
                 <p>{{ sub.community.members.count }} members</p>
-                <a class="unsubscribe-btn" href="{% url 'toggle_subscription' sub.community.id %}">Unsubscribe</a>
+                {% if request.user in sub.community.members.all %}
+                    <!-- User is a member: show Leave button which toggles join/leave -->
+                    <a class="unsubscribe-btn" href="{% url 'toggle_join_community' sub.community.id %}">Leave</a>
+                {% else %}
+                    <!-- Not a member: show Unsubscribe which only removes subscription -->
+                    <a class="unsubscribe-btn" href="{% url 'toggle_subscription' sub.community.id %}">Unsubscribe</a>
+                {% endif %}
             {% elif sub.author %}
                 <h4>{{ sub.author.username }}</h4>
                 <p>Author</p>
@@ -160,5 +166,26 @@ tabs.forEach(tab => {
         });
     });
 });
+// Also filter the subscription cards list to only show matching subscription types
+function filterSubscriptionCards(target) {
+    const cards = document.querySelectorAll('.subscription-card');
+    cards.forEach(card => {
+        const type = card.dataset.type;
+        if (target === 'community-posts') {
+            card.style.display = type === 'community' ? '' : 'none';
+        } else if (target === 'blog-posts') {
+            card.style.display = type === 'author' ? '' : 'none';
+        }
+    });
+}
+
+// Hook into existing tab click handlers to also filter cards
+tabs.forEach(tab => tab.addEventListener('click', () => {
+    filterSubscriptionCards(tab.dataset.target);
+}));
+
+// Run initial filter based on current active tab
+const initialTab = document.querySelector('.tab-btn.active');
+if (initialTab) filterSubscriptionCards(initialTab.dataset.target);
 </script>
 {% endblock %}

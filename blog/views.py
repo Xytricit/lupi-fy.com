@@ -276,10 +276,7 @@ def follow_user(request, author_id):
         author.followers.add(user)
         status = 'Following'
     return JsonResponse({'status': status, 'followers_count': author.followers.count()})
-from django.contrib.auth.decorators import login_required
-from django.http import JsonResponse
-from django.shortcuts import get_object_or_404
-from .models import Post, Comment
+
 
 def post_comment(request, post_id):
     # Allow AJAX clients to receive JSON errors rather than redirects when not authenticated

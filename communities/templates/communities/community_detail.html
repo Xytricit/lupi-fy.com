@@ -1,4 +1,5 @@
 {% extends "dashboardhome.html" %}
+{% load static %}
 {% block title %}{{ community.name }} - Lupify{% endblock %}
 
 {% block content %}
@@ -50,20 +51,68 @@
                     {% if community.posts.exists %}
                         {% for post in community.posts.all %}
                             <div class="community-post card">
+                                <!-- Post Header: Author Info + Actions -->
+                                <div class="post-header">
+                                    <!-- Left: Creator Info -->
+                                    <div class="creator-info">
+                                        <img src="{% if post.author.avatar %}{{ post.author.avatar.url }}{% else %}{% static 'avatars/default.png' %}{% endif %}" 
+                                             alt="{{ post.author.username }}" class="creator-pfp user-profile-trigger" 
+                                             data-user-id="{{ post.author.id }}" data-username="{{ post.author.username }}"
+                                             data-allow-public-socials="{{ post.author.allow_public_socials }}" style="cursor: pointer;">
+                                        <div class="creator-details">
+                                            <strong style="display: flex; align-items: center; gap: 6px;">
+                                                {{ post.author.username }}
+                                                {% if post.author.is_verified %}
+                                                <svg style="width: 16px; height: 16px; color: #1f9cee;" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" title="Verified">
+                                                  <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/>
+                                                </svg>
+                                                {% endif %}
+                                            </strong>
+                                            <span class="followers-count">{{ post.author.followers.count }} Followers</span>
+                                        </div>
 
-                                {% if post.image %}
-                                    <div class="post-image-wrapper">
-                                        <div class="post-image-bg" style="background-image: url('{{ post.image.url }}');"></div>
-                                        <img src="{{ post.image.url }}" alt="Post image" class="post-image reddit-style">
+                                        <!-- Follow Button -->
+                                        <button type="button" class="follow-btn" data-author-id="{{ post.author.id }}">
+                                            {% if request.user in post.author.followers.all %}
+                                                Following
+                                            {% else %}
+                                                Follow
+                                            {% endif %}
+                                        </button>
                                     </div>
-                                {% endif %}
 
-                                <div class="post-text">
-                                    <h4>{{ post.title }}</h4>
-                                    <p>{{ post.content|truncatechars:250 }}</p>
-                                    <span class="post-meta">by {{ post.author.username }} • {{ post.created_at }}</span>
+                                    <!-- Right: Post Actions -->
+                                    <div class="post-actions">
+                                        <!-- Like -->
+                                        <button type="button" class="post-like-action" data-post-id="{{ post.id }}">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none"
+                                                 stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                                <path d="M7 10v12"/>
+                                                <path d="M15 5.88 14 10h5.83a2 2 0 0 1 1.92 2.56l-2.33 8A2 2 0 0 1 17.5 22H4a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2h2.76a2 2 0 0 0 1.79-1.11L12 2a3.13 3.13 0 0 1 3 3.88Z"/>
+                                            </svg>
+                                            <span class="like-count">0</span>
+                                        </button>
+
+                                        <!-- Bookmark -->
+                                        <button type="button" class="bookmark-btn" data-post-id="{{ post.id }}">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none"
+                                                 stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                                <path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z"/>
+                                            </svg>
+                                        </button>
+                                    </div>
                                 </div>
 
+                                <!-- Post Content -->
+                                <div class="post-content-section">
+                                    <h3>{{ post.title }}</h3>
+                                    {% if post.image %}
+                                        <div class="post-image-wrapper">
+                                            <img src="{{ post.image.url }}" alt="Post image" class="post-image">
+                                        </div>
+                                    {% endif %}
+                                    <p>{{ post.content }}</p>
+                                </div>
                             </div>
                         {% endfor %}
                     {% else %}
@@ -206,7 +255,8 @@
     display: flex;
     flex-direction: column;
     gap: 20px;
-    align-items: center;
+    align-items: stretch;
+    width: 100%;
 }
 .empty {
     font-size: 0.95rem;
@@ -224,18 +274,134 @@
     transition: 0.25s ease;
     display: flex;
     flex-direction: column;
-    align-items: center;
 }
 .card:hover { box-shadow: 0 10px 25px rgba(0,0,0,0.1); }
 
-.community-post {
-    width: 70%;
-    max-width: 600px;
-    padding: 20px;
+.community-post.card {
+    align-items: stretch;
 }
-.community-post h4 { margin-bottom: 8px; }
-.community-post p { margin-bottom: 12px; }
-.post-meta { font-size: 0.8rem; opacity: 0.7; }
+
+.community-post {
+    width: 100%;
+    padding: 20px;
+    display: flex !important;
+    flex-direction: column;
+    align-items: stretch;
+    box-sizing: border-box;
+}
+
+/* Post header (author info + actions) */
+.post-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 16px;
+    margin-bottom: 16px;
+    width: 100%;
+}
+
+.creator-info {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex: 1;
+}
+
+.creator-pfp {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    object-fit: cover;
+    flex-shrink: 0;
+}
+
+.creator-details {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.creator-details strong {
+    font-size: 0.95rem;
+    color: #333;
+}
+
+.followers-count {
+    font-size: 0.8rem;
+    color: #999;
+}
+
+.follow-btn {
+    padding: 8px 16px;
+    background: #1f9cee;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: 0.2s;
+    white-space: nowrap;
+}
+
+.follow-btn:hover {
+    opacity: 0.9;
+    transform: translateY(-1px);
+}
+
+.follow-btn.following {
+    background: #10b981;
+}
+
+/* Post actions (like, bookmark, etc) */
+.post-actions {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+}
+
+.post-like-action,
+.bookmark-btn {
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 10px;
+    border-radius: 6px;
+    transition: 0.2s;
+    color: #666;
+}
+
+.post-like-action:hover,
+.bookmark-btn:hover {
+    background: #f0f0f0;
+}
+
+.like-count {
+    font-size: 0.85rem;
+    color: #666;
+}
+
+/* Post content section */
+.post-content-section {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.post-content-section h3 {
+    margin: 0;
+    font-size: 1.2rem;
+    color: #333;
+}
+
+.post-content-section p {
+    margin: 0;
+    color: #555;
+    line-height: 1.6;
+}
 
 /* Post images */
 .post-image-wrapper {

@@ -1,233 +1,281 @@
-{% load static %}
+{% extends 'auth_base.html' %}
 
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Register | Lupify</title>
-<link rel="stylesheet" href="{% static 'style.css' %}">
+{% load socialaccount %}
+
+{% block title %}Sign Up - Lupify{% endblock %}
+
+{% block content %}
 <style>
-    /* -------------------------
-       Page & Background
-       ------------------------- */
-    body {
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        min-height: 100vh;
-        background: linear-gradient(135deg, #1f9cee, #fec76f, #ffffff);
-        font-family: 'Arial', sans-serif;
-        margin: 0;
-        padding: 20px;
-        box-sizing: border-box;
+    .register-form-container {
+        animation: slideUp 0.5s ease-out;
     }
 
-    /* -------------------------
-       Register Box
-       ------------------------- */
-    .register-box {
-        background: #ffffff;
-        padding: 40px 50px;
-        border-radius: 16px;
-        box-shadow: 0 10px 30px rgba(0,0,0,0.2);
-        width: 100%;
-        max-width: 400px;
-        text-align: center;
-        transition: transform 0.3s ease;
-    }
-
-    .register-box:hover {
-        transform: translateY(-3px);
-    }
-
-    .register-box h2 {
-        margin-bottom: 25px;
+    .google-signup-label {
+        margin-bottom: 12px;
+        font-size: 14px;
+        font-weight: 700;
         color: #1f9cee;
-        font-size: 28px;
+        display: block;
+        letter-spacing: 0.5px;
     }
 
-    /* -------------------------
-       Input Fields
-       ------------------------- */
-    .register-box input[type="text"],
-    .register-box input[type="email"],
-    .register-box input[type="password"] {
+    .google-button-section {
+        margin: 20px 0;
+    }
+
+    .btn-google {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 12px;
+        background: linear-gradient(135deg, #f9fafb 0%, #f3f4f6 100%);
+        color: #1f2937;
+        border: 2px solid #e5e7eb;
+        padding: 14px 24px;
+        border-radius: 12px;
+        font-weight: 700;
+        cursor: pointer;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        text-decoration: none;
         width: 100%;
-        padding: 14px 15px;
-        margin: 10px 0;
-        border: 1px solid #1f9cee;
-        border-radius: 10px;
+        font-size: 14px;
+    }
+
+    .btn-google:hover {
+        background: white;
+        border-color: #1f9cee;
+        box-shadow: 0 8px 20px rgba(31, 156, 238, 0.15);
+        transform: translateY(-2px);
+        color: #1f9cee;
+    }
+
+    .btn-google:active {
+        transform: translateY(0);
+    }
+
+    .google-logo {
+        width: 20px;
+        height: 20px;
+        flex-shrink: 0;
+    }
+
+    .divider {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin: 24px 0;
+        font-size: 13px;
+        color: #9ca3af;
+        font-weight: 600;
+    }
+
+    .divider::before,
+    .divider::after {
+        content: '';
+        flex: 1;
+        height: 1px;
+        background: linear-gradient(to right, transparent, #e5e7eb, transparent);
+    }
+
+    .form-group label {
+        color: #1f2937;
+        font-weight: 700;
+        font-size: 13px;
+        letter-spacing: 0.5px;
+        text-transform: uppercase;
+        display: block;
+        margin-bottom: 8px;
+    }
+
+    .form-group input {
+        width: 100%;
+        padding: 13px 16px;
+        border: 2px solid #e5e7eb;
+        border-radius: 12px;
+        font-size: 14px;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        font-family: inherit;
+        background: linear-gradient(135deg, #f9fafb 0%, #ffffff 100%);
+    }
+
+    .form-group input:focus {
         outline: none;
-        font-size: 16px;
-        box-sizing: border-box;
-        transition: border-color 0.3s, box-shadow 0.3s;
+        border-color: #1f9cee;
+        box-shadow: 0 0 0 4px rgba(31, 156, 238, 0.12);
+        background: white;
+        transform: translateY(-2px);
     }
 
-    .register-box input:focus {
-        border-color: #fec76f;
-        box-shadow: 0 0 8px #fec76f;
+    .form-group input::placeholder {
+        color: #d1d5db;
+        font-weight: 400;
     }
 
-    .password-wrapper {
+    .password-toggle {
         position: relative;
+        margin-bottom: 18px;
     }
 
-    .toggle-password {
+    .password-toggle input {
+        padding-right: 45px;
+    }
+
+    .toggle-btn {
         position: absolute;
         right: 12px;
-        top: 50%;
-        transform: translateY(-50%);
-        cursor: pointer;
-        font-size: 0.95rem;
-        color: #1f9cee;
-        user-select: none;
-    }
-
-    /* -------------------------
-       Buttons
-       ------------------------- */
-    .register-box button {
-        width: 100%;
-        padding: 14px;
-        margin-top: 15px;
+        top: 38px;
+        background: none;
         border: none;
-        border-radius: 10px;
         cursor: pointer;
-        font-weight: bold;
-        font-size: 16px;
-        transition: background 0.3s, transform 0.2s;
-        background: linear-gradient(135deg, #1f9cee, #fec76f);
-        color: #fff;
-    }
-
-    .register-box button:hover {
-        transform: translateY(-1px);
-        background: linear-gradient(135deg, #fec76f, #1f9cee);
-    }
-
-    /* -------------------------
-       Links & Text
-       ------------------------- */
-    .register-box p {
-        margin-top: 20px;
-        font-size: 15px;
-        color: #111827;
-    }
-
-    .register-box a {
         color: #1f9cee;
-        text-decoration: none;
-        font-weight: bold;
+        font-size: 18px;
+        padding: 4px 8px;
+        transition: all 0.2s ease;
     }
 
-    .register-box a:hover {
+    .toggle-btn:hover {
+        color: #fec76f;
+        transform: scale(1.15);
+    }
+
+    .toggle-btn:active {
+        transform: scale(0.95);
+    }
+
+    .signin-prompt {
+        margin-top: 20px;
+        font-size: 13px;
+        text-align: center;
+        color: #6b7280;
+    }
+
+    .signin-prompt a {
+        color: #1f9cee;
+        font-weight: 700;
+        text-decoration: none;
+        transition: all 0.3s ease;
+    }
+
+    .signin-prompt a:hover {
+        color: #fec76f;
         text-decoration: underline;
     }
 
-    /* -------------------------
-       Error Message
-       ------------------------- */
-    .error-msg {
-        color: #c53030;
-        font-size: 0.85rem;
-        margin: 4px 0 0 0;
-        text-align: left;
-    }
-
-    /* -------------------------
-       Mobile Responsive
-       ------------------------- */
-    @media (max-width: 480px) {
-        .register-box {
-            width: 90vw;       /* fill most of screen width */
-            padding: 45px 35px;
+    @keyframes slideUp {
+        from {
+            opacity: 0;
+            transform: translateY(20px);
         }
-
-        .register-box h2 {
-            font-size: 30px;
-            margin-bottom: 30px;
-        }
-
-        .register-box input[type="text"],
-        .register-box input[type="email"],
-        .register-box input[type="password"] {
-            padding: 16px 15px;
-            font-size: 18px;
-        }
-
-        .register-box button {
-            padding: 16px;
-            font-size: 18px;
-            margin-top: 20px;
-        }
-
-        .register-box p {
-            font-size: 16px;
-            margin-top: 25px;
-        }
-
-        .toggle-password {
-            font-size: 1.1rem;
+        to {
+            opacity: 1;
+            transform: translateY(0);
         }
     }
 </style>
-</head>
-<body>
+<div class="auth-header">
+    <h1>Lupify</h1>
+    <p>Create your account ✨</p>
+</div>
 
-<div class="register-box">
-    <h2>Create an Account</h2>
-    <form id="register-form" method="POST">
+<div class="auth-body register-form-container">
+    {% if request.GET.error %}
+    <div class="error-message">Registration failed. Please try again.</div>
+    {% endif %}
+
+    {% if google_invalid %}
+    <div class="error-message">
+        ⚙️ Google OAuth Setup Required<br>
+        <small style="font-size: 12px; margin-top: 8px; display: block;">
+            Real Google credentials are needed for OAuth to work. See GOOGLE_OAUTH_SETUP_GUIDE.md for instructions. For now, use the form below to sign up.
+        </small>
+    </div>
+    {% endif %}
+
+    {% if not google_configured and not google_invalid %}
+    <div class="info-box">
+        <strong>Setup Required:</strong> Google OAuth is not configured. You can either configure it in the admin or sign up using the form below.
+    </div>
+    {% endif %}
+
+    {% if google_configured and not google_invalid %}
+    <div class="google-signup-label">Sign up with Google</div>
+    <div class="google-button-section">
+    <a href="{% provider_login_url 'google' %}" class="btn-google">
+        <svg class="google-logo" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+            <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+            <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
+            <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+        </svg>
+        Continue with Google
+    </a>
+    </div>
+    <div class="divider">or</div>
+    {% endif %}
+
+    {% if form.non_field_errors %}
+    <div class="error-message">
+        {% for error in form.non_field_errors %}
+            {{ error }}
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <form method="POST" novalidate>
         {% csrf_token %}
-        <input type="text" name="username" placeholder="Username" required>
-        <input type="email" name="email" placeholder="Email" required>
-        <div class="password-wrapper">
-            <input type="password" name="password1" placeholder="Password" id="password1" required>
-            <span class="toggle-password" data-target="password1">Show</span>
+        
+        <div class="form-group">
+            <label for="id_username">Username</label>
+            <input type="text" id="id_username" name="username" placeholder="Choose a username" required value="{{ form.username.value|default:'' }}">
+            {% if form.username.errors %}
+            <div class="error-message">{{ form.username.errors.0 }}</div>
+            {% endif %}
         </div>
-        <div class="password-wrapper">
-            <input type="password" name="password2" placeholder="Confirm Password" id="password2" required>
-            <span class="toggle-password" data-target="password2">Show</span>
+
+        <div class="form-group">
+            <label for="id_email">Email</label>
+            <input type="email" id="id_email" name="email" placeholder="your@email.com" required value="{{ form.email.value|default:'' }}">
+            {% if form.email.errors %}
+            <div class="error-message">{{ form.email.errors.0 }}</div>
+            {% endif %}
         </div>
-        <div id="password-error" class="error-msg"></div>
-        <button class="btn-register" type="submit">Register</button>
+
+        <div class="form-group password-toggle">
+            <label for="id_password1">Password</label>
+            <input type="password" id="id_password1" name="password1" placeholder="Enter a strong password" required>
+            <button type="button" class="toggle-btn" onclick="togglePassword('id_password1')">👁</button>
+            {% if form.password1.errors %}
+            <div class="error-message">{{ form.password1.errors.0 }}</div>
+            {% endif %}
+        </div>
+
+        <div class="form-group password-toggle">
+            <label for="id_password2">Confirm Password</label>
+            <input type="password" id="id_password2" name="password2" placeholder="Confirm your password" required>
+            <button type="button" class="toggle-btn" onclick="togglePassword('id_password2')">👁</button>
+            {% if form.password2.errors %}
+            <div class="error-message">{{ form.password2.errors.0 }}</div>
+            {% endif %}
+        </div>
+
+        <button type="submit" class="btn btn-primary">Create Account</button>
     </form>
-    <p>Already have an account? <a href="{% url 'login' %}">Login</a></p>
+
+    <div class="signin-prompt">Already have an account? <a href="/accounts/login/">Sign in</a></div>
+</div>
+
+<div class="auth-footer">
+    By creating an account you agree to our terms of service.
 </div>
 
 <script>
-    // Password Show/Hide Toggle
-    const togglePasswordButtons = document.querySelectorAll('.toggle-password');
-    togglePasswordButtons.forEach(btn => {
-        btn.addEventListener('click', () => {
-            const targetId = btn.getAttribute('data-target');
-            const input = document.getElementById(targetId);
-            if (input.type === 'password') {
-                input.type = 'text';
-                btn.textContent = 'Hide';
-            } else {
-                input.type = 'password';
-                btn.textContent = 'Show';
-            }
-        });
-    });
-
-    // Password Match Validation
-    const form = document.getElementById('register-form');
-    const password1 = document.getElementById('password1');
-    const password2 = document.getElementById('password2');
-    const passwordError = document.getElementById('password-error');
-
-    form.addEventListener('submit', e => {
-        if (password1.value !== password2.value) {
-            e.preventDefault();
-            passwordError.textContent = "Passwords do not match!";
-            password2.focus();
-        } else {
-            passwordError.textContent = "";
-        }
-    });
+function togglePassword(fieldId) {
+    const input = document.getElementById(fieldId);
+    const btn = event.target;
+    if (!input) return;
+    if (input.type === 'password') { input.type = 'text'; btn.textContent = '👁‍🗨'; }
+    else { input.type = 'password'; btn.textContent = '👁'; }
+}
 </script>
 
-</body>
-</html>
+{% endblock %}

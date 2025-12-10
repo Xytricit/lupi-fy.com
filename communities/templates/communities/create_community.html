@@ -33,6 +33,8 @@
     margin-bottom:60px;
 }
 .banner-preview img { width:100%; height:100%; object-fit:cover; }
+.banner-image { position:absolute; top:0; left:0; width:100%; height:100%; border-radius:14px; overflow:hidden; }
+.banner-image img { width:100%; height:100%; object-fit:cover; display:block; }
 .logo-preview {
     position:absolute;
     bottom:-20px;
@@ -44,6 +46,7 @@
     box-shadow:0 6px 20px rgba(0,0,0,0.15);
     overflow:hidden;
     background:#fff;
+    z-index: 3;
 }
 .logo-preview img { width:100%; height:100%; object-fit:cover; }
 
@@ -100,6 +103,10 @@ button:hover { opacity:0.9; }
 }
 #cropModal img { display:block; max-width:100%; max-height:70vh; }
 
+/* Ensure cropper UI sits above modal content and images don't tile */
+.cropper-container { z-index: 1001 !important; }
+.cropper-view-box, .cropper-face { background-color: transparent !important; }
+
 /* Responsive */
 @media(max-width:768px){
     .banner-preview { height:160px; margin-bottom:50px; }
@@ -107,13 +114,15 @@ button:hover { opacity:0.9; }
 }
 </style>
 
-<d<div class="create-wrapper">
+<div class="create-wrapper">
     <h2>Create a Community</h2>
     <form method="post" enctype="multipart/form-data">
         {% csrf_token %}
 
-        <div class="banner-preview" id="bannerPreview"></div>
-        <div class="logo-preview" id="logoPreview"></div>
+        <div class="banner-preview" id="bannerPreview">
+            <div class="banner-image" id="bannerImage"></div>
+            <div class="logo-preview" id="logoPreview"></div>
+        </div>
 
         <p><label for="id_name">Community Name:</label><br>{{ form.name }}</p>
         <p><label for="id_category">Category:</label><br>{{ form.category }}</p>
@@ -121,41 +130,25 @@ button:hover { opacity:0.9; }
         <p><label for="id_rules">Rules:</label><br>{{ form.rules }}</p>
 
         <p><label for="id_banner_image">Banner Image:</label><br>{{ form.banner_image }}</p>
+        <input type="hidden" name="cropped_banner" id="cropped-banner" value="">
         <p><label for="id_community_image">Community Profile Picture:</label><br>{{ form.community_image }}</p>
+        <input type="hidden" name="cropped_logo" id="cropped-logo" value="">
 
         <button type="submit">Create Community</button>
     </form>
 </div>
 
-<!-- Crop Modal -->
+<!-- Crop Modal (single) -->
 <div id="cropModal">
     <div class="modal-content">
         <h3>Crop Image</h3>
-
-        <!-- MUST MATCH JS -->
-        <img id="cropper-image"/>
-
-        <br><br>
-
-        <!-- MUST MATCH JS -->
-        <button type="button" id="savePreviewBtn" class="btn success">
-            Crop & Save
-        </button>
-
-        <button type="button" id="cropCancel" class="btn danger">
-            Cancel
-        </button>
-    </div>
-</div>
-
-
-<div id="cropModal">
-    <div class="modal-content">
-        <h3>Crop Image</h3>
-        <img id="cropper-image" />
-        <br><br>
-        <button type="button" id="cropConfirm" class="btn success">Crop & Save</button>
-        <button type="button" id="cropCancel" class="btn danger">Cancel</button>
+        <div class="cropper-frame" style="width:100%;max-width:760px;height:420px;margin:10px auto;overflow:hidden;">
+            <img id="cropper-image" alt="Crop preview" style="display:block;max-width:100%;"/>
+        </div>
+        <div style="margin-top:12px;">
+            <button type="button" id="cropConfirm" class="btn success">Crop & Save</button>
+            <button type="button" id="cropCancel" class="btn danger">Cancel</button>
+        </div>
     </div>
 </div>
 <script>
@@ -165,13 +158,15 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const cropModal = document.getElementById("cropModal");
     const cropImage = document.getElementById("cropper-image");
-    const saveBtn = document.getElementById("savePreviewBtn");
+    const saveBtn = document.getElementById("cropConfirm");
+    const CROP_SCRIPT_SRC = 'https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.js';
     const cancelBtn = document.getElementById("cropCancel");
 
     const bannerInput = document.getElementById("id_banner_image");
     const logoInput = document.getElementById("id_community_image");
 
     const bannerPreview = document.getElementById("bannerPreview");
+    const bannerImage = document.getElementById("bannerImage");
     const logoPreview = document.getElementById("logoPreview");
 
     // -----------------------------
@@ -182,19 +177,153 @@ document.addEventListener("DOMContentLoaded", () => {
 
         const reader = new FileReader();
         reader.onload = function (e) {
+            // Set src and wait for actual image load before creating Cropper
+            cropImage.onload = function () {
+                    // Show modal once image has decoded
+                    cropModal.style.display = "flex";
+
+                    // Kill old cropper if exists
+                    if (cropper) {
+                        try { cropper.destroy(); } catch (err) { console.error('Error destroying cropper', err); }
+                        cropper = null;
+                    }
+
+                    // choose aspect ratio based on target
+                    const opts = {
+                        viewMode: 1,
+                        responsive: true,
+                        // show a crop box smaller than full image so users can adjust
+                        autoCropArea: 0.7,
+                        modal: true,
+                        center: true,
+                        highlight: true,
+                        // allow crop box interaction
+                        cropBoxResizable: true,
+                        cropBoxMovable: true,
+                        // show guidelines/grid
+                        guides: true
+                    };
+
+                    // minimums for acceptable image sizes
+                    const MIN_BANNER_W = 1200;
+                    const MIN_BANNER_H = 375; // matches approx 16:5 ratio
+                    const MIN_LOGO_W = 300;
+                    const MIN_LOGO_H = 300;
+                    if (target === 'banner') {
+                        opts.aspectRatio = 16 / 5;
+                    } else {
+                        opts.aspectRatio = 1;
+                    }
+
+                    // disable save until cropper ready
+                    if (saveBtn) saveBtn.disabled = true;
+
+                    // Initialize cropper now that image is ready. If Cropper lib isn't loaded, try to load it.
+                    (async function initCropper() {
+                        try {
+                        if (typeof Cropper !== 'function') {
+                                // dynamically load script as fallback
+                                await new Promise((resolve, reject) => {
+                                    const s = document.createElement('script');
+                                    s.src = CROP_SCRIPT_SRC;
+                                    s.onload = () => resolve();
+                                    s.onerror = () => reject(new Error('Failed to load Cropper.js'));
+                                    document.head.appendChild(s);
+                                });
+                            }
+
+                        if (typeof Cropper !== 'function') throw new Error('Cropper is not available');
+
+                        // ensure image has enough resolution for selected target
+                        const iw = cropImage.naturalWidth || cropImage.width;
+                        const ih = cropImage.naturalHeight || cropImage.height;
+                        // remove any existing error
+                        const prevErr = document.getElementById('cropper-error');
+                        if (prevErr) prevErr.remove();
+
+                        if (target === 'banner') {
+                            if (iw < MIN_BANNER_W || ih < MIN_BANNER_H) {
+                                const errEl = document.createElement('div');
+                                errEl.id = 'cropper-error';
+                                errEl.style.color = '#c00';
+                                errEl.style.marginTop = '8px';
+                                errEl.textContent = `Image too small for banner. Minimum ${MIN_BANNER_W}×${MIN_BANNER_H}px required.`;
+                                const modalContent = cropModal.querySelector('.modal-content');
+                                if (modalContent) modalContent.appendChild(errEl);
+                                if (saveBtn) saveBtn.disabled = true;
+                                return;
+                            }
+                        } else {
+                            if (iw < MIN_LOGO_W || ih < MIN_LOGO_H) {
+                                const errEl = document.createElement('div');
+                                errEl.id = 'cropper-error';
+                                errEl.style.color = '#c00';
+                                errEl.style.marginTop = '8px';
+                                errEl.textContent = `Image too small for profile picture. Minimum ${MIN_LOGO_W}×${MIN_LOGO_H}px required.`;
+                                const modalContent = cropModal.querySelector('.modal-content');
+                                if (modalContent) modalContent.appendChild(errEl);
+                                if (saveBtn) saveBtn.disabled = true;
+                                return;
+                            }
+                        }
+
+                        // add interaction options so user can move/zoom before saving (matches avatar crop behavior)
+                        const interactionOpts = Object.assign({}, opts, {
+                            movable: true,
+                            zoomable: true,
+                            rotatable: false,
+                            scalable: false,
+                            guides: true,
+                            background: true,
+                            dragMode: 'move',
+                            toggleDragModeOnDblclick: false
+                        });
+
+                        // Ensure image styling doesn't cause duplicate visual artifacts
+                        cropImage.style.display = 'block';
+                        cropImage.style.maxWidth = '100%';
+
+                        cropper = new Cropper(cropImage, interactionOpts);
+
+                        // enforce minimum cropbox size based on target
+                        try {
+                            if (target === 'banner') {
+                                cropper.setData({});
+                                cropper.setCropBoxData({ width: Math.min(iw, 1000) });
+                                cropper.setMinCropBoxWidth(600);
+                                cropper.setMinCropBoxHeight(200);
+                            } else {
+                                cropper.setMinCropBoxWidth(150);
+                                cropper.setMinCropBoxHeight(150);
+                            }
+                        } catch (e) { /* some cropper builds don't have setMinCropBox* methods; ignore */ }
+
+                        if (saveBtn) saveBtn.disabled = false;
+                            if (saveBtn) saveBtn.disabled = false;
+                        } catch (err) {
+                            console.error('Failed to initialize Cropper:', err);
+                            // show an inline message in modal if possible
+                            try {
+                                let errEl = document.getElementById('cropper-error');
+                                if (!errEl) {
+                                    errEl = document.createElement('div');
+                                    errEl.id = 'cropper-error';
+                                    errEl.style.color = '#c00';
+                                    errEl.style.marginTop = '8px';
+                                    errEl.textContent = 'Unable to initialize image cropper. Try reloading the page.';
+                                    const modalContent = cropModal.querySelector('.modal-content');
+                                    if (modalContent) modalContent.appendChild(errEl);
+                                }
+                            } catch (e) { /* ignore */ }
+                        }
+                    })();
+
+                    // remove this onload handler to avoid duplicates
+                    cropImage.onload = null;
+            };
+
+            // assign src last to trigger load
             cropImage.src = e.target.result;
-
-            cropModal.style.display = "block";
-
-            // Kill old cropper if exists
-            if (cropper) cropper.destroy();
-
-            cropper = new Cropper(cropImage, {
-                aspectRatio: 1,
-                viewMode: 1,
-                responsive: true,
-                autoCropArea: 1.0
-            });
         };
         reader.readAsDataURL(file);
     }
@@ -202,39 +331,76 @@ document.addEventListener("DOMContentLoaded", () => {
     // -----------------------------
     // Detect image inputs
     // -----------------------------
-    bannerInput.addEventListener("change", function () {
-        if (this.files.length) {
-            openCropper(this.files[0], "banner");
-        }
-    });
+    if (bannerInput) {
+        bannerInput.addEventListener("change", function () {
+            if (this.files && this.files.length) {
+                openCropper(this.files[0], "banner");
+            }
+        });
+    }
 
-    logoInput.addEventListener("change", function () {
-        if (this.files.length) {
-            openCropper(this.files[0], "logo");
-        }
-    });
+    if (logoInput) {
+        logoInput.addEventListener("change", function () {
+            if (this.files && this.files.length) {
+                openCropper(this.files[0], "logo");
+            }
+        });
+    }
 
     // -----------------------------
     // Save Cropped Image
     // -----------------------------
     saveBtn.addEventListener("click", () => {
         if (!cropper) {
-            alert("Cropper not ready!");
+            // show inline error instead of alert
+            let errEl = document.getElementById('cropper-error');
+            if (!errEl) {
+                errEl = document.createElement('div');
+                errEl.id = 'cropper-error';
+                errEl.style.color = '#c00';
+                errEl.style.marginTop = '8px';
+                errEl.textContent = 'Cropper not ready. Try reloading the page.';
+                const modalContent = cropModal.querySelector('.modal-content');
+                if (modalContent) modalContent.appendChild(errEl);
+            }
             return;
         }
 
-        const canvas = cropper.getCroppedCanvas({
-            width: 600,
-            height: 600
-        });
+        // choose canvas size based on target
+        let canvas;
+        if (activeTarget === 'banner') {
+            canvas = cropper.getCroppedCanvas({ width: 1600, height: 500 });
+        } else {
+            canvas = cropper.getCroppedCanvas({ width: 600, height: 600 });
+        }
 
         const croppedDataUrl = canvas.toDataURL();
 
-        // Apply to correct preview box
+        // Apply to correct preview box. Use an <img> element (like avatar flow) so we don't mix background images
         if (activeTarget === "banner") {
-            bannerPreview.style.backgroundImage = `url(${croppedDataUrl})`;
+            if (bannerImage) bannerImage.innerHTML = '';
+            const img = document.createElement('img');
+            img.src = croppedDataUrl;
+            img.style.width = '100%';
+            img.style.height = '100%';
+            img.style.objectFit = 'cover';
+            img.alt = 'Banner preview';
+            if (bannerImage) bannerImage.appendChild(img);
+            // set hidden input for form submission
+            const hb = document.getElementById('cropped-banner');
+            if (hb) hb.value = croppedDataUrl;
         } else if (activeTarget === "logo") {
-            logoPreview.style.backgroundImage = `url(${croppedDataUrl})`;
+            logoPreview.innerHTML = '';
+            const img = document.createElement('img');
+            img.src = croppedDataUrl;
+            img.style.width = '100%';
+            img.style.height = '100%';
+            img.style.objectFit = 'cover';
+            img.style.borderRadius = '20px';
+            img.alt = 'Logo preview';
+            logoPreview.appendChild(img);
+            const hl = document.getElementById('cropped-logo');
+            if (hl) hl.value = croppedDataUrl;
         }
 
         // Close modal

@@ -1,0 +1,276 @@
+{% extends 'auth_base.html' %}
+
+{% block title %}Sign Up - Lupify{% endblock %}
+
+{% block content %}
+<style>
+    .register-form-container {
+        animation: slideUp 0.5s ease-out;
+    }
+
+    .form-group label {
+        color: #1f2937;
+        font-weight: 700;
+        font-size: 13px;
+        letter-spacing: 0.5px;
+        text-transform: uppercase;
+        display: block;
+        margin-bottom: 8px;
+    }
+
+    .form-group input {
+        width: 100%;
+        padding: 13px 16px;
+        border: 2px solid #e5e7eb;
+        border-radius: 12px;
+        font-size: 14px;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        font-family: inherit;
+        background: linear-gradient(135deg, #f9fafb 0%, #ffffff 100%);
+    }
+
+    .form-group input:focus {
+        outline: none;
+        border-color: #1f9cee;
+        box-shadow: 0 0 0 4px rgba(31, 156, 238, 0.12);
+        background: white;
+        transform: translateY(-2px);
+    }
+
+    .form-group input::placeholder {
+        color: #d1d5db;
+        font-weight: 400;
+    }
+
+    .password-toggle {
+        position: relative;
+        margin-bottom: 18px;
+    }
+
+    .password-toggle input {
+        padding-right: 45px;
+    }
+
+    .toggle-btn {
+        position: absolute;
+        right: 12px;
+        top: 38px;
+        background: none;
+        border: none;
+        cursor: pointer;
+        color: #1f9cee;
+        font-size: 18px;
+        padding: 4px 8px;
+        transition: all 0.2s ease;
+    }
+
+    .toggle-btn:hover {
+        color: #fec76f;
+        transform: scale(1.15);
+    }
+
+    .toggle-btn:active {
+        transform: scale(0.95);
+    }
+
+    .divider {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin: 24px 0;
+        font-size: 13px;
+        color: #9ca3af;
+        font-weight: 600;
+    }
+
+    .divider::before,
+    .divider::after {
+        content: '';
+        flex: 1;
+        height: 1px;
+        background: linear-gradient(to right, transparent, #e5e7eb, transparent);
+    }
+
+    .google-button-section {
+        margin: 20px 0;
+    }
+
+    .btn-google {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 12px;
+        background: linear-gradient(135deg, #f9fafb 0%, #f3f4f6 100%);
+        color: #1f2937;
+        border: 2px solid #e5e7eb;
+        padding: 14px 24px;
+        border-radius: 12px;
+        font-weight: 700;
+        cursor: pointer;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        text-decoration: none;
+        width: 100%;
+        font-size: 14px;
+    }
+
+    .btn-google:hover {
+        background: white;
+        border-color: #1f9cee;
+        box-shadow: 0 8px 20px rgba(31, 156, 238, 0.15);
+        transform: translateY(-2px);
+        color: #1f9cee;
+    }
+
+    .btn-google:active {
+        transform: translateY(0);
+    }
+
+    .google-logo {
+        width: 20px;
+        height: 20px;
+        flex-shrink: 0;
+    }
+
+    .signin-prompt {
+        margin-top: 20px;
+        font-size: 13px;
+        text-align: center;
+        color: #6b7280;
+    }
+
+    .signin-prompt a {
+        color: #1f9cee;
+        font-weight: 700;
+        text-decoration: none;
+        transition: all 0.3s ease;
+    }
+
+    .signin-prompt a:hover {
+        color: #fec76f;
+        text-decoration: underline;
+    }
+
+    @keyframes slideUp {
+        from {
+            opacity: 0;
+            transform: translateY(20px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+</style>
+<div class="auth-header">
+    <h1>Lupify</h1>
+    <p>Create your account</p>
+</div>
+
+<div class="auth-body register-form-container">
+    {% if form.non_field_errors %}
+    <div class="error-message">
+        {% for error in form.non_field_errors %}
+            {{ error }}
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <form method="POST" novalidate>
+        {% csrf_token %}
+        
+        <div class="form-group">
+            <label for="{{ form.username.id_for_label }}">Username</label>
+            <input 
+                type="text" 
+                id="{{ form.username.id_for_label }}"
+                name="{{ form.username.name }}"
+                placeholder="Choose a unique username"
+                value="{{ form.username.value|default:'' }}"
+                required
+            >
+            {% if form.username.errors %}
+            <div class="error-message">{{ form.username.errors.0 }}</div>
+            {% endif %}
+        </div>
+
+        <div class="form-group">
+            <label for="{{ form.email.id_for_label }}">Email</label>
+            <input 
+                type="email" 
+                id="{{ form.email.id_for_label }}"
+                name="{{ form.email.name }}"
+                placeholder="your@email.com"
+                value="{{ form.email.value|default:'' }}"
+                required
+            >
+            {% if form.email.errors %}
+            <div class="error-message">{{ form.email.errors.0 }}</div>
+            {% endif %}
+        </div>
+
+        <div class="form-group password-toggle">
+            <label for="{{ form.password1.id_for_label }}">Password</label>
+            <input 
+                type="password" 
+                id="{{ form.password1.id_for_label }}"
+                name="{{ form.password1.name }}"
+                placeholder="Create a strong password"
+                required
+            >
+            <button type="button" class="toggle-btn" onclick="togglePassword('password1')">👁</button>
+            {% if form.password1.errors %}
+            <div class="error-message">{{ form.password1.errors.0 }}</div>
+            {% endif %}
+        </div>
+
+        <div class="form-group password-toggle">
+            <label for="{{ form.password2.id_for_label }}">Confirm Password</label>
+            <input 
+                type="password" 
+                id="{{ form.password2.id_for_label }}"
+                name="{{ form.password2.name }}"
+                placeholder="Confirm your password"
+                required
+            >
+            <button type="button" class="toggle-btn" onclick="togglePassword('password2')">👁</button>
+            {% if form.password2.errors %}
+            <div class="error-message">{{ form.password2.errors.0 }}</div>
+            {% endif %}
+        </div>
+
+        <button type="submit" class="btn btn-primary">Create Account</button>
+    </form>
+
+    <div class="divider">or</div>
+
+    <div class="google-button-section">
+    <a href="/accounts/google/login/" class="btn-google">
+        <svg class="google-logo" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+            <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+            <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
+            <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+        </svg>
+        Sign Up with Google
+    </a>
+    </div>
+</div>
+
+<div class="auth-footer">
+    <div class="signin-prompt">Already have an account? <a href="/accounts/login/">Sign in</a></div>
+</div>
+
+<script>
+function togglePassword(fieldId) {
+    const input = document.getElementById('id_' + fieldId);
+    const btn = event.target;
+    if (input.type === 'password') {
+        input.type = 'text';
+        btn.textContent = '👁‍🗨';
+    } else {
+        input.type = 'password';
+        btn.textContent = '👁';
+    }
+}
+</script>
+{% endblock %}

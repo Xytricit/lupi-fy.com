@@ -7,6 +7,7 @@ from communities import views as communities_views
 urlpatterns = [
     path('', core_views.main_home_view, name='main_home'),
     path('dashboard/', core_views.dashboard_view, name='dashboard_home'),
+    path('dashboard/community-posts-api/', core_views.community_posts_api, name='community_posts_api'),
     path('blogs/', posts_list_view, name='blogs'),
 
     # Use the correct communities view

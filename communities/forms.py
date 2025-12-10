@@ -40,8 +40,15 @@ class CommunityPostForm(forms.ModelForm):
         cleaned_data = super().clean()
         title = cleaned_data.get('title')
         content = cleaned_data.get('content')
+        image = cleaned_data.get('image')
 
         if not title:
             self.add_error('title', "A title is required.")
         if not content:
             self.add_error('content', "Content cannot be empty.")
+        
+        # Validate image size (max 5MB)
+        if image:
+            max_size = 5 * 1024 * 1024  # 5MB
+            if image.size > max_size:
+                self.add_error('image', "Image size must be less than 5MB. Please crop or compress your image.")

@@ -10,4 +10,11 @@ urlpatterns = [
     path('create-post/', views.create_community_post_generic, name='create_community_post_generic'),
     path('<int:community_id>/create-post/', views.create_community_post, name='create_community_post'),
     path('post/<int:post_id>/', views.community_post_detail, name='community_post_detail'),
+    path('api/post/<int:post_id>/like/', views.toggle_community_post_like, name='toggle_community_post_like'),
+    path('api/post/<int:post_id>/dislike/', views.toggle_community_post_dislike, name='toggle_community_post_dislike'),
+    path('api/post/<int:post_id>/bookmark/', views.toggle_community_post_bookmark, name='toggle_community_post_bookmark'),
+    path('api/post/<int:post_id>/comment/', views.add_community_post_comment, name='add_community_post_comment'),
+    path('api/post/<int:post_id>/report/', views.report_community_post, name='report_community_post'),
+    path('api/comment/<int:comment_id>/like/', views.toggle_community_comment_like, name='toggle_community_comment_like'),
+    path('api/comment/<int:comment_id>/dislike/', views.toggle_community_comment_dislike, name='toggle_community_comment_dislike'),
 ]

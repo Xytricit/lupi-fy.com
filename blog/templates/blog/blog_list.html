@@ -19,7 +19,7 @@
         {{ post.content|truncatewords:30 }}…
     </a>
 </p>
-            <p><strong>Author:</strong> {{ post.author.username }}</p>
+            <p><strong>Author:</strong> <span style="display: flex; align-items: center; gap: 6px;">{{ post.author.username }}{% if post.author.is_verified %}<svg style="width: 14px; height: 14px; color: #1f9cee;" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" title="Verified"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg>{% endif %}</span></p>
             {% if post.category %}
                 <p><strong>Category:</strong> {{ post.category.name }}</p>
             {% endif %}

@@ -1,0 +1,748 @@
+{% load static %}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Try Not To Get Banned - Lupify</title>
+    <link rel="stylesheet" href="{% static 'css/main.css' %}">
+    <style>
+        :root {
+            --primary: #1f9cee;
+            --primary-dark: #167ac6;
+            --accent: #fec76f;
+            --bg: #f8f9fa;
+            --card-bg: #ffffff;
+            --text-dark: #111827;
+            --secondary-text: #6b7280;
+            --danger: #ef4444;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background: var(--bg);
+            color: var(--text-dark);
+        }
+
+        .game-container {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .game-header {
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+            color: white;
+            padding: 30px;
+            border-radius: 12px;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+
+        .game-header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+        }
+
+        .game-header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        .rules {
+            background: var(--card-bg);
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 30px;
+            border-left: 4px solid var(--accent);
+        }
+
+        .rules h3 {
+            margin-bottom: 15px;
+            color: var(--text-dark);
+        }
+
+        .rules ol {
+            margin-left: 20px;
+            line-height: 1.8;
+        }
+
+        .rules li {
+            margin-bottom: 8px;
+        }
+
+        .chat-container {
+            display: flex;
+            flex-direction: column;
+            height: 600px;
+            background: var(--card-bg);
+            border-radius: 12px;
+            box-shadow: 0 6px 18px rgba(0,0,0,0.05);
+            overflow: hidden;
+        }
+
+        .chat-messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .message {
+            padding: 12px 16px;
+            background: #f0f9ff;
+            border-radius: 8px;
+            border-left: 3px solid var(--primary);
+        }
+
+        .message.own {
+            background: #fef3c7;
+            border-left-color: var(--accent);
+            align-self: flex-end;
+            max-width: 70%;
+        }
+
+        .message-header {
+            font-weight: 600;
+            margin-bottom: 4px;
+            font-size: 0.9rem;
+            color: var(--primary);
+        }
+
+        .message.own .message-header {
+            color: #ca8a04;
+        }
+
+        .message-content {
+            word-wrap: break-word;
+        }
+
+        .message-time {
+            font-size: 0.75rem;
+            color: var(--secondary-text);
+            margin-top: 4px;
+        }
+
+        .chat-input-section {
+            padding: 20px;
+            border-top: 1px solid #e5e7eb;
+            display: flex;
+            gap: 12px;
+        }
+
+        .chat-input-section input {
+            flex: 1;
+            border: 2px solid #e5e7eb;
+            border-radius: 8px;
+            padding: 12px 16px;
+            font-size: 1rem;
+            transition: border-color 0.3s;
+        }
+
+        .chat-input-section input:focus {
+            outline: none;
+            border-color: var(--primary);
+        }
+
+        .chat-input-section input:disabled {
+            background: #f3f4f6;
+            cursor: not-allowed;
+        }
+
+        .chat-input-section button {
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            padding: 12px 24px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        .chat-input-section button:hover:not(:disabled) {
+            background: var(--primary-dark);
+        }
+
+        .chat-input-section button:disabled {
+            background: #9ca3af;
+            cursor: not-allowed;
+        }
+
+        /* Ban Modal */
+        .ban-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.7);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .ban-modal.active {
+            display: flex;
+        }
+
+        .ban-modal-content {
+            background: white;
+            border-radius: 12px;
+            padding: 40px;
+            text-align: center;
+            max-width: 400px;
+            box-shadow: 0 20px 25px rgba(0, 0, 0, 0.2);
+        }
+
+        .ban-icon {
+            width: 80px;
+            height: 80px;
+            background: #fee2e2;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 20px;
+            font-size: 40px;
+        }
+
+        .ban-modal-content h2 {
+            color: var(--danger);
+            margin-bottom: 10px;
+            font-size: 1.8rem;
+        }
+
+        .ban-modal-content p {
+            color: var(--secondary-text);
+            margin-bottom: 20px;
+            line-height: 1.6;
+        }
+
+        .countdown-timer {
+            font-size: 3rem;
+            font-weight: 700;
+            color: var(--danger);
+            margin: 30px 0;
+            font-family: 'Courier New', monospace;
+        }
+
+        .reenter-btn {
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            padding: 12px 32px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.3s;
+            margin-top: 20px;
+        }
+
+        .reenter-btn:hover {
+            background: var(--primary-dark);
+        }
+
+        .reenter-btn:disabled {
+            background: #9ca3af;
+            cursor: not-allowed;
+        }
+
+        .empty-chat {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            color: var(--secondary-text);
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .empty-chat-icon {
+            font-size: 3rem;
+            opacity: 0.5;
+        }
+
+        .back-button {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: var(--primary);
+            color: white;
+            text-decoration: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-weight: 600;
+            transition: background 0.3s;
+        }
+
+        .back-button:hover {
+            background: var(--primary-dark);
+        }
+
+        .back-button svg {
+            width: 20px;
+            height: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <a href="{% url 'dashboard_home' %}" class="back-button">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M19 12H5M12 19l-7-7 7-7"/>
+            </svg>
+            Back to Dashboard
+        </a>
+
+        <div class="game-header">
+            <h1>🎮 Try Not To Get Banned</h1>
+            <p>Chat freely. You'll also receive a 12-letter challenge — type words containing those letters to turn them green and earn <strong>20 points</strong> when you collect all 12. Avoid banned words or be banned for 1 minute.</p>
+            <div style="margin-top:12px; display:flex; gap:12px; justify-content:center;">
+                <!-- Letter Set entry removed from lobby per request -->
+            </div>
+        </div>
+
+        <!-- Score and leaderboard panel -->
+        <div style="max-width:1000px;margin:12px auto 0;display:flex;gap:12px;align-items:flex-start;">
+            <div style="background:#fff;border-radius:8px;padding:12px 16px;box-shadow:0 6px 18px rgba(0,0,0,0.04);flex:0 0 220px;">
+                <div style="font-weight:700;color:#111;margin-bottom:6px;">Your Points</div>
+                <div style="font-size:1.6rem;font-weight:800;color:#1f9cee;">{{ lobby_score|default:0 }}</div>
+                <div style="font-size:0.85rem;color:#6b7280;margin-top:6px;">Points earned from lobby challenges</div>
+            </div>
+            <div style="background:#fff;border-radius:8px;padding:12px 16px;box-shadow:0 6px 18px rgba(0,0,0,0.04);flex:1;">
+                <div style="font-weight:700;color:#111;margin-bottom:8px;">Lobby Leaderboard</div>
+                {% if lobby_leaderboard %}
+                <ol style="margin-left:18px;color:#111;">
+                    {% for entry in lobby_leaderboard %}
+                    <li style="margin-bottom:6px;">{{ entry.username }} — <strong style="color:#1f9cee">{{ entry.score }}</strong></li>
+                    {% endfor %}
+                </ol>
+                {% else %}
+                <div style="color:#6b7280;">No scores yet — be the first to complete the challenge!</div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Link to full Letter Set page (inline panel removed) -->
+
+        <div class="rules">
+            <h3>📋 Game Rules</h3>
+            <ol>
+                <li><strong>Stay Clean:</strong> Don't use prohibited words in chat.</li>
+                <li><strong>One Strike:</strong> Use a banned word and you'll be banned for 1 minute.</li>
+                <li><strong>Letters:</strong> A 12-letter challenge appears below. When you type a message, any of the challenge letters present in the words you typed will be marked (turn green).</li>
+                <li><strong>Reward:</strong> When all 12 letters have been triggered, you earn <strong>20 points</strong>.</li>
+                <li><strong>Re-enter:</strong> Click "Re-enter Game" when the ban expires.</li>
+                <li><strong>Play Again:</strong> You can chat and play as many times as you want.</li>
+            </ol>
+        </div>
+
+        <div class="chat-container" id="chatContainer">
+            <div class="chat-messages" id="chatMessages">
+                <div class="empty-chat">
+                    <div class="empty-chat-icon">💬</div>
+                    <p>No messages yet. Be the first to chat!</p>
+                </div>
+            </div>
+            <div class="chat-input-section">
+                <input 
+                    type="text" 
+                    id="messageInput" 
+                    placeholder="Type your message..." 
+                    {% if is_banned %}disabled{% endif %}
+                >
+                <button type="button" id="sendBtn" {% if is_banned %}disabled{% endif %}>Send</button>
+            </div>
+        </div>
+        <div id="postError" style="color:#b91c1c; padding:8px 20px; display:none;
+            background:#fff7f7; border-left:4px solid #fecaca; border-radius:8px; margin-top:8px; max-width:1000px; margin-left:auto; margin-right:auto;">
+        </div>
+
+        <!-- Lobby 12-word challenge -->
+        <div class="rules" style="margin-top:12px;">
+            <h3>🔤 12-Letter Challenge</h3>
+            <p>Use words in chat that contain the letters below. When you trigger all 12 letters you'll earn <strong>20 points</strong>.</p>
+            <div id="challengeWords" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:8px;">
+                <!-- letters loaded by JS -->
+                <div class="empty-chat" id="challengeLoading">Loading letters...</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Ban Modal -->
+    <div class="ban-modal" id="banModal">
+        <div class="ban-modal-content">
+            <div class="ban-icon">⛔</div>
+            <h2>You've Been Banned!</h2>
+            <p>You used a banned word and were kicked from the game.</p>
+            <div class="countdown-timer" id="countdownTimer">1:00</div>
+            <p>Come back when the timer runs out to try again.</p>
+            <button class="reenter-btn" id="reenterBtn" disabled>Re-enter Game</button>
+        </div>
+    </div>
+
+    <script>
+        // Try template-injected token first; fall back to cookie if not present
+        let CSRF_TOKEN = '{{ csrf_token }}';
+        function getCookie(name) {
+            const value = `; ${document.cookie}`;
+            const parts = value.split(`; ${name}=`);
+            if (parts.length === 2) return parts.pop().split(';').shift();
+            return null;
+        }
+        if (!CSRF_TOKEN) {
+            const c = getCookie('csrftoken');
+            if (c) CSRF_TOKEN = c;
+        }
+        const messageInput = document.getElementById('messageInput');
+        const sendBtn = document.getElementById('sendBtn');
+        const chatMessages = document.getElementById('chatMessages');
+        const banModal = document.getElementById('banModal');
+        const countdownTimer = document.getElementById('countdownTimer');
+        const reenterBtn = document.getElementById('reenterBtn');
+        
+        let isBanned = {{ is_banned|lower }};
+        let banTimeRemaining = {{ ban_time_remaining }};
+        let isLoading = false;
+
+        // Format time for countdown (MM:SS)
+        function formatTime(seconds) {
+            const mins = Math.floor(seconds / 60);
+            const secs = seconds % 60;
+            return `${mins}:${secs.toString().padStart(2, '0')}`;
+        }
+
+        // Load chat history from sessionStorage
+        function loadChatHistory() {
+            const history = sessionStorage.getItem('gameChatHistory');
+            if (history) {
+                const messages = JSON.parse(history);
+                chatMessages.innerHTML = '';
+                messages.forEach(msg => {
+                    addMessageToUI(msg.user, msg.content, msg.isOwn, msg.time);
+                });
+                // Scroll to bottom
+                chatMessages.scrollTop = chatMessages.scrollHeight;
+            }
+        }
+
+        // Add message to UI
+        function addMessageToUI(username, content, isOwn = false, time = null) {
+            if (!time) {
+                const now = new Date();
+                time = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+            }
+
+            const messageEl = document.createElement('div');
+            messageEl.className = `message ${isOwn ? 'own' : ''}`;
+            messageEl.innerHTML = `
+                <div class="message-header">${username}</div>
+                <div class="message-content">${escapeHtml(content)}</div>
+                <div class="message-time">${time}</div>
+            `;
+            
+            if (chatMessages.querySelector('.empty-chat')) {
+                chatMessages.innerHTML = '';
+            }
+            
+            chatMessages.appendChild(messageEl);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        // Escape HTML to prevent XSS
+        function escapeHtml(text) {
+            const map = {
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                '"': '&quot;',
+                "'": '&#039;'
+            };
+            return text.replace(/[&<>"']/g, m => map[m]);
+        }
+
+        // Send message
+        function sendMessage() {
+            const content = messageInput.value.trim();
+            if (!content || isLoading) return;
+
+            console.log('sendMessage() start, content=', content);
+            // clear previous error
+            const postError = document.getElementById('postError');
+            if (postError) { postError.style.display = 'none'; postError.textContent = ''; }
+
+            isLoading = true;
+            sendBtn.disabled = true;
+
+            fetch('{% url "game_post_message" %}', {
+                method: 'POST',
+                credentials: 'same-origin',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': CSRF_TOKEN
+                },
+                body: JSON.stringify({ content: content })
+            })
+            .then(res => res.json().then(body => ({ ok: res.ok, status: res.status, body })))
+            .then(({ok, status, body}) => {
+                    if (body.error === 'banned_words') {
+                        // Append the offending message to chat (post it)
+                        if (body.chat_post) {
+                            const now = new Date();
+                            const time = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+                            addMessageToUI(body.chat_post.author, body.chat_post.content, true, time);
+                            saveMessageToHistory(body.chat_post.author, body.chat_post.content, true, time);
+                        }
+                        // Append a system message announcing the ban
+                        if (body.system_message) {
+                            const now2 = new Date();
+                            const time2 = now2.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+                            addMessageToUI('System', body.system_message, false, time2);
+                            saveMessageToHistory('System', body.system_message, false, time2);
+                        }
+                        // User has been banned: show modal and disable input
+                        isBanned = true;
+                        banTimeRemaining = body.ban_time_remaining;
+                        showBanModal();
+                        startBanCountdown();
+                        messageInput.value = '';
+                        messageInput.disabled = true;
+                        sendBtn.disabled = true;
+                        // Update challenge UI if server returned any challenge update
+                        if (body.challenge_update) updateChallengeUI(body.challenge_update);
+                    } else if (body.success) {
+                    // Message sent successfully
+                    const now = new Date();
+                    const time = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+                    addMessageToUI('{{ user.username }}', body.content, true, time);
+
+                    // Save to sessionStorage
+                    saveMessageToHistory('{{ user.username }}', body.content, true, time);
+                    
+                    messageInput.value = '';
+                    messageInput.focus();
+                    // Update challenge UI if server returned any challenge update
+                    if (body.challenge_update) updateChallengeUI(body.challenge_update);
+                }
+                if (!ok && body && body.error && body.error !== 'banned_words') {
+                    // show any other server-side error to the user in-page
+                    const postError = document.getElementById('postError');
+                    const msg = (body.error || body.message || 'Failed to send message');
+                    if (postError) {
+                        postError.textContent = msg;
+                        postError.style.display = 'block';
+                    } else {
+                        alert(msg);
+                    }
+                    console.warn('post failed', body);
+                }
+                console.log('sendMessage() done, ok=', ok, 'status=', status, 'body=', body);
+                isLoading = false;
+                sendBtn.disabled = false;
+            })
+            .catch(err => {
+                console.error('Error:', err);
+                isLoading = false;
+                sendBtn.disabled = false;
+            });
+        }
+
+        // Save message to sessionStorage
+        function saveMessageToHistory(username, content, isOwn, time) {
+            let history = sessionStorage.getItem('gameChatHistory');
+            const messages = history ? JSON.parse(history) : [];
+            messages.push({ user: username, content: content, isOwn: isOwn, time: time });
+            sessionStorage.setItem('gameChatHistory', JSON.stringify(messages));
+        }
+
+                // -- WebSocket: receive broadcasts from the server for lobby messages
+                (function() {
+                    const protocol = location.protocol === 'https:' ? 'wss' : 'ws';
+                    const wsUrl = `${protocol}://${location.host}/ws/game/lobby/`;
+                    let socket;
+
+                    try {
+                        socket = new WebSocket(wsUrl);
+                    } catch (e) {
+                        console.warn('WebSocket not available', e);
+                        return;
+                    }
+
+                    socket.onopen = function() {
+                        console.log('Connected to lobby WebSocket');
+                    };
+
+                    socket.onmessage = function(event) {
+                        try {
+                            const payload = JSON.parse(event.data);
+                            if (!payload || payload.type !== 'lobby.message') return;
+                            const msg = payload.message || {};
+                            const author = msg.author || 'System';
+                            const content = msg.content || '';
+                            const isSystem = msg.is_system || false;
+                            const now = new Date();
+                            const time = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+
+                            // Determine ownership
+                            const isOwn = (author === '{{ user.username }}');
+                            addMessageToUI(author, content, isOwn, time);
+                            saveMessageToHistory(author, content, isOwn, time);
+                        } catch (e) {
+                            console.error('Invalid WS message', e);
+                        }
+                    };
+
+                    socket.onclose = function() {
+                        console.log('Lobby WebSocket closed');
+                    };
+                })();
+
+                // Load lobby challenge words and render
+                (function() {
+                    function renderChallenge(data) {
+                            const container = document.getElementById('challengeWords');
+                            container.innerHTML = '';
+                            if (!data || !data.letters) {
+                                container.innerHTML = '<div class="empty-chat">No letters available</div>';
+                                return;
+                            }
+                            for (const w of data.letters) {
+                                const el = document.createElement('div');
+                                el.className = 'letter-box';
+                                el.dataset.letter = w;
+                                el.textContent = w;
+                                el.style.display = 'inline-flex';
+                                el.style.padding = '8px 10px';
+                                el.style.borderRadius = '8px';
+                                el.style.background = '#f3f4f6';
+                                el.style.color = '#111';
+                                el.style.fontWeight = '700';
+                                if (data.used_letters && data.used_letters.includes(w)) {
+                                    el.style.background = '#10b981';
+                                    el.style.color = '#fff';
+                                }
+                                container.appendChild(el);
+                            }
+                        }
+
+                    fetch('{% url "game_challenge_start" %}', { credentials: 'same-origin' })
+                        .then(r => r.json().then(body => ({ ok: r.ok, body })))
+                        .then(({ok, body}) => {
+                            if (ok) renderChallenge(body);
+                            else {
+                                document.getElementById('challengeWords').innerHTML = '<div class="empty-chat">Failed to load</div>';
+                                console.error('Failed to load challenge', body);
+                            }
+                        })
+                        .catch(err => { document.getElementById('challengeWords').innerHTML = '<div class="empty-chat">Failed to load</div>'; console.error(err); });
+                })();
+
+                function updateChallengeUI(update) {
+                    try {
+                        if (!update) return;
+                        const container = document.getElementById('challengeWords');
+                        // If server sent a new letters list, rebuild the UI
+                        if (update.letters && (!container.querySelector('.letter-box') || JSON.stringify(Array.from(container.querySelectorAll('.letter-box')).map(b => b.dataset.letter)) !== JSON.stringify(update.letters))) {
+                            container.innerHTML = '';
+                            for (const w of update.letters) {
+                                const el = document.createElement('div');
+                                el.className = 'letter-box';
+                                el.dataset.letter = w;
+                                el.textContent = w;
+                                el.style.display = 'inline-flex';
+                                el.style.padding = '8px 10px';
+                                el.style.borderRadius = '8px';
+                                el.style.background = '#f3f4f6';
+                                el.style.color = '#111';
+                                el.style.fontWeight = '700';
+                                container.appendChild(el);
+                            }
+                        }
+
+                        // Update used_letters and completed state
+                        const used = update.used_letters || [];
+                        const completed = update.completed || false;
+                        const badges = container.querySelectorAll('.letter-box');
+                        badges.forEach(b => {
+                            const w = b.dataset.letter;
+                            if (used.includes(w)) {
+                                b.style.background = '#10b981';
+                                b.style.color = '#fff';
+                            } else {
+                                b.style.background = '#f3f4f6';
+                                b.style.color = '#111';
+                            }
+                        });
+
+                        if (completed && update.letters) {
+                            // show system notification
+                            const now = new Date();
+                            const tm = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+                            addMessageToUI('System', `${update.user} completed the 12-letter challenge and earned 20 points!`, false, tm);
+                        }
+                    } catch (e) { console.error(e); }
+                }
+
+        // Show ban modal
+        function showBanModal() {
+            banModal.classList.add('active');
+        }
+
+        // Hide ban modal
+        function hideBanModal() {
+            banModal.classList.remove('active');
+            isBanned = false;
+            messageInput.disabled = false;
+            sendBtn.disabled = false;
+            messageInput.focus();
+        }
+
+        // Start ban countdown
+        function startBanCountdown() {
+            countdownTimer.textContent = formatTime(banTimeRemaining);
+            reenterBtn.disabled = true;
+
+            const interval = setInterval(() => {
+                banTimeRemaining--;
+                countdownTimer.textContent = formatTime(banTimeRemaining);
+
+                if (banTimeRemaining <= 0) {
+                    clearInterval(interval);
+                    reenterBtn.disabled = false;
+                }
+            }, 1000);
+        }
+
+        // Event listeners
+        sendBtn.addEventListener('click', sendMessage);
+        messageInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter' && !isLoading) {
+                sendMessage();
+            }
+        });
+
+        reenterBtn.addEventListener('click', hideBanModal);
+
+        // Initialize
+        loadChatHistory();
+        
+        {% if is_banned %}
+        showBanModal();
+        startBanCountdown();
+        {% endif %}
+    </script>
+</body>
+</html>

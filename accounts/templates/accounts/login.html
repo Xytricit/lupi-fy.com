@@ -53,12 +53,43 @@
         font-size: 16px;
         outline: none;
         transition: border-color 0.3s, box-shadow 0.3s;
+        box-sizing: border-box;
     }
 
     .login-box input[type="text"]:focus,
     .login-box input[type="password"]:focus {
         border-color: #fec76f;
         box-shadow: 0 0 8px #fec76f;
+    }
+
+    /* Password wrapper for toggle */
+    .password-wrapper {
+        position: relative;
+        margin: 10px 0;
+    }
+
+    .password-wrapper input[type="password"],
+    .password-wrapper input[type="text"] {
+        padding-right: 45px;
+        margin: 0;
+    }
+
+    /* Toggle button styling */
+    .toggle-password {
+        position: absolute;
+        right: 12px;
+        top: 50%;
+        transform: translateY(-50%);
+        cursor: pointer;
+        color: #1f9cee;
+        font-weight: bold;
+        font-size: 12px;
+        user-select: none;
+        transition: color 0.3s;
+    }
+
+    .toggle-password:hover {
+        color: #fec76f;
     }
 
     /* Buttons */
@@ -81,6 +112,17 @@
 
     .btn-login:hover {
         background: linear-gradient(135deg, #fec76f, #1f9cee);
+    }
+
+    /* Error messages */
+    .error-message {
+        color: #dc2626;
+        font-size: 14px;
+        margin-bottom: 15px;
+        background: #fee2e2;
+        padding: 10px;
+        border-radius: 8px;
+        border-left: 4px solid #dc2626;
     }
 
     /* Footer text */
@@ -116,6 +158,16 @@
             font-size: 15px;
         }
 
+        .password-wrapper input[type="password"],
+        .password-wrapper input[type="text"] {
+            padding-right: 40px;
+        }
+
+        .toggle-password {
+            right: 10px;
+            font-size: 11px;
+        }
+
         .login-box button {
             padding: 12px;
             font-size: 15px;
@@ -131,14 +183,43 @@
 
 <div class="login-box">
     <h2>Welcome Back!</h2>
+    
+    {% if messages %}
+        {% for message in messages %}
+            <div class="error-message">{{ message }}</div>
+        {% endfor %}
+    {% endif %}
+
     <form method="POST">
         {% csrf_token %}
         <input type="text" name="username" placeholder="Username" required>
-        <input type="password" name="password" placeholder="Password" required>
+        
+        <div class="password-wrapper">
+            <input type="password" name="password" placeholder="Password" required id="password-field">
+            <span class="toggle-password" data-target="password-field">Show</span>
+        </div>
+
         <button class="btn-login" type="submit">Login</button>
     </form>
     <p>Don't have an account? <a href="{% url 'register' %}">Sign Up</a></p>
 </div>
+
+<script>
+    document.querySelectorAll('.toggle-password').forEach(toggle => {
+        toggle.addEventListener('click', function() {
+            const targetId = this.getAttribute('data-target');
+            const input = document.getElementById(targetId);
+            
+            if (input.type === 'password') {
+                input.type = 'text';
+                this.textContent = 'Hide';
+            } else {
+                input.type = 'password';
+                this.textContent = 'Show';
+            }
+        });
+    });
+</script>
 
 </body>
 </html>

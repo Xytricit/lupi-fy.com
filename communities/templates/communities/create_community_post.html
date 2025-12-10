@@ -37,7 +37,19 @@
         <div>
             {{ form.image.label_tag }}<br>
             {{ form.image }}
+            <small style="color: var(--muted); display: block; margin-top: 5px;">Max size: 5MB. You can crop/resize before uploading.</small>
+            {% if form.image.errors %}
+                <div style="color: #c53030; margin-top: 5px;">{{ form.image.errors }}</div>
+            {% endif %}
             <img id="imagePreview" src="#" alt="Image Preview" style="display:none; max-width:100%; margin-top:10px; border-radius:5px;"/>
+            <canvas id="cropCanvas" style="display:none; max-width:100%; margin-top:10px; border-radius:5px;"></canvas>
+            <div id="cropControls" style="display:none; margin-top:10px; gap:10px; display:none;">
+                <label>Crop the image (drag to select area):</label>
+                <div style="display:flex; gap:10px; margin-top:10px;">
+                    <button type="button" id="resetCrop" class="btn" style="padding:8px 16px; background:#6b7280; color:white; border:none; border-radius:5px; cursor:pointer;">Reset</button>
+                    <button type="button" id="applyCrop" class="btn" style="padding:8px 16px; background:#1f9cee; color:white; border:none; border-radius:5px; cursor:pointer;">Apply Crop</button>
+                </div>
+            </div>
         </div>
 
         <button type="submit" class="btn success" style="padding:10px 20px; border:none; background:#1f9cee; color:white; border-radius:5px; cursor:pointer; font-weight:bold;">
@@ -105,24 +117,131 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     });
 
-    // Image preview
+    // Image preview and validation
     const imageInput = document.getElementById("id_image");
     const preview = document.getElementById("imagePreview");
+    const cropCanvas = document.getElementById("cropCanvas");
+    const cropControls = document.getElementById("cropControls");
+    const resetCrop = document.getElementById("resetCrop");
+    const applyCrop = document.getElementById("applyCrop");
+    const MAX_SIZE = 5 * 1024 * 1024; // 5MB
+    let originalImage = null;
+    let originalFileName = '';
 
     if (imageInput) {
         imageInput.addEventListener('change', (e) => {
             const file = e.target.files[0];
             if (!file) {
                 preview.style.display = 'none';
+                cropCanvas.style.display = 'none';
+                cropControls.style.display = 'none';
                 preview.src = "#";
                 return;
             }
+
+            // Check file size
+            if (file.size > MAX_SIZE) {
+                alert(`Image size must be less than 5MB. Current size: ${(file.size / 1024 / 1024).toFixed(2)}MB\n\nPlease crop or compress your image.`);
+                imageInput.value = '';
+                preview.style.display = 'none';
+                cropCanvas.style.display = 'none';
+                cropControls.style.display = 'none';
+                return;
+            }
+
+            originalFileName = file.name;
             const reader = new FileReader();
             reader.onload = (event) => {
-                preview.src = event.target.result;
-                preview.style.display = 'block';
+                const img = new Image();
+                img.onload = () => {
+                    originalImage = img;
+                    preview.src = event.target.result;
+                    preview.style.display = 'block';
+                    cropCanvas.style.display = 'block';
+                    cropControls.style.display = 'flex';
+                    setupCropCanvas();
+                };
+                img.src = event.target.result;
             };
             reader.readAsDataURL(file);
+        });
+    }
+
+    function setupCropCanvas() {
+        if (!originalImage) return;
+        
+        const ctx = cropCanvas.getContext('2d');
+        const maxWidth = 400;
+        const scale = maxWidth / originalImage.width;
+        
+        cropCanvas.width = originalImage.width * scale;
+        cropCanvas.height = originalImage.height * scale;
+        ctx.drawImage(originalImage, 0, 0, cropCanvas.width, cropCanvas.height);
+    }
+
+    if (resetCrop) {
+        resetCrop.addEventListener('click', (e) => {
+            e.preventDefault();
+            setupCropCanvas();
+        });
+    }
+
+    if (applyCrop) {
+        applyCrop.addEventListener('click', (e) => {
+            e.preventDefault();
+            if (!originalImage) return;
+            
+            const canvasWidth = cropCanvas.width;
+            const canvasHeight = cropCanvas.height;
+            
+            // Get the current canvas image data and reduce size by 20%
+            const newWidth = canvasWidth * 0.8;
+            const newHeight = canvasHeight * 0.8;
+            const startX = (canvasWidth - newWidth) / 2;
+            const startY = (canvasHeight - newHeight) / 2;
+            
+            // Create temporary canvas for cropping
+            const tempCanvas = document.createElement('canvas');
+            tempCanvas.width = newWidth;
+            tempCanvas.height = newHeight;
+            const tempCtx = tempCanvas.getContext('2d');
+            
+            // Draw cropped portion
+            tempCtx.drawImage(
+                cropCanvas,
+                startX,
+                startY,
+                newWidth,
+                newHeight,
+                0,
+                0,
+                newWidth,
+                newHeight
+            );
+            
+            // Update the visible canvas to show cropped version
+            cropCanvas.width = newWidth;
+            cropCanvas.height = newHeight;
+            const ctx = cropCanvas.getContext('2d');
+            ctx.drawImage(tempCanvas, 0, 0);
+            
+            // Convert to blob and update file input
+            tempCanvas.toBlob((blob) => {
+                const dataTransfer = new DataTransfer();
+                const croppedFile = new File([blob], originalFileName, { type: 'image/jpeg' });
+                dataTransfer.items.add(croppedFile);
+                imageInput.files = dataTransfer.files;
+                
+                // Update preview with cropped image
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    preview.src = event.target.result;
+                    cropControls.style.display = 'none';
+                    cropCanvas.style.display = 'none';
+                    alert('Image cropped successfully! Ready to post.');
+                };
+                reader.readAsDataURL(blob);
+            }, 'image/jpeg', 0.85);
         });
     }
 });

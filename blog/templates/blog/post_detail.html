@@ -17,7 +17,9 @@
         <!-- Left: Creator Info -->
         <div class="creator-info">
             <img src="{% if post.author.avatar %}{{ post.author.avatar.url }}{% else %}{% static 'avatars/default.png' %}{% endif %}" 
-                 alt="{{ post.author.username }}" class="creator-pfp">
+                 alt="{{ post.author.username }}" class="creator-pfp user-profile-trigger" 
+                 data-user-id="{{ post.author.id }}" data-username="{{ post.author.username }}"
+                 data-allow-public-socials="{{ post.author.allow_public_socials }}" style="cursor: pointer;">
             <div class="creator-details">
                 <strong>{{ post.author.username }}</strong>
                 <span class="followers-count">{{ post.author.followers.count }} Followers</span>
@@ -73,7 +75,13 @@
             
             <!-- More / Report -->
             <div class="more-container">
-                <button type="button" class="more-btn">⋯</button>
+                <button type="button" class="more-btn" aria-haspopup="true" aria-expanded="false" aria-label="More options">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" focusable="false">
+                        <circle cx="12" cy="5" r="2"></circle>
+                        <circle cx="12" cy="12" r="2"></circle>
+                        <circle cx="12" cy="19" r="2"></circle>
+                    </svg>
+                </button>
                 <div class="more-menu">
                     <button type="button" class="report-post-btn" data-post-id="{{ post.id }}">Report</button>
                 </div>
@@ -113,7 +121,10 @@
                 </div>
 
                 <!-- Replies -->
-                <div class="replies">
+                {% if comment.replies.count %}
+                <button type="button" class="replies-toggle" data-parent-id="{{ comment.id }}">Replies ({{ comment.replies.count }})</button>
+                {% endif %}
+                <div class="replies" data-parent-id="{{ comment.id }}" aria-hidden="true">
                     {% for reply in comment.replies.all %}
                     <div class="comment-box reply-box" data-comment-id="{{ reply.id }}">
                         <div class="comment-header">
@@ -156,7 +167,7 @@
 
 
 <style>
-    :root{ --primary: #0d6efd; }
+    :root{ --primary: #1f9cee; }
 .post-header {
     display: flex;
     justify-content: space-between;
@@ -185,13 +196,13 @@
 .follow-btn {
     padding: 5px 10px;
     border: none;
-    background-color: #0d6efd;
+    background-color: #1f9cee;
     color: white;
     display: flex;
     align-items: center;
     gap: 5px;
     border-radius: 8px;
-    cursor: pointer;
+    cursor: button;
 }
 
 .more-btn {
@@ -270,6 +281,21 @@
     display: flex;
 }
 
+/* Replies collapsed by default */
+.replies { display: none; max-height: 0; overflow: hidden; transition: max-height 0.24s cubic-bezier(.2,.8,.2,1), opacity 0.18s ease; opacity: 0; }
+.replies.open { display: block; opacity: 1; max-height: 2000px; }
+
+.replies-toggle {
+    background: none;
+    border: none;
+    color: var(--primary);
+    cursor: pointer;
+    padding: 6px 0;
+    font-weight: 600;
+}
+.replies-toggle:after { content: ' ▾'; font-weight: 400; }
+.replies-toggle.open:after { content: ' ▴'; }
+
 .more-menu button {
     background: none;
     border: none;
@@ -320,7 +346,7 @@
 .description-toggle {
     border: none;
     background: none;
-    color: #0d6efd;
+    color: #1f9cee;
     cursor: pointer;
     font-size: 0.9rem;
     padding: 0;
@@ -397,14 +423,14 @@
 }
 
 .comments-section textarea:focus {
-    border-color: #0d6efd;
+    border-color: #1f9cee;
     outline: none;
 }
 
 .comments-section form button {
     align-self: flex-end;
     padding: 8px 18px;
-    background-color: #0d6efd;
+    background-color: #1f9cee;
     color: white;
     border: none;
     border-radius: 10px;
@@ -434,11 +460,12 @@
 
 /* Reply visual treatment */
 .reply-box {
-    margin-left: 28px;
+    margin-left: 36px;
+    margin-top: 10px;
     background: linear-gradient(180deg, #ffffff, #fbfbfd);
     border-left: 3px solid rgba(13,110,253,0.08);
     padding: 12px 16px;
-    box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+    box-shadow: 0 1px 6px rgba(0,0,0,0.06);
 }
 
 .reply-box .comment-header strong { font-size: 0.95rem; }
@@ -450,15 +477,15 @@
     max-height: 0;
     overflow: hidden;
     opacity: 0;
-    transform: translateY(-6px);
-    transition: max-height 0.18s ease, opacity 0.18s ease, transform 0.18s ease;
+    transform: translateY(-8px);
+    transition: max-height 0.24s cubic-bezier(.2,.8,.2,1), opacity 0.18s ease, transform 0.18s ease;
     margin-top: 0; /* will be applied when open */
 }
 .reply-form.open {
-    max-height: 360px;
+    max-height: 420px;
     opacity: 1;
     transform: translateY(0);
-    margin-top: 12px;
+    margin-top: 18px;
 }
 
 
@@ -519,7 +546,7 @@
 }
 
 .comment-actions svg {
-    stroke: #0d6efd; /* Blue for icons */
+    stroke: #1f9cee; /* Blue for icons */
     width: 20px;
     height: 20px;
 }
@@ -742,6 +769,16 @@ document.addEventListener('DOMContentLoaded', () => {
                 </div>
             `;
             replies.appendChild(node);
+            // update replies count on the toggle button if present
+            try {
+                const toggleBtn = parentBox.querySelector(`.replies-toggle[data-parent-id="${parentId}"]`);
+                if (toggleBtn) {
+                    const match = toggleBtn.textContent.match(/(\d+)/);
+                    const oldCount = match ? parseInt(match[1], 10) : 0;
+                    const newCount = oldCount + 1;
+                    toggleBtn.textContent = `Replies (${newCount})`;
+                }
+            } catch (_) {}
             replyForm.style.display = 'none';
             textarea.value = '';
 
@@ -807,6 +844,59 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch (err) {
             console.error('Error posting comment:', err);
         }
+    });
+    // ------------------------------
+    // Page-specific fallbacks: ensure replies toggle and more-menu work
+    // even if global `static/script.js` didn't load or was blocked.
+    // ------------------------------
+    // Replies toggle fallback
+    document.querySelectorAll('.replies-toggle').forEach(rt => {
+        rt.addEventListener('click', (ev) => {
+            ev.stopPropagation();
+            const parentId = rt.dataset.parentId;
+            const repliesEl = document.querySelector(`.replies[data-parent-id='${parentId}']`) || rt.closest('.comment-box')?.querySelector('.replies');
+            if (!repliesEl) return;
+            const isOpen = repliesEl.classList.toggle('open');
+            rt.classList.toggle('open', isOpen);
+            repliesEl.setAttribute('aria-hidden', !isOpen);
+            repliesEl.style.display = isOpen ? 'block' : 'none';
+        });
+    });
+
+    // More-menu (ellipsis) fallback & Report button wiring
+    document.querySelectorAll('.more-container').forEach(mc => {
+        const btn = mc.querySelector('.more-btn');
+        const menu = mc.querySelector('.more-menu');
+        if (!btn || !menu) return;
+        btn.addEventListener('click', (ev) => {
+            ev.stopPropagation();
+            const isOpen = mc.classList.toggle('open');
+            btn.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+            menu.style.display = isOpen ? 'flex' : 'none';
+        });
+    });
+
+    // Report button: POST to report endpoint and show confirmation
+    document.querySelectorAll('.report-post-btn').forEach(rb => {
+        rb.addEventListener('click', async (ev) => {
+            ev.stopPropagation();
+            const postId = rb.dataset.postId;
+            if (!confirm('Report this post for moderation?')) return;
+            try {
+                const res = await fetch(`/posts/post/${postId}/report/`, { method: 'POST', headers: { 'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value } });
+                if (!res.ok) throw new Error('Report failed');
+                alert('Reported — thank you.');
+                const container = rb.closest('.more-container');
+                if (container) {
+                    container.classList.remove('open');
+                    const m = container.querySelector('.more-menu'); if (m) m.style.display = 'none';
+                    const b = container.querySelector('.more-btn'); if (b) b.setAttribute('aria-expanded','false');
+                }
+            } catch (err) {
+                console.error('Report error', err);
+                alert('Failed to report — try again.');
+            }
+        });
     });
 });
 </script>

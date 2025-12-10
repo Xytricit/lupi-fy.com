@@ -289,6 +289,30 @@ transition: transform 0.2s;
 transform: translateY(-4px);
 }
 
+/* Filter Bubble Styling */
+.filter-bubble {
+    padding: 8px 16px;
+    border: 2px solid #ddd;
+    background: #fff;
+    color: var(--text-dark);
+    border-radius: 20px;
+    cursor: pointer;
+    font-weight: 500;
+    transition: all 0.2s;
+    font-size: 0.9rem;
+}
+
+.filter-bubble:hover {
+    border-color: var(--primary);
+    color: var(--primary);
+}
+
+.filter-bubble.active {
+    border-color: var(--primary);
+    background: var(--primary);
+    color: #fff;
+}
+
 /* Avatar */
 .pfp, .pfp-fallback {
 width: 38px;
@@ -559,6 +583,16 @@ body, html { overflow-x: hidden; }
                 </svg>
             </a>
         </li>
+        <li title="Games">
+            <a href="{% url 'games_hub' %}">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                    <rect x="2" y="6" width="20" height="12" rx="2"/>
+                    <path d="M6 10h3v4H6z"/>
+                    <path d="M15 9v6"/>
+                    <path d="M18 12h-6"/>
+                </svg>
+            </a>
+        </li>
     </ul>
 </aside>
 
@@ -569,76 +603,48 @@ body, html { overflow-x: hidden; }
 <div class="main-wrapper">
     {% block content %}
     <div class="feed" id="feed">
-        <!-- Trending chips (selectable bubbles) -->
-        {% if trending_posts %}
-        <div class="trending-chips" style="display:flex;gap:8px;overflow-x:auto;margin-bottom:14px;padding:8px 4px;">
-            <button class="trending-chip active" data-post-id="all">All</button>
-            {% for t in trending_posts %}
-                <button class="trending-chip" data-post-id="{{ t.id }}">{{ t.title|truncatechars:40 }}</button>
-            {% endfor %}
-        </div>
-
-        {% endif %}
-
-        <div class="layout-grid" style="display:flex;gap:20px;align-items:flex-start;">
-            <div class="main-feed" style="flex:1;">
-                {% if recent_posts %}
-                    {% for post in recent_posts %}
-                    <div class="post-card">
-                        <div style="display:flex;justify-content:space-between;align-items:center;">
-                            <div>
-                                <a href="{% url 'post_detail' post.id %}"><h4>{{ post.title }}</h4></a>
-                                <p style="margin:0;color:var(--secondary-text);">by {{ post.author.username }} • {{ post.created|date:'M d, Y' }}</p>
+        <!-- Recently Played (Horizontal Scroller) -->
+        <section style="margin-bottom:32px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+                <h2 style="margin:0;font-size:1.5rem;color:var(--text-dark);">Recently Played</h2>
+                <a href="{% url 'games_hub' %}" style="color:var(--primary);font-weight:500;text-decoration:none;transition:color 0.2s;" onmouseover="this.style.color='var(--primary-dark)'" onmouseout="this.style.color='var(--primary)'">See all →</a>
+            </div>
+            <div id="recent-games" style="display:flex;gap:14px;overflow-x:auto;padding-bottom:8px;scroll-behavior:smooth;">
+                {% if recent_games %}
+                    {% for g in recent_games %}
+                        <a href="{% url 'games_hub' %}" style="text-decoration:none;color:inherit;min-width:160px;flex-shrink:0;">
+                            <div style="background:linear-gradient(135deg, #1f9cee15, #fec76f15);padding:16px;border-radius:12px;border:1px solid rgba(31,156,238,0.1);transition:all 0.3s ease;" onmouseover="this.style.transform='translateY(-4px)';this.style.boxShadow='0 8px 16px rgba(31,156,238,0.15)'" onmouseout="this.style.transform='none';this.style.boxShadow='none'">
+                                <div style="font-size:2rem;margin-bottom:8px;">🎮</div>
+                                <div style="font-weight:600;font-size:0.95rem;color:var(--text-dark);margin-bottom:4px;">{{ g.user.username }}</div>
+                                <div style="color:var(--primary);font-weight:700;font-size:1.1rem;margin-bottom:6px;">{{ g.score }}</div>
+                                <div style="font-size:0.8rem;color:var(--secondary-text);">{{ g.updated_at|date:'M d, Y' }}</div>
                             </div>
-                            <div style="display:flex;gap:8px;align-items:center;">
-                                <button class="bookmark-btn" data-post-id="{{ post.id }}">{% if request.user in post.bookmarks.all %}★{% else %}☆{% endif %}</button>
-                                <button class="more-btn">⋯</button>
-                                <div class="more-menu" style="display:none;position:absolute;">
-                                    <button class="report-post-btn" data-post-id="{{ post.id }}">Report</button>
-                                </div>
-                            </div>
-                        </div>
-                        <p style="color:var(--secondary-text);">{{ post.content|truncatewords:30 }}</p>
-                        <a href="{% url 'post_detail' post.id %}">Read more</a>
-                    </div>
+                        </a>
                     {% endfor %}
                 {% else %}
-                    <div class="post-card">No posts to show yet.</div>
+                    <div style="padding:20px;color:var(--secondary-text);">No recent games yet. <a href="{% url 'games_hub' %}">Play now</a>!</div>
                 {% endif %}
             </div>
+        </section>
 
-            <aside style="width:320px;">
-                <div class="post-card">
-                    <h4>Trending</h4>
-                    {% if trending_posts %}
-                        {% for t in trending_posts %}
-                            <div style="padding:8px 0;border-bottom:1px solid #eee;">
-                                <a href="{% url 'post_detail' t.id %}">{{ t.title }}</a>
-                                <div style="color:var(--secondary-text);font-size:0.9rem;">{{ t.likes.count }} likes • {{ t.created|date:'M d' }}</div>
-                            </div>
-                        {% endfor %}
-                    {% else %}
-                        <p>No trending posts yet.</p>
-                    {% endif %}
-                </div>
+        <!-- Bubble Filters -->
+        <section style="margin-bottom:20px;">
+            <h2 style="margin:0 0 16px 0;font-size:1.5rem;color:var(--text-dark);">Community Posts</h2>
+            <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+                <button class="filter-bubble active" data-sort="latest" style="padding:8px 16px;border:2px solid var(--primary);background:var(--primary);color:#fff;border-radius:20px;cursor:pointer;font-weight:500;transition:all 0.2s;font-size:0.9rem;">Latest</button>
+                <button class="filter-bubble" data-sort="popular" style="padding:8px 16px;border:2px solid #ddd;background:#fff;color:var(--text-dark);border-radius:20px;cursor:pointer;font-weight:500;transition:all 0.2s;font-size:0.9rem;">Most likes</button>
+                <button class="filter-bubble" data-sort="popular" style="padding:8px 16px;border:2px solid #ddd;background:#fff;color:var(--text-dark);border-radius:20px;cursor:pointer;font-weight:500;transition:all 0.2s;font-size:0.9rem;">Most viewed</button>
+                <button class="filter-bubble" data-sort="engaged" style="padding:8px 16px;border:2px solid #ddd;background:#fff;color:var(--text-dark);border-radius:20px;cursor:pointer;font-weight:500;transition:all 0.2s;font-size:0.9rem;">Trending</button>
+            </div>
+        </section>
 
-                <div class="post-card" style="margin-top:12px;">
-                    <h4>Popular Communities</h4>
-                    {% if popular_communities %}
-                        <ul style="list-style:none;padding:0;margin:0;">
-                        {% for c in popular_communities %}
-                            <li style="padding:8px 0;border-bottom:1px solid #eee;">
-                                <a href="{% url 'community_detail' c.id %}">{{ c.name }}</a>
-                                <div style="color:var(--secondary-text);font-size:0.9rem;">{{ c.members.count }} members</div>
-                            </li>
-                        {% endfor %}
-                        </ul>
-                    {% else %}
-                        <p>No communities yet.</p>
-                    {% endif %}
-                </div>
-            </aside>
-        </div>
+        <!-- Community posts feed (infinite scroll) -->
+        <section id="community-feed" style="display:flex;flex-direction:column;gap:14px;">
+            <!-- posts will be appended here by JS -->
+        </section>
+
+        <div id="feed-loading" style="text-align:center;padding:20px;color:var(--secondary-text);display:none;font-weight:500;">Loading more posts...</div>
+        <div id="feed-end" style="text-align:center;padding:20px;color:var(--secondary-text);display:none;font-weight:500;">No more posts.</div>
     </div>
     {% endblock %}
 </div>
@@ -786,7 +792,404 @@ window.addEventListener('resize', () => {
     }
 });
 </script>
+</script>
 
+<script src="{% static 'script.js' %}" defer></script>
+
+<script>
+// Community posts infinite scroll
+(() => {
+    const feedEl = document.getElementById('community-feed');
+    const loadingEl = document.getElementById('feed-loading');
+    const endEl = document.getElementById('feed-end');
+    const bubbles = document.querySelectorAll('.filter-bubble');
+    const apiUrl = "{% url 'community_posts_api' %}";
+
+    let offset = 0;
+    const limit = 8;
+    let loading = false;
+    let endReached = false;
+    let sort = 'latest';
+
+    function showLoading(show) { loadingEl.style.display = show ? 'block' : 'none'; }
+    function showEnd(show) { endEl.style.display = show ? 'block' : 'none'; }
+
+    function mapSort(s) {
+        if (s === 'latest') return 'latest';
+        if (s === 'popular') return 'popular';
+        if (s === 'engaged') return 'engaged';
+        return 'latest';
+    }
+
+    function renderPost(p) {
+        const card = document.createElement('div');
+        card.className = 'post-card';
+        card.style.display = 'flex';
+        card.style.flexDirection = 'column';
+        card.style.gap = '12px';
+
+        // Header with community icon, name, date, and menu
+        const header = document.createElement('div');
+        header.style.display = 'flex';
+        header.style.justifyContent = 'space-between';
+        header.style.alignItems = 'flex-start';
+
+        const headerLeft = document.createElement('div');
+        headerLeft.style.display = 'flex';
+        headerLeft.style.gap = '10px';
+        headerLeft.style.alignItems = 'center';
+
+        // Community icon
+        const communityIconDiv = document.createElement('div');
+        if (p.community_image) {
+            const img = document.createElement('img');
+            img.src = p.community_image;
+            img.style.width = '40px';
+            img.style.height = '40px';
+            img.style.borderRadius = '50%';
+            img.style.objectFit = 'cover';
+            communityIconDiv.appendChild(img);
+        } else {
+            const fallback = document.createElement('div');
+            fallback.style.width = '40px';
+            fallback.style.height = '40px';
+            fallback.style.borderRadius = '50%';
+            fallback.style.background = '#ddd';
+            fallback.style.display = 'flex';
+            fallback.style.alignItems = 'center';
+            fallback.style.justifyContent = 'center';
+            fallback.style.fontWeight = 'bold';
+            fallback.textContent = p.community_name ? p.community_name.slice(0,1).toUpperCase() : 'C';
+            communityIconDiv.appendChild(fallback);
+        }
+
+        // Community name and date
+        const headerInfo = document.createElement('div');
+        const communityLink = document.createElement('a');
+        communityLink.href = `/communities/${p.community_id}/`;
+        communityLink.style.textDecoration = 'none';
+        communityLink.style.fontWeight = '600';
+        communityLink.style.color = 'var(--text-dark)';
+        communityLink.style.fontSize = '0.95rem';
+        communityLink.textContent = p.community_name;
+
+        const dateDiv = document.createElement('div');
+        dateDiv.style.fontSize = '0.8rem';
+        dateDiv.style.color = 'var(--secondary-text)';
+        dateDiv.textContent = new Date(p.created_at).toLocaleDateString();
+
+        headerInfo.appendChild(communityLink);
+        headerInfo.appendChild(dateDiv);
+
+        headerLeft.appendChild(communityIconDiv);
+        headerLeft.appendChild(headerInfo);
+
+        // Menu (ellipsis) button
+        const menuContainer = document.createElement('div');
+        menuContainer.style.position = 'relative';
+
+        const menuBtn = document.createElement('button');
+        menuBtn.style.background = 'none';
+        menuBtn.style.border = 'none';
+        menuBtn.style.cursor = 'pointer';
+        menuBtn.style.padding = '0';
+        menuBtn.style.fontSize = '1.2rem';
+        menuBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/></svg>`;
+        menuBtn.style.color = 'var(--secondary-text)';
+
+        const menu = document.createElement('div');
+        menu.style.position = 'absolute';
+        menu.style.top = '100%';
+        menu.style.right = '0';
+        menu.style.background = '#fff';
+        menu.style.border = '1px solid #ddd';
+        menu.style.borderRadius = '8px';
+        menu.style.minWidth = '140px';
+        menu.style.display = 'none';
+        menu.style.zIndex = '1000';
+        menu.style.boxShadow = '0 4px 12px rgba(0,0,0,0.1)';
+
+        const reportBtn = document.createElement('button');
+        reportBtn.style.display = 'block';
+        reportBtn.style.width = '100%';
+        reportBtn.style.padding = '10px 12px';
+        reportBtn.style.border = 'none';
+        reportBtn.style.background = 'none';
+        reportBtn.style.cursor = 'pointer';
+        reportBtn.style.textAlign = 'left';
+        reportBtn.style.fontSize = '0.9rem';
+        reportBtn.style.color = 'var(--text-dark)';
+        reportBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 24 24" style="display:inline;margin-right:6px;"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>Report`;
+        reportBtn.onmouseover = () => reportBtn.style.background = '#f5f5f5';
+        reportBtn.onmouseout = () => reportBtn.style.background = 'none';
+
+        const bookmarkBtn = document.createElement('button');
+        bookmarkBtn.style.display = 'block';
+        bookmarkBtn.style.width = '100%';
+        bookmarkBtn.style.padding = '10px 12px';
+        bookmarkBtn.style.border = 'none';
+        bookmarkBtn.style.background = 'none';
+        bookmarkBtn.style.cursor = 'pointer';
+        bookmarkBtn.style.textAlign = 'left';
+        bookmarkBtn.style.fontSize = '0.9rem';
+        bookmarkBtn.style.color = 'var(--text-dark)';
+        bookmarkBtn.innerHTML = p.user_bookmarked ? `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 24 24" style="display:inline;margin-right:6px;"><path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2Z"/></svg>✓ Bookmarked` : `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="display:inline;margin-right:6px;"><path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z"/></svg>Bookmark`;
+        bookmarkBtn.onclick = (e) => {
+            e.stopPropagation();
+            fetch(`/communities/api/post/${p.id}/bookmark/`, { method: 'POST', credentials: 'include' })
+                .then(r => r.json())
+                .then(d => {
+                    bookmarkBtn.innerHTML = d.bookmarked ? `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 24 24" style="display:inline;margin-right:6px;"><path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2Z"/></svg>✓ Bookmarked` : `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="display:inline;margin-right:6px;"><path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z"/></svg>Bookmark`;
+                });
+        };
+        bookmarkBtn.onmouseover = () => bookmarkBtn.style.background = '#f5f5f5';
+        bookmarkBtn.onmouseout = () => bookmarkBtn.style.background = 'none';
+
+        menu.appendChild(reportBtn);
+        menu.appendChild(bookmarkBtn);
+
+        menuBtn.onclick = (e) => {
+            e.stopPropagation();
+            menu.style.display = menu.style.display === 'none' ? 'block' : 'none';
+        };
+
+        document.addEventListener('click', () => { menu.style.display = 'none'; });
+
+        menuContainer.appendChild(menuBtn);
+        menuContainer.appendChild(menu);
+
+        header.appendChild(headerLeft);
+        header.appendChild(menuContainer);
+        card.appendChild(header);
+
+        // Title
+        const titleEl = document.createElement('h3');
+        titleEl.style.margin = '8px 0';
+        titleEl.style.fontSize = '1.1rem';
+        titleEl.style.color = 'var(--text-dark)';
+        titleEl.textContent = p.title;
+        card.appendChild(titleEl);
+
+        // Post image (square with gradient background fallback)
+        if (p.image) {
+            const imgEl = document.createElement('img');
+            imgEl.src = p.image;
+            imgEl.style.width = '100%';
+            imgEl.style.aspectRatio = '1/1';
+            imgEl.style.objectFit = 'cover';
+            imgEl.style.borderRadius = '10px';
+            card.appendChild(imgEl);
+        } else {
+            const imgFallback = document.createElement('div');
+            imgFallback.style.width = '100%';
+            imgFallback.style.aspectRatio = '1/1';
+            imgFallback.style.background = 'linear-gradient(135deg, #1f9cee15, #fec76f15)';
+            imgFallback.style.borderRadius = '10px';
+            imgFallback.style.display = 'flex';
+            imgFallback.style.alignItems = 'center';
+            imgFallback.style.justifyContent = 'center';
+            imgFallback.style.color = 'var(--secondary-text)';
+            imgFallback.textContent = '📸 No image';
+            card.appendChild(imgFallback);
+        }
+
+        // Content
+        const contentEl = document.createElement('p');
+        contentEl.style.margin = '8px 0';
+        contentEl.style.color = 'var(--secondary-text)';
+        contentEl.style.fontSize = '0.95rem';
+        contentEl.textContent = p.content;
+        card.appendChild(contentEl);
+
+        // Action buttons (like, dislike, comment, author avatar)
+        const actions = document.createElement('div');
+        actions.style.display = 'flex';
+        actions.style.gap = '12px';
+        actions.style.alignItems = 'center';
+        actions.style.marginTop = '8px';
+        actions.style.paddingTop = '8px';
+        actions.style.borderTop = '1px solid #eee';
+        actions.style.position = 'relative';
+        actions.style.zIndex = '10';
+        actions.style.overflow = 'visible';
+
+        // Like button
+        const likeBtn = document.createElement('button');
+        likeBtn.style.background = 'none';
+        likeBtn.style.border = 'none';
+        likeBtn.style.cursor = 'pointer';
+        likeBtn.style.padding = '4px 8px';
+        likeBtn.style.fontSize = '0.9rem';
+        likeBtn.style.color = p.user_liked ? 'var(--primary)' : 'var(--secondary-text)';
+        likeBtn.style.display = 'flex';
+        likeBtn.style.alignItems = 'center';
+        likeBtn.style.gap = '6px';
+        likeBtn.style.transition = 'color 0.2s';
+        likeBtn.style.position = 'relative';
+        likeBtn.style.zIndex = '260';
+        likeBtn.style.overflow = 'visible';
+        likeBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="butt" stroke-linejoin="miter"><path d="M7 10v12"/><path d="M15 5.88 14 10h5.83a2 2 0 0 1 1.92 2.56l-2.33 8A2 2 0 0 1 17.5 22H4a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2h2.76a2 2 0 0 0 1.79-1.11L12 2a3.13 3.13 0 0 1 3 3.88Z"/></svg><span class="like-count">${p.likes_count}</span>`;
+        likeBtn.onclick = (e) => {
+            e.stopPropagation();
+            e.preventDefault();
+            fetch(`/communities/api/post/${p.id}/like/`, { method: 'POST', credentials: 'include' })
+                .then(r => r.json())
+                .then(d => {
+                    likeBtn.style.color = d.liked ? 'var(--primary)' : 'var(--secondary-text)';
+                    likeBtn.querySelector('.like-count').textContent = d.likes_count;
+                    dislikeBtn.querySelector('.dislike-count').textContent = d.dislikes_count;
+                    dislikeBtn.style.color = 'var(--secondary-text)';
+                })
+                .catch(e => console.error('Like error:', e));
+        };
+
+        // Dislike button
+        const dislikeBtn = document.createElement('button');
+        dislikeBtn.style.background = 'none';
+        dislikeBtn.style.border = 'none';
+        dislikeBtn.style.cursor = 'pointer';
+        dislikeBtn.style.padding = '4px 8px';
+        dislikeBtn.style.fontSize = '0.9rem';
+        dislikeBtn.style.color = p.user_disliked ? '#e74c3c' : 'var(--secondary-text)';
+        dislikeBtn.style.display = 'flex';
+        dislikeBtn.style.alignItems = 'center';
+        dislikeBtn.style.gap = '6px';
+        dislikeBtn.style.transition = 'color 0.2s';
+        dislikeBtn.style.position = 'relative';
+        dislikeBtn.style.zIndex = '260';
+        dislikeBtn.style.overflow = 'visible';
+        dislikeBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="butt" stroke-linejoin="miter"><path d="M17 14V2"/><path d="M9 18.12 10 14H4.17a2 2 0 0 1-1.92-2.56l2.33-8A2 2 0 0 1 6.5 2H20a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-2.76a2 2 0 0 0-1.79 1.11L12 22a3.13 3.13 0 0 1-3-3.88Z"/></svg><span class="dislike-count">${p.dislikes_count}</span>`;
+        dislikeBtn.onclick = (e) => {
+            e.stopPropagation();
+            e.preventDefault();
+            fetch(`/communities/api/post/${p.id}/dislike/`, { method: 'POST', credentials: 'include' })
+                .then(r => r.json())
+                .then(d => {
+                    dislikeBtn.style.color = d.disliked ? '#e74c3c' : 'var(--secondary-text)';
+                    dislikeBtn.querySelector('.dislike-count').textContent = d.dislikes_count;
+                    likeBtn.querySelector('.like-count').textContent = d.likes_count;
+                    likeBtn.style.color = 'var(--secondary-text)';
+                })
+                .catch(e => console.error('Dislike error:', e));
+        };
+
+        // Comment button (SVG)
+        const commentBtn = document.createElement('a');
+        commentBtn.href = `/communities/post/${p.id}/`;
+        commentBtn.style.background = 'none';
+        commentBtn.style.border = 'none';
+        commentBtn.style.cursor = 'pointer';
+        commentBtn.style.padding = '0';
+        commentBtn.style.fontSize = '0.9rem';
+        commentBtn.style.color = 'var(--secondary-text)';
+        commentBtn.style.textDecoration = 'none';
+        commentBtn.style.display = 'flex';
+        commentBtn.style.alignItems = 'center';
+        commentBtn.style.gap = '6px';
+        commentBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="butt" stroke-linejoin="miter"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg><span>Comment</span>`;
+        commentBtn.onmouseover = () => commentBtn.style.color = 'var(--primary)';
+        commentBtn.onmouseout = () => commentBtn.style.color = 'var(--secondary-text)';
+
+        // Author avatar
+        const authorAvatarDiv = document.createElement('div');
+        authorAvatarDiv.style.marginLeft = 'auto';
+
+        if (p.author_avatar) {
+            const aimg = document.createElement('img');
+            aimg.src = p.author_avatar;
+            aimg.style.width = '32px';
+            aimg.style.height = '32px';
+            aimg.style.borderRadius = '50%';
+            aimg.style.objectFit = 'cover';
+            authorAvatarDiv.appendChild(aimg);
+        } else {
+            const afb = document.createElement('div');
+            afb.style.width = '32px';
+            afb.style.height = '32px';
+            afb.style.borderRadius = '50%';
+            afb.style.background = '#999';
+            afb.style.color = '#fff';
+            afb.style.display = 'flex';
+            afb.style.alignItems = 'center';
+            afb.style.justifyContent = 'center';
+            afb.style.fontWeight = 'bold';
+            afb.textContent = p.author_username ? p.author_username.slice(0,1).toUpperCase() : 'U';
+            authorAvatarDiv.appendChild(afb);
+        }
+
+        actions.appendChild(likeBtn);
+        actions.appendChild(dislikeBtn);
+        actions.appendChild(commentBtn);
+        actions.appendChild(authorAvatarDiv);
+        card.appendChild(actions);
+
+        // Make clicking the card navigate to the post detail unless the click was on an interactive element
+        card.style.cursor = 'pointer';
+        card.addEventListener('click', (e) => {
+            if (e.target.closest('button') || e.target.closest('a') || e.target.closest('input') || e.target.closest('textarea')) return;
+            window.location.href = `/communities/post/${p.id}/`;
+        });
+
+        feedEl.appendChild(card);
+    }
+
+    async function loadMore() {
+        if (loading || endReached) return;
+        loading = true;
+        showLoading(true);
+
+        const q = new URLSearchParams({ offset: offset, limit: limit, sort: mapSort(sort) });
+        try {
+            const res = await fetch(apiUrl + '?' + q.toString(), { credentials: 'include' });
+            if (!res.ok) throw new Error('Network error');
+            const data = await res.json();
+            if (!data.posts || data.posts.length === 0) {
+                endReached = true;
+                showEnd(true);
+            } else {
+                data.posts.forEach(renderPost);
+                offset += data.posts.length;
+                if (offset >= data.total) { endReached = true; showEnd(true); }
+            }
+        } catch (e) {
+            console.error('Failed to load posts', e);
+        } finally {
+            loading = false;
+            showLoading(false);
+        }
+    }
+
+    // initial load
+    loadMore();
+
+    // infinite scroll (window)
+    window.addEventListener('scroll', () => {
+        if (loading || endReached) return;
+        const nearBottom = (window.innerHeight + window.scrollY) >= (document.body.offsetHeight - 600);
+        if (nearBottom) loadMore();
+    });
+
+    // bubble filter click
+    bubbles.forEach(b => b.addEventListener('click', (ev) => {
+        bubbles.forEach(x => {
+            x.classList.remove('active');
+            x.style.borderColor = '#ddd';
+            x.style.background = '#fff';
+            x.style.color = 'var(--text-dark)';
+        });
+        b.classList.add('active');
+        b.style.borderColor = 'var(--primary)';
+        b.style.background = 'var(--primary)';
+        b.style.color = '#fff';
+        sort = b.getAttribute('data-sort') || 'latest';
+        // reset
+        offset = 0; endReached = false; feedEl.innerHTML = '';
+        showEnd(false);
+        loadMore();
+    }));
+
+})();
+</script>
 
 </body>
 </html>

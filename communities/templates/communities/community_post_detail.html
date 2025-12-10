@@ -3,12 +3,767 @@
 {% block title %}{{ post.title }} - {{ post.community.name }}{% endblock %}
 
 {% block content %}
-<article class="community-post-detail card">
-    <h1>{{ post.title }}</h1>
-    <p class="meta">by {{ post.author.username }} • {{ post.created_at }}</p>
+<style>
+    svg {
+        position: relative;
+        z-index: 1;
+    }
+
+    /* Default: make all svgs inside the post container use a white stroke by default.
+       Do NOT force `fill:none` here because some SVGs rely on `fill` (ellipsis/menu dots).
+    */
+    .post-detail-container svg {
+        stroke: white;
+    }
+    .post-detail-container {
+        /* expand to use more horizontal space on larger screens while staying responsive */
+        max-width: 1100px;
+        width: min(1100px, 96%);
+        margin: 20px auto;
+        padding: 20px;
+        background: var(--bg-color);
+        border-radius: 12px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+
+    /* Avoid clipping interactive icons inside comment boxes / replies */
+    .comment-box,
+    .replies-container,
+    .reply-form-container {
+        overflow: visible;
+    }
+
+    /* Make the more/ellipsis button sit above other content */
+    .more-btn {
+        z-index: 250;
+    }
+
+    .post-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 20px;
+        padding-bottom: 16px;
+        border-bottom: 1px solid var(--border-color);
+    }
+
+    .post-header-left {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        flex: 1;
+    }
+
+    .community-icon {
+        width: 48px;
+        height: 48px;
+        border-radius: 50%;
+        object-fit: cover;
+        background: linear-gradient(135deg, #1f9cee15, #fec76f15);
+    }
+
+    .header-info {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+    }
+
+    .community-name {
+        font-weight: 600;
+        color: var(--text-color);
+        text-decoration: none;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 1rem;
+    }
+
+    .community-name:hover {
+        color: var(--primary);
+    }
+
+    .post-date {
+        font-size: 0.85rem;
+        color: var(--secondary-text);
+    }
+
+    .more-btn {
+        background: none;
+        border: none;
+        cursor: pointer;
+        padding: 8px;
+        color: var(--secondary-text);
+        font-size: 1.2rem;
+        position: relative;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .more-btn:hover {
+        color: var(--text-color);
+    }
+
+    .post-menu {
+        position: absolute;
+        top: 40px;
+        right: 0;
+        background: white;
+        border: 1px solid var(--border-color);
+        border-radius: 8px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        min-width: 180px;
+        z-index: 100;
+        display: none;
+    }
+
+    .post-menu.active {
+        display: block;
+    }
+
+    .menu-item {
+        padding: 10px 16px;
+        cursor: pointer;
+        color: var(--text-color);
+        border: none;
+        background: none;
+        width: 100%;
+        text-align: left;
+        font-size: 0.95rem;
+        transition: background 0.2s;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .menu-item:hover {
+        background: var(--bg-color);
+    }
+
+    .menu-item.danger {
+        color: #e74c3c;
+    }
+
+    .post-title {
+        font-size: 1.4rem;
+        font-weight: 700;
+        color: var(--text-color);
+        margin-bottom: 12px;
+    }
+
+    .post-image {
+        width: 100%;
+        aspect-ratio: 1 / 1;
+        object-fit: cover;
+        border-radius: 10px;
+        margin-bottom: 16px;
+    }
+
+    .post-image-fallback {
+        width: 100%;
+        aspect-ratio: 1 / 1;
+        background: linear-gradient(135deg, #1f9cee15, #fec76f15);
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: var(--secondary-text);
+        font-size: 1.1rem;
+        margin-bottom: 16px;
+    }
+
+    .post-content {
+        font-size: 1rem;
+        line-height: 1.6;
+        color: var(--text-color);
+        margin-bottom: 20px;
+        word-wrap: break-word;
+    }
+
+    .post-actions {
+        display: flex;
+        gap: 16px;
+        padding-top: 16px;
+        border-top: 1px solid var(--border-color);
+        margin-bottom: 24px;
+        position: relative;
+        z-index: 10;
+    }
+
+    .action-btn {
+        background: none;
+        border: none;
+        cursor: pointer;
+        padding: 8px 12px;
+        font-size: 0.95rem;
+        color: var(--secondary-text);
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        transition: color 0.2s;
+        border-radius: 4px;
+        overflow: visible;
+    }
+
+    .action-btn svg {
+        min-width: 20px;
+        min-height: 20px;
+        width: 20px;
+        height: 20px;
+        /* default inside fill when not active */
+        fill: white;
+        /* stroke follows the button color (uses currentColor) */
+        stroke: currentColor;
+        /* flat/cut stroke caps and sharp joins */
+        stroke-linecap: butt;
+        stroke-linejoin: miter;
+    }
+
+    /* Apply same default fill / cut edges to comment action svgs */
+    .comment-like-action svg,
+    .comment-dislike-action svg,
+    .reply-toggle svg {
+        fill: white;
+        stroke: currentColor;
+        stroke-linecap: butt;
+        stroke-linejoin: miter;
+    }
+
+    .action-btn:hover {
+        color: var(--primary);
+    }
+
+    .action-btn.liked {
+        color: var(--primary);
+    }
+
+    .action-btn.liked svg {
+        fill: var(--primary) !important;
+        stroke: var(--primary) !important;
+    }
+
+    .action-btn.disliked {
+        color: #e74c3c;
+    }
+
+    .action-btn.disliked svg {
+        fill: #e74c3c !important;
+        stroke: #e74c3c !important;
+    }
+
+    /* Ensure comment/reply like & dislike buttons show filled color when active */
+    .comment-like-action.liked { color: var(--primary) !important; }
+    .comment-like-action.liked svg { fill: var(--primary) !important; stroke: var(--primary) !important; }
+
+    .comment-dislike-action.disliked { color: #e74c3c !important; }
+    .comment-dislike-action.disliked svg { fill: #e74c3c !important; stroke: #e74c3c !important; }
+
+    /* Replies use the same classes */
+    .replies-container .comment-like-action.liked { color: var(--primary) !important; }
+    .replies-container .comment-like-action.liked svg { fill: var(--primary) !important; stroke: var(--primary) !important; }
+    .replies-container .comment-dislike-action.disliked { color: #e74c3c !important; }
+    .replies-container .comment-dislike-action.disliked svg { fill: #e74c3c !important; stroke: #e74c3c !important; }
+
+    /* Make sure action buttons are visible and not clipped, and sit above surrounding content */
+    .comment-like-action,
+    .comment-dislike-action,
+    .reply-toggle,
+    .reply-cancel {
+        position: relative;
+        z-index: 260;
+        overflow: visible;
+    }
+
+    /* Ensure comment boxes are positioned so their icons can overlap safely when needed */
+    .comment-box { position: relative; z-index: 1; overflow: visible; }
+
+    /* Style the report button: red triangle with small white detail (inner path) */
+    #reportBtn svg { fill: #e74c3c; stroke: #e74c3c; }
+    #reportBtn svg path:nth-of-type(2) { stroke: #ffffff; stroke-width: 1.5; }
+
+    .action-count {
+        font-size: 0.9rem;
+        font-weight: 500;
+    }
+
+    .comments-section {
+        border-top: 1px solid var(--border-color);
+        padding-top: 20px;
+    }
+
+    .comments-title {
+        font-size: 1.1rem;
+        font-weight: 600;
+        margin-bottom: 16px;
+        color: var(--text-color);
+    }
+
+    .back-link {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        margin-bottom: 20px;
+        color: var(--primary);
+        text-decoration: none;
+        font-size: 0.95rem;
+        padding: 8px 12px;
+        border-radius: 6px;
+        transition: background 0.2s;
+    }
+
+    .back-link:hover {
+        background: rgba(31, 156, 238, 0.1);
+    }
+
+    @media (max-width: 640px) {
+        .post-detail-container {
+            border-radius: 0;
+            box-shadow: none;
+        }
+
+        .post-title {
+            font-size: 1.2rem;
+        }
+
+        .post-header {
+            margin-bottom: 16px;
+            padding-bottom: 12px;
+        }
+    }
+</style>
+
+<div class="post-detail-container">
+    <a href="{% url 'dashboard_home' %}" class="back-link">
+        <svg width="20" height="20" viewBox="0 0 24 24">
+            <path d="M19 12H5M12 19l-7-7 7-7"/>
+        </svg>
+        Back to Feed
+    </a>
+
+    <!-- Post Header -->
+    <div class="post-header">
+        <div class="post-header-left">
+            {% if post.community.community_image %}
+                <img src="{{ post.community.community_image.url }}" alt="{{ post.community.name }}" class="community-icon">
+            {% else %}
+                <div class="community-icon" style="background: linear-gradient(135deg, #1f9cee15, #fec76f15); display: flex; align-items: center; justify-content: center; font-size: 1.2rem;">🌍</div>
+            {% endif %}
+            <div class="header-info">
+                <a href="{% url 'community_detail' post.community.id %}" class="community-name">
+                    {{ post.community.name }}
+                </a>
+                <div class="post-date">{{ post.created_at|date:"M d, Y \a\t g:i A" }}</div>
+            </div>
+        </div>
+
+        <div style="position: relative;">
+            <button class="more-btn" id="moreBtn">
+                <svg width="24" height="24" viewBox="0 0 24 24">
+                    <circle cx="12" cy="12" r="1" fill="currentColor"/>
+                    <circle cx="19" cy="12" r="1" fill="currentColor"/>
+                    <circle cx="5" cy="12" r="1" fill="currentColor"/>
+                </svg>
+            </button>
+            <div class="post-menu" id="postMenu">
+                <button class="menu-item" id="bookmarkBtn">
+                    <svg width="18" height="18" viewBox="0 0 24 24">
+                        <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/>
+                    </svg>
+                    <span>Bookmark</span>
+                </button>
+                <button class="menu-item danger" id="reportBtn">
+                    <svg width="18" height="18" viewBox="0 0 24 24">
+                        <path d="M12 2L2 20h20L12 2z"/>
+                        <path d="M12 9v4M12 17h.01"/>
+                    </svg>
+                    <span>Report Post</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Post Title -->
+    <h1 class="post-title">{{ post.title }}</h1>
+
+    <!-- Post Image -->
     {% if post.image %}
         <img src="{{ post.image.url }}" alt="{{ post.title }}" class="post-image">
+    {% else %}
+        <div class="post-image-fallback">📸 No image</div>
     {% endif %}
-    <div class="content">{{ post.content|linebreaks }}</div>
-</article>
+
+    <!-- Post Content -->
+    <p class="post-content">{{ post.content }}</p>
+
+    <!-- Post Actions -->
+    <div class="post-actions">
+        <button class="action-btn {% if user_liked %}liked{% endif %}" id="likeBtn">
+            <svg width="20" height="20" viewBox="0 0 24 24">
+                <path d="M7 10v12"/>
+                <path d="M15 5.88 14 10h5.83a2 2 0 0 1 1.92 2.56l-2.33 8A2 2 0 0 1 17.5 22H4a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2h2.76a2 2 0 0 0 1.79-1.11L12 2a3.13 3.13 0 0 1 3 3.88Z"/>
+            </svg>
+            <span class="action-count" id="likeCount">{{ likes_count }}</span>
+        </button>
+
+        <button class="action-btn {% if user_disliked %}disliked{% endif %}" id="dislikeBtn">
+            <svg width="20" height="20" viewBox="0 0 24 24">
+                <path d="M17 14V2"/>
+                <path d="M9 18.12 10 14H4.17a2 2 0 0 1-1.92-2.56l2.33-8A2 2 0 0 1 6.5 2H20a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-2.76a2 2 0 0 0-1.79 1.11L12 22a3.13 3.13 0 0 1-3-3.88Z"/>
+            </svg>
+            <span class="action-count" id="dislikeCount">{{ dislikes_count }}</span>
+        </button>
+
+        <button class="action-btn" id="commentBtn">
+            <svg width="20" height="20" viewBox="0 0 24 24">
+                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+            </svg>
+            <span class="action-count">0</span>
+        </button>
+    </div>
+
+    <!-- Comments Section -->
+    <div class="comments-section">
+        <h2 class="comments-title">Comments</h2>
+        
+        {% if user.is_authenticated %}
+        <form id="commentForm" method="POST" data-post-id="{{ post.id }}" style="display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px;">
+            {% csrf_token %}
+            <textarea name="text" placeholder="Write a comment..." required style="min-height: 80px; padding: 12px; border: 1px solid var(--border-color); border-radius: 8px; font-family: inherit; resize: vertical; font-size: 0.95rem;"></textarea>
+            <button type="submit" style="background: var(--primary); color: white; border: none; padding: 10px 16px; border-radius: 6px; cursor: pointer; font-weight: 600;">Post Comment</button>
+        </form>
+        {% else %}
+        <p style="color: var(--secondary-text); margin-bottom: 20px;">
+            <a href="{% url 'login' %}" style="color: var(--primary); text-decoration: none;">Log in</a> to comment
+        </p>
+        {% endif %}
+
+        <div id="commentsList">
+            {% for comment in comments %}
+            <div class="comment-box" data-comment-id="{{ comment.id }}" style="background: var(--bg-color); padding: 14px; border-radius: 8px; margin-bottom: 12px; border-left: 3px solid var(--border-color);">
+                <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                    <strong style="color: var(--text-color); font-size: 0.95rem;">{{ comment.author.username }}</strong>
+                    <span style="font-size: 0.85rem; color: var(--secondary-text);">{{ comment.created_at|date:"M d, Y H:i" }}</span>
+                </div>
+                <p style="color: var(--text-color); margin: 8px 0; line-height: 1.5;">{{ comment.text }}</p>
+                <div style="display: flex; gap: 12px; margin-top: 8px; align-items: center;">
+                    <button class="comment-like-action" data-comment-id="{{ comment.id }}" style="background: none; border: none; cursor: pointer; color: var(--secondary-text); display: flex; align-items: center; gap: 4px; font-size: 0.85rem; padding: 0;">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="butt" stroke-linejoin="miter"><path d="M7 10v12"/><path d="M15 5.88 14 10h5.83a2 2 0 0 1 1.92 2.56l-2.33 8A2 2 0 0 1 17.5 22H4a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2h2.76a2 2 0 0 0 1.79-1.11L12 2a3.13 3.13 0 0 1 3 3.88Z"/></svg>
+                        <span class="like-count">{{ comment.likes.count }}</span>
+                    </button>
+                    <button class="comment-dislike-action" data-comment-id="{{ comment.id }}" style="background: none; border: none; cursor: pointer; color: var(--secondary-text); display: flex; align-items: center; gap: 4px; font-size: 0.85rem; padding: 0;">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="butt" stroke-linejoin="miter"><path d="M17 14V2"/><path d="M9 18.12 10 14H4.17a2 2 0 0 1-1.92-2.56l2.33-8A2 2 0 0 1 6.5 2H20a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-2.76a2 2 0 0 0-1.79 1.11L12 22a3.13 3.13 0 0 1-3-3.88Z"/></svg>
+                        <span class="dislike-count">{{ comment.dislikes.count }}</span>
+                    </button>
+                    <button class="reply-toggle" data-parent-id="{{ comment.id }}" style="background: none; border: none; cursor: pointer; color: var(--secondary-text); font-size: 0.85rem; padding: 0; display:flex; align-items:center; gap:6px;">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="butt" stroke-linejoin="miter"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                        <span>Reply</span>
+                    </button>
+                </div>
+                <div class="reply-form-container" style="margin-top:8px;">
+                    <form class="reply-form" data-parent-id="{{ comment.id }}" data-post-id="{{ post.id }}" method="POST" style="display: none; flex-direction: column; gap: 8px;">
+                        {% csrf_token %}
+                        <textarea name="text" placeholder="Write a reply..." required style="min-height:60px; padding:8px; border:1px solid var(--border-color); border-radius:6px; font-family:inherit; font-size:0.9rem;"></textarea>
+                        <div style="display:flex; gap:8px;">
+                            <button type="submit" style="background: var(--primary); color: white; border: none; padding: 8px 12px; border-radius: 6px; cursor: pointer; font-weight:600;">Reply</button>
+                            <button type="button" class="reply-cancel" data-parent-id="{{ comment.id }}" style="background: none; border: 1px solid var(--border-color); padding:8px 12px; border-radius:6px; cursor:pointer;">Cancel</button>
+                        </div>
+                    </form>
+                    <div class="replies-container" data-parent-id="{{ comment.id }}" style="margin-top:8px;"></div>
+                </div>
+            </div>
+            {% empty %}
+                <p style="color: var(--secondary-text); text-align: center; padding: 20px;">No comments yet. Be the first to comment!</p>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<script>
+function csrfToken() {
+    let token = '';
+    const cookies = document.cookie.split(';');
+    for (let cookie of cookies) {
+        cookie = cookie.trim();
+        if (cookie.startsWith('csrftoken=')) {
+            token = cookie.substring('csrftoken='.length);
+            break;
+        }
+    }
+    return token || document.querySelector('[name=csrfmiddlewaretoken]')?.value || '';
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    const postId = {{ post.id }};
+    const container = document.querySelector('.post-detail-container');
+    const commentForm = document.getElementById('commentForm');
+
+    // Main click handler for all buttons (including reply toggles)
+    container.addEventListener('click', async (e) => {
+        const btn = e.target.closest('button');
+        if (!btn) return;
+        if (btn.closest('form') && btn.type === 'submit') return;
+
+        // Reply toggle/cancel handled here (no network call)
+        if (btn.classList.contains('reply-toggle')) {
+            e.preventDefault();
+            const pid = btn.dataset.parentId;
+            const form = document.querySelector(`.reply-form[data-parent-id="${pid}"]`);
+            if (form) form.style.display = form.style.display === 'flex' || form.style.display === 'block' ? 'none' : 'flex';
+            return;
+        }
+
+        if (btn.classList.contains('reply-cancel')) {
+            e.preventDefault();
+            const pid = btn.dataset.parentId;
+            const form = document.querySelector(`.reply-form[data-parent-id="${pid}"]`);
+            if (form) form.style.display = 'none';
+            return;
+        }
+
+        let url = '';
+        if (btn.id === 'likeBtn') url = `/communities/api/post/${postId}/like/`;
+        else if (btn.id === 'dislikeBtn') url = `/communities/api/post/${postId}/dislike/`;
+        else if (btn.id === 'bookmarkBtn') url = `/communities/api/post/${postId}/bookmark/`;
+        else if (btn.classList.contains('comment-like-action')) url = `/communities/api/comment/${btn.dataset.commentId}/like/`;
+        else if (btn.classList.contains('comment-dislike-action')) url = `/communities/api/comment/${btn.dataset.commentId}/dislike/`;
+        else if (btn.id === 'reportBtn') {
+            // Report button handler with form
+            e.stopPropagation();
+            showReportForm();
+            return;
+        } else if (btn.id === 'moreBtn') {
+            e.stopPropagation();
+            document.getElementById('postMenu').classList.toggle('active');
+            return;
+        } else if (btn.id === 'commentBtn') {
+            e.preventDefault();
+            const commentsSection = document.querySelector('.comments-section');
+            if (commentsSection) commentsSection.scrollIntoView({ behavior: 'smooth' });
+            return;
+        } else return;
+
+        try {
+            e.preventDefault();
+            const res = await fetch(url, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': csrfToken(),
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            });
+            if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+            const data = await res.json();
+
+            // Update UI
+            if (btn.id === 'likeBtn') {
+                btn.querySelector('.action-count').textContent = data.likes_count;
+                const disBtn = document.getElementById('dislikeBtn');
+                if (disBtn) disBtn.querySelector('.action-count').textContent = data.dislikes_count;
+                if (data.liked) {
+                    btn.classList.add('liked');
+                    if (disBtn) disBtn.classList.remove('disliked');
+                } else {
+                    btn.classList.remove('liked');
+                }
+            } else if (btn.id === 'dislikeBtn') {
+                btn.querySelector('.action-count').textContent = data.dislikes_count;
+                const likeBtn = document.getElementById('likeBtn');
+                if (likeBtn) likeBtn.querySelector('.action-count').textContent = data.likes_count;
+                if (data.disliked) {
+                    btn.classList.add('disliked');
+                    if (likeBtn) likeBtn.classList.remove('liked');
+                } else {
+                    btn.classList.remove('disliked');
+                }
+            } else if (btn.id === 'bookmarkBtn') {
+                btn.innerHTML = data.bookmarked
+                    ? `<svg width="18" height="18" viewBox="0 0 24 24"><path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2Z"/></svg><span>✓ Bookmarked</span>`
+                    : `<svg width="18" height="18" viewBox="0 0 24 24"><path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2Z"/></svg><span>Bookmark</span>`;
+                document.getElementById('postMenu').classList.remove('active');
+            } else if (btn.classList.contains('comment-like-action')) {
+                btn.querySelector('.like-count').textContent = data.likes_count;
+                const disBtn = btn.parentElement.querySelector('.comment-dislike-action');
+                if (disBtn) disBtn.querySelector('.dislike-count').textContent = data.dislikes_count;
+                if (data.liked) {
+                    btn.classList.add('liked');
+                    if (disBtn) disBtn.classList.remove('disliked');
+                } else {
+                    btn.classList.remove('liked');
+                }
+            } else if (btn.classList.contains('comment-dislike-action')) {
+                btn.querySelector('.dislike-count').textContent = data.dislikes_count;
+                const likeBtn = btn.parentElement.querySelector('.comment-like-action');
+                if (likeBtn) likeBtn.querySelector('.like-count').textContent = data.likes_count;
+                if (data.disliked) {
+                    btn.classList.add('disliked');
+                    if (likeBtn) likeBtn.classList.remove('liked');
+                } else {
+                    btn.classList.remove('disliked');
+                }
+            }
+        } catch (err) {
+            console.error('Error:', err);
+        }
+    });
+
+    // Comment form submission (top-level)
+    if (commentForm) {
+        commentForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const textarea = commentForm.querySelector('textarea');
+            const text = textarea.value.trim();
+            if (!text) return;
+
+            try {
+                const res = await fetch(`/communities/api/post/${postId}/comment/`, {
+                    method: 'POST',
+                    headers: { 'X-CSRFToken': csrfToken() },
+                    body: new FormData(commentForm)
+                });
+                if (!res.ok) throw new Error('Failed to post comment');
+                const data = await res.json();
+
+                // Add comment to DOM (includes reply UI)
+                const commentsList = document.getElementById('commentsList');
+                const commentEl = document.createElement('div');
+                commentEl.className = 'comment-box';
+                commentEl.dataset.commentId = data.id;
+                commentEl.style.cssText = 'background: var(--bg-color); padding: 14px; border-radius: 8px; margin-bottom: 12px; border-left: 3px solid var(--border-color);';
+                commentEl.innerHTML = `
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                        <strong style="color: var(--text-color); font-size: 0.95rem;">${data.user}</strong>
+                        <span style="font-size: 0.85rem; color: var(--secondary-text);">${data.created_at}</span>
+                    </div>
+                    <p style="color: var(--text-color); margin: 8px 0; line-height: 1.5;">${data.text}</p>
+                    <div style="display: flex; gap: 12px; margin-top: 8px; align-items: center;">
+                        <button class="comment-like-action" data-comment-id="${data.id}" style="background: none; border: none; cursor: pointer; color: var(--secondary-text); display: flex; align-items: center; gap: 4px; font-size: 0.85rem; padding: 0;">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="butt" stroke-linejoin="miter"><path d="M7 10v12"/><path d="M15 5.88 14 10h5.83a2 2 0 0 1 1.92 2.56l-2.33 8A2 2 0 0 1 17.5 22H4a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2h2.76a2 2 0 0 0 1.79-1.11L12 2a3.13 3.13 0 0 1 3 3.88Z"/></svg>
+                            <span class="like-count">0</span>
+                        </button>
+                        <button class="comment-dislike-action" data-comment-id="${data.id}" style="background: none; border: none; cursor: pointer; color: var(--secondary-text); display: flex; align-items: center; gap: 4px; font-size: 0.85rem; padding: 0;">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="butt" stroke-linejoin="miter"><path d="M17 14V2"/><path d="M9 18.12 10 14H4.17a2 2 0 0 1-1.92-2.56l2.33-8A2 2 0 0 1 6.5 2H20a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-2.76a2 2 0 0 0-1.79 1.11L12 22a3.13 3.13 0 0 1-3-3.88Z"/></svg>
+                            <span class="dislike-count">0</span>
+                        </button>
+                        <button class="reply-toggle" data-parent-id="${data.id}" style="background: none; border: none; cursor: pointer; color: var(--secondary-text); font-size: 0.85rem; padding: 0; display:flex; align-items:center; gap:6px;">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="butt" stroke-linejoin="miter"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                            <span>Reply</span>
+                        </button>
+                    </div>
+                    <div class="reply-form-container" style="margin-top:8px;">
+                        <form class="reply-form" data-parent-id="${data.id}" data-post-id="${postId}" method="POST" style="display: none; flex-direction: column; gap: 8px;">
+                            <textarea name="text" placeholder="Write a reply..." required style="min-height:60px; padding:8px; border:1px solid var(--border-color); border-radius:6px; font-family:inherit; font-size:0.9rem;"></textarea>
+                            <div style="display:flex; gap:8px;">
+                                <button type="submit" style="background: var(--primary); color: white; border: none; padding: 8px 12px; border-radius: 6px; cursor: pointer; font-weight:600;">Reply</button>
+                                <button type="button" class="reply-cancel" data-parent-id="${data.id}" style="background: none; border: 1px solid var(--border-color); padding:8px 12px; border-radius:6px; cursor:pointer;">Cancel</button>
+                            </div>
+                        </form>
+                        <div class="replies-container" data-parent-id="${data.id}" style="margin-top:8px;"></div>
+                    </div>
+                `;
+                commentsList.prepend(commentEl);
+                textarea.value = '';
+            } catch (err) {
+                console.error('Error:', err);
+                alert('Failed to post comment');
+            }
+        });
+    }
+
+    // Reply form submissions (delegated)
+    document.addEventListener('submit', async (e) => {
+        const form = e.target.closest('.reply-form');
+        if (!form) return;
+        e.preventDefault();
+        const parentId = form.dataset.parentId;
+        const postIdAttr = form.dataset.postId || postId;
+        const textarea = form.querySelector('textarea');
+        const text = textarea.value.trim();
+        if (!text) return;
+
+        try {
+            const fd = new FormData(form);
+            fd.append('parent_id', parentId);
+
+            const res = await fetch(`/communities/api/post/${postIdAttr}/comment/`, {
+                method: 'POST',
+                headers: { 'X-CSRFToken': csrfToken() },
+                body: fd
+            });
+            if (!res.ok) throw new Error('Failed to post reply');
+            const data = await res.json();
+
+            // Build reply DOM
+            const replyEl = document.createElement('div');
+            replyEl.className = 'comment-box';
+            replyEl.dataset.commentId = data.id;
+            replyEl.style.cssText = 'background: var(--bg-color); padding: 12px; border-radius: 8px; margin-top: 8px; margin-left: 10px; border-left: 3px solid var(--border-color);';
+            replyEl.innerHTML = `
+                <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
+                    <strong style="color: var(--text-color); font-size: 0.9rem;">${data.user}</strong>
+                    <span style="font-size: 0.8rem; color: var(--secondary-text);">${data.created_at}</span>
+                </div>
+                <p style="color: var(--text-color); margin: 6px 0; line-height: 1.4;">${data.text}</p>
+                <div style="display:flex; gap:8px; margin-top:6px; align-items:center;">
+                    <button class="comment-like-action" data-comment-id="${data.id}" style="background: none; border: none; cursor: pointer; color: var(--secondary-text); display: flex; align-items: center; gap: 4px; font-size: 0.85rem; padding: 0;">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="butt" stroke-linejoin="miter"><path d="M7 10v12"/><path d="M15 5.88 14 10h5.83a2 2 0 0 1 1.92 2.56l-2.33 8A2 2 0 0 1 17.5 22H4a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2h2.76a2 2 0 0 0 1.79-1.11L12 2a3.13 3.13 0 0 1 3 3.88Z"/></svg>
+                        <span class="like-count">0</span>
+                    </button>
+                    <button class="comment-dislike-action" data-comment-id="${data.id}" style="background: none; border: none; cursor: pointer; color: var(--secondary-text); display: flex; align-items: center; gap: 4px; font-size: 0.85rem; padding: 0;">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="butt" stroke-linejoin="miter"><path d="M17 14V2"/><path d="M9 18.12 10 14H4.17a2 2 0 0 1-1.92-2.56l2.33-8A2 2 0 0 1 6.5 2H20a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-2.76a2 2 0 0 0-1.79 1.11L12 22a3.13 3.13 0 0 1-3-3.88Z"/></svg>
+                        <span class="dislike-count">0</span>
+                    </button>
+                </div>
+            `;
+
+            // Append reply under parent replies container
+            const repliesContainer = document.querySelector(`.replies-container[data-parent-id="${parentId}"]`);
+            if (repliesContainer) repliesContainer.appendChild(replyEl);
+
+            textarea.value = '';
+            form.style.display = 'none';
+        } catch (err) {
+            console.error('Reply error:', err);
+            alert('Failed to post reply');
+        }
+    });
+
+    // Report form handler
+    function showReportForm() {
+        const reportType = prompt('Report type:\n1. Spam\n2. Harassment\n3. Inappropriate Content\n4. Misinformation\n5. Other\n\nEnter 1-5:', '5');
+        if (!reportType) return;
+
+        const typeMap = { '1': 'spam', '2': 'harassment', '3': 'inappropriate', '4': 'misinformation', '5': 'other' };
+        const type = typeMap[reportType] || 'other';
+
+        const description = prompt('Any additional details? (optional)');
+
+        submitReport(type, description || '');
+    }
+
+    function submitReport(type, description) {
+        const formData = new FormData();
+        formData.append('type', type);
+        formData.append('description', description);
+
+        fetch(`/communities/api/post/${postId}/report/`, {
+            method: 'POST',
+            headers: { 'X-CSRFToken': csrfToken() },
+            body: formData
+        }).then(r => r.json()).then(d => {
+            alert(d.message || 'Report submitted successfully');
+            document.getElementById('postMenu').classList.remove('active');
+        }).catch(e => {
+            console.error('Report error:', e);
+            alert('Failed to submit report');
+        });
+    }
+
+    // Close menu when clicking outside
+    document.addEventListener('click', (e) => {
+        if (!e.target.closest('.more-btn') && !e.target.closest('.post-menu')) {
+            document.getElementById('postMenu').classList.remove('active');
+        }
+    });
+});
+</script>
 {% endblock %}

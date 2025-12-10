@@ -1,0 +1,261 @@
+{% load static %}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Games - Lupify</title>
+    <link rel="stylesheet" href="{% static 'css/main.css' %}">
+    <style>
+        :root {
+            --primary: #1f9cee;
+            --primary-dark: #167ac6;
+            --accent: #fec76f;
+            --bg: #f8f9fa;
+            --card-bg: #ffffff;
+            --text-dark: #111827;
+            --secondary-text: #6b7280;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background: var(--bg);
+            color: var(--text-dark);
+        }
+
+        .games-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .back-button {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: var(--primary);
+            color: white;
+            text-decoration: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            margin-bottom: 30px;
+            font-weight: 600;
+            transition: background 0.3s;
+        }
+
+        .back-button:hover {
+            background: var(--primary-dark);
+        }
+
+        .back-button svg {
+            width: 20px;
+            height: 20px;
+        }
+
+        .games-header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        .games-header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            color: var(--primary);
+        }
+
+        .games-header p {
+            font-size: 1.1rem;
+            color: var(--secondary-text);
+        }
+
+        .games-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 30px;
+            margin-bottom: 40px;
+        }
+
+        .game-card {
+            background: white;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 6px 18px rgba(0,0,0,0.05);
+            transition: all 0.3s ease;
+            text-decoration: none;
+            color: inherit;
+            display: flex;
+            flex-direction: column;
+            cursor: pointer;
+        }
+
+        .game-card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 12px 28px rgba(0,0,0,0.15);
+        }
+
+        .game-card-header {
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+            color: white;
+            padding: 40px 20px;
+            text-align: center;
+        }
+
+        .game-emoji {
+            font-size: 4rem;
+            margin-bottom: 15px;
+        }
+
+        .game-card h2 {
+            font-size: 1.5rem;
+            margin-bottom: 10px;
+        }
+
+        .game-card-body {
+            padding: 20px;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .game-description {
+            color: var(--secondary-text);
+            margin-bottom: 20px;
+            line-height: 1.6;
+        }
+
+        .game-rules {
+            background: #f3f4f6;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            flex: 1;
+        }
+
+        .game-rules h4 {
+            font-size: 0.9rem;
+            color: var(--text-dark);
+            margin-bottom: 10px;
+        }
+
+        .game-rules ul {
+            list-style: none;
+            font-size: 0.85rem;
+            color: var(--secondary-text);
+            line-height: 1.6;
+        }
+
+        .game-rules li {
+            margin-bottom: 6px;
+        }
+
+        .game-rules li:before {
+            content: "✓ ";
+            color: var(--primary);
+            font-weight: 600;
+            margin-right: 6px;
+        }
+
+        .play-button {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.3s;
+            align-self: flex-start;
+            text-decoration: none;
+            display: inline-block;
+        }
+
+        .play-button:hover {
+            background: var(--primary-dark);
+        }
+
+        .coming-soon {
+            background: #f3f4f6;
+            color: var(--secondary-text);
+            cursor: not-allowed;
+        }
+
+        .coming-soon:hover {
+            background: #f3f4f6;
+        }
+
+        .badge {
+            display: inline-block;
+            background: var(--accent);
+            color: var(--text-dark);
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            margin-bottom: 15px;
+        }
+    </style>
+</head>
+<body>
+    <div class="games-container">
+        <a href="{% url 'dashboard_home' %}" class="back-button">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M19 12H5M12 19l-7-7 7-7"/>
+            </svg>
+            Back to Dashboard
+        </a>
+
+        <div class="games-header">
+            <h1>🎮 Games</h1>
+            <p>Have fun, compete with friends, and earn points!</p>
+        </div>
+
+        <div class="games-grid">
+            {% for game in games %}
+            <a href="{% url game.url %}" style="text-decoration: none; color: inherit;">
+                <div class="game-card">
+                    <div class="game-card-header">
+                        <div class="game-emoji">{{ game.emoji }}</div>
+                        <h2>{{ game.name }}</h2>
+                    </div>
+                    <div class="game-card-body">
+                        <p class="game-description">{{ game.description }}</p>
+                        <div class="game-rules">
+                            {% if game.id == 'try-not-to-get-banned' %}
+                                <h4>Quick Rules</h4>
+                                <ul>
+                                    <li>Chat with other players</li>
+                                    <li>Avoid banned words</li>
+                                    <li>Get banned for 1 minute if you slip up</li>
+                                    <li>Play unlimited times</li>
+                                </ul>
+                            {% elif game.id == 'letter-set' %}
+                                <h4>Quick Rules</h4>
+                                <ul>
+                                    <li>Get 13 random letters</li>
+                                    <li>Form valid words from your letters</li>
+                                    <li>Each word = 1 point</li>
+                                    <li>Chat with other players</li>
+                                </ul>
+                            {% endif %}
+                        </div>
+                        <button class="play-button">
+                            <svg style="width: 16px; height: 16px; display: inline; margin-right: 6px;" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M8 5v14l11-7z"/>
+                            </svg>
+                            Play Now
+                        </button>
+                    </div>
+                </div>
+            </a>
+            {% endfor %}
+        </div>
+    </div>
+</body>
+</html>

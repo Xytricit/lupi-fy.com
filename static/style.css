@@ -794,4 +794,39 @@ ul li a:hover { color: #1b7dc9; }
     .footer-site { padding: 20px 10px; width: 100%; max-width: 100%; }
 }
 
+/*================ Profile Popup =================*/
+
+.profile-popup {
+    animation: fadeInScale 0.2s ease-out;
+}
+
+@keyframes fadeInScale {
+    from {
+        opacity: 0;
+        transform: scale(0.95);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+.view-account-btn {
+    display: block !important;
+    text-align: center;
+    padding: 10px 16px !important;
+    background: #1f9cee !important;
+    color: white !important;
+    border-radius: 8px !important;
+    text-decoration: none !important;
+    font-weight: 600 !important;
+    font-size: 0.9rem !important;
+    transition: 0.2s !important;
+}
+
+.view-account-btn:hover {
+    opacity: 0.9 !important;
+    transform: translateY(-1px) !important;
+}
+
 /*================ END OF CSS =================*/
