@@ -8,16 +8,13 @@
     <!-- Header -->
     <div class="feed-header">
         <div style="display: flex; align-items: center; gap: 12px;">
-            <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
-                <path d="M6.5 2H20a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H6.5a2.5 2.5 0 0 1 0-5H20"></path>
-            </svg>
+            <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-bookmark-check-icon lucide-bookmark-check"><path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2Z"/><path d="m9 10 2 2 4-4"/></svg>
             <h2>Your Subscriptions & Bookmarks</h2>
         </div>
         <div class="subscription-tabs">
             <button class="tab-btn active" data-target="community-posts">Community Posts</button>
             <button class="tab-btn" data-target="blog-posts">Blog Articles</button>
-            <button class="tab-btn" data-target="bookmarks" style="display: flex; align-items: center; gap: 6px;"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2"><path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path></svg>Bookmarks</button>
+            <button class="tab-btn" data-target="bookmarks" style="display: flex; align-items: center; gap: 6px;"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" class="lucide lucide-bookmark-check-icon lucide-bookmark-check"><path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2Z"/><path d="m9 10 2 2 4-4"/></svg>Bookmarks</button>
         </div>
     </div>
 
@@ -50,18 +47,34 @@
         <div id="community-posts" class="tab-panel active">
             {% if community_posts %}
                 {% for post in community_posts %}
-                <div class="post-card-subscription">
-                    <div class="post-card-header">
-                        <h4><a href="{% url 'community_post_detail' post.id %}">{{ post.title }}</a></h4>
-                        <div class="post-meta-compact">
-                            <span>{{ post.community.name }}</span>
-                            <span style="display: flex; align-items: center; gap: 4px;"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>{{ post.comments.count }}</span>
-                            <span style="display: flex; align-items: center; gap: 4px;"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>{{ post.likes.count }}</span>
+                <article class="post-card full-bleed">
+                    <div class="post-card-wrapper">
+                        <div class="post-content">
+                            <div class="author-line">
+                                <span style="font-weight:600;color:var(--secondary-text);font-size:0.9rem;">{{ post.community.name }}</span>
+                            </div>
+                            <h3 class="post-title"><a href="{% url 'community_post_detail' post.id %}">{{ post.title }}</a></h3>
+                            <div class="engage-row">
+                                <div class="engage-left">
+                                    <div class="engage-controls" style="display:flex;gap:12px;align-items:center;">
+                                        <button class="like-btn" data-post-id="{{ post.id }}" data-post-type="community" style="border:none;background:none;cursor:pointer;padding:0;display:flex;align-items:center;gap:6px;color:var(--secondary-text);font-size:0.9rem;transition:color 0.2s;">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-thumbs-up-icon lucide-thumbs-up"><path d="M15 5.88 14 10h5.83a2 2 0 0 1 1.92 2.56l-2.33 8A2 2 0 0 1 17.5 22H4a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2h2.76a2 2 0 0 0 1.79-1.11L12 2a3.13 3.13 0 0 1 3 3.88Z"/><path d="M7 10v12"/></svg>
+                                            <span class="like-count">{{ post.likes.count }}</span>
+                                        </button>
+                                        <button class="comment-btn" data-post-id="{{ post.id }}" data-post-type="community" style="border:none;background:none;cursor:pointer;padding:0;display:flex;align-items:center;gap:6px;color:var(--secondary-text);font-size:0.9rem;transition:color 0.2s;">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-message-square-icon lucide-message-square"><path d="M22 17a2 2 0 0 1-2 2H6.828a2 2 0 0 0-1.414.586l-2.202 2.202A.71.71 0 0 1 2 21.286V5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2z"/></svg>
+                                            <span class="comment-count">{{ post.comments.count }}</span>
+                                        </button>
+                                        <button class="bookmark-btn" data-post-id="{{ post.id }}" data-post-type="community" style="border:none;background:none;cursor:pointer;padding:0;display:flex;align-items:center;gap:6px;color:var(--secondary-text);font-size:0.9rem;transition:color 0.2s;">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-bookmark-check-icon lucide-bookmark-check"><path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2Z"/><path d="m9 10 2 2 4-4"/></svg>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                            <p style="color:var(--secondary-text);margin-top:8px;line-height:1.5;">{{ post.content|truncatewords:30 }}</p>
                         </div>
                     </div>
-                    <p>{{ post.content|truncatewords:25 }}</p>
-                    <a href="{% url 'community_post_detail' post.id %}" class="read-more-btn">View Post →</a>
-                </div>
+                </article>
                 {% endfor %}
             {% else %}
                 <div class="empty-state">
@@ -77,18 +90,34 @@
         <div id="blog-posts" class="tab-panel">
             {% if author_posts %}
                 {% for blog in author_posts %}
-                <div class="post-card-subscription">
-                    <div class="post-card-header">
-                        <h4><a href="{% url 'post_detail' blog.id %}">{{ blog.title }}</a></h4>
-                        <div class="post-meta-compact">
-                            <span style="display: flex; align-items: center; gap: 4px;"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>{{ blog.author.username }}</span>
-                            <span style="display: flex; align-items: center; gap: 4px;"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>{{ blog.comments.count }}</span>
-                            <span style="display: flex; align-items: center; gap: 4px;"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>{{ blog.likes.count }}</span>
+                <article class="post-card full-bleed">
+                    <div class="post-card-wrapper">
+                        <div class="post-content">
+                            <div class="author-line">
+                                <span style="font-weight:600;color:var(--secondary-text);font-size:0.9rem;">By {{ blog.author.get_full_name|default:blog.author.username }}</span>
+                            </div>
+                            <h3 class="post-title"><a href="{% url 'post_detail' blog.id %}">{{ blog.title }}</a></h3>
+                            <div class="engage-row">
+                                <div class="engage-left">
+                                    <div class="engage-controls" style="display:flex;gap:12px;align-items:center;">
+                                        <button class="like-btn" data-post-id="{{ blog.id }}" data-post-type="blog" style="border:none;background:none;cursor:pointer;padding:0;display:flex;align-items:center;gap:6px;color:var(--secondary-text);font-size:0.9rem;transition:color 0.2s;">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-thumbs-up-icon lucide-thumbs-up"><path d="M15 5.88 14 10h5.83a2 2 0 0 1 1.92 2.56l-2.33 8A2 2 0 0 1 17.5 22H4a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2h2.76a2 2 0 0 0 1.79-1.11L12 2a3.13 3.13 0 0 1 3 3.88Z"/><path d="M7 10v12"/></svg>
+                                            <span class="like-count">{{ blog.likes.count }}</span>
+                                        </button>
+                                        <button class="comment-btn" data-post-id="{{ blog.id }}" data-post-type="blog" style="border:none;background:none;cursor:pointer;padding:0;display:flex;align-items:center;gap:6px;color:var(--secondary-text);font-size:0.9rem;transition:color 0.2s;">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-message-square-icon lucide-message-square"><path d="M22 17a2 2 0 0 1-2 2H6.828a2 2 0 0 0-1.414.586l-2.202 2.202A.71.71 0 0 1 2 21.286V5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2z"/></svg>
+                                            <span class="comment-count">{{ blog.comments.count }}</span>
+                                        </button>
+                                        <button class="bookmark-btn" data-post-id="{{ blog.id }}" data-post-type="blog" style="border:none;background:none;cursor:pointer;padding:0;display:flex;align-items:center;gap:6px;color:var(--secondary-text);font-size:0.9rem;transition:color 0.2s;">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-bookmark-check-icon lucide-bookmark-check"><path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2Z"/><path d="m9 10 2 2 4-4"/></svg>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                            <p style="color:var(--secondary-text);margin-top:8px;line-height:1.5;">{{ blog.content|truncatewords:30 }}</p>
                         </div>
                     </div>
-                    <p>{{ blog.content|truncatewords:25 }}</p>
-                    <a href="{% url 'post_detail' blog.id %}" class="read-more-btn">Read Article →</a>
-                </div>
+                </article>
                 {% endfor %}
             {% else %}
                 <div class="empty-state">
@@ -107,18 +136,34 @@
                 <div class="bookmarks-section">
                     <h5 style="margin-bottom: 16px; color: var(--text-dark);">Community Posts</h5>
                     {% for post in user.bookmarked_community_posts.all %}
-                    <div class="post-card-subscription">
-                        <div class="post-card-header">
-                            <h4><a href="{% url 'community_post_detail' post.id %}">{{ post.title }}</a></h4>
-                            <div class="post-meta-compact">
-                                <span>{{ post.community.name }}</span>
-                                <span style="display: flex; align-items: center; gap: 4px;"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>{{ post.comments.count }}</span>
-                                <span style="display: flex; align-items: center; gap: 4px;"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>{{ post.likes.count }}</span>
+                    <article class="post-card full-bleed">
+                        <div class="post-card-wrapper">
+                            <div class="post-content">
+                                <div class="author-line">
+                                    <span style="font-weight:600;color:var(--secondary-text);font-size:0.9rem;">{{ post.community.name }}</span>
+                                </div>
+                                <h3 class="post-title"><a href="{% url 'community_post_detail' post.id %}">{{ post.title }}</a></h3>
+                                <div class="engage-row">
+                                    <div class="engage-left">
+                                        <div class="engage-controls" style="display:flex;gap:12px;align-items:center;">
+                                            <button class="like-btn" data-post-id="{{ post.id }}" data-post-type="community" style="border:none;background:none;cursor:pointer;padding:0;display:flex;align-items:center;gap:6px;color:var(--secondary-text);font-size:0.9rem;transition:color 0.2s;">
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-thumbs-up-icon lucide-thumbs-up"><path d="M15 5.88 14 10h5.83a2 2 0 0 1 1.92 2.56l-2.33 8A2 2 0 0 1 17.5 22H4a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2h2.76a2 2 0 0 0 1.79-1.11L12 2a3.13 3.13 0 0 1 3 3.88Z"/><path d="M7 10v12"/></svg>
+                                                <span class="like-count">{{ post.likes.count }}</span>
+                                            </button>
+                                            <button class="comment-btn" data-post-id="{{ post.id }}" data-post-type="community" style="border:none;background:none;cursor:pointer;padding:0;display:flex;align-items:center;gap:6px;color:var(--secondary-text);font-size:0.9rem;transition:color 0.2s;">
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-message-square-icon lucide-message-square"><path d="M22 17a2 2 0 0 1-2 2H6.828a2 2 0 0 0-1.414.586l-2.202 2.202A.71.71 0 0 1 2 21.286V5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2z"/></svg>
+                                                <span class="comment-count">{{ post.comments.count }}</span>
+                                            </button>
+                                            <button class="bookmark-btn" data-post-id="{{ post.id }}" data-post-type="community" style="border:none;background:none;cursor:pointer;padding:0;display:flex;align-items:center;gap:6px;color:var(--secondary-text);font-size:0.9rem;transition:color 0.2s;">
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-bookmark-check-icon lucide-bookmark-check"><path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2Z"/><path d="m9 10 2 2 4-4"/></svg>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                                <p style="color:var(--secondary-text);margin-top:8px;line-height:1.5;">{{ post.content|truncatewords:30 }}</p>
                             </div>
                         </div>
-                        <p>{{ post.content|truncatewords:25 }}</p>
-                        <a href="{% url 'community_post_detail' post.id %}" class="read-more-btn">View Post →</a>
-                    </div>
+                    </article>
                     {% endfor %}
                 </div>
             {% endif %}
@@ -127,18 +172,34 @@
                 <div class="bookmarks-section">
                     <h5 style="margin-bottom: 16px; color: var(--text-dark);">Blog Articles</h5>
                     {% for blog in user.bookmarked_posts.all %}
-                    <div class="post-card-subscription">
-                        <div class="post-card-header">
-                            <h4><a href="{% url 'post_detail' blog.id %}">{{ blog.title }}</a></h4>
-                            <div class="post-meta-compact">
-                                <span style="display: flex; align-items: center; gap: 4px;"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>{{ blog.author.username }}</span>
-                                <span style="display: flex; align-items: center; gap: 4px;"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>{{ blog.comments.count }}</span>
-                                <span style="display: flex; align-items: center; gap: 4px;"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>{{ blog.likes.count }}</span>
+                    <article class="post-card full-bleed">
+                        <div class="post-card-wrapper">
+                            <div class="post-content">
+                                <div class="author-line">
+                                    <span style="font-weight:600;color:var(--secondary-text);font-size:0.9rem;">By {{ blog.author.get_full_name|default:blog.author.username }}</span>
+                                </div>
+                                <h3 class="post-title"><a href="{% url 'post_detail' blog.id %}">{{ blog.title }}</a></h3>
+                                <div class="engage-row">
+                                    <div class="engage-left">
+                                        <div class="engage-controls" style="display:flex;gap:12px;align-items:center;">
+                                            <button class="like-btn" data-post-id="{{ blog.id }}" data-post-type="blog" style="border:none;background:none;cursor:pointer;padding:0;display:flex;align-items:center;gap:6px;color:var(--secondary-text);font-size:0.9rem;transition:color 0.2s;">
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-thumbs-up-icon lucide-thumbs-up"><path d="M15 5.88 14 10h5.83a2 2 0 0 1 1.92 2.56l-2.33 8A2 2 0 0 1 17.5 22H4a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2h2.76a2 2 0 0 0 1.79-1.11L12 2a3.13 3.13 0 0 1 3 3.88Z"/><path d="M7 10v12"/></svg>
+                                                <span class="like-count">{{ blog.likes.count }}</span>
+                                            </button>
+                                            <button class="comment-btn" data-post-id="{{ blog.id }}" data-post-type="blog" style="border:none;background:none;cursor:pointer;padding:0;display:flex;align-items:center;gap:6px;color:var(--secondary-text);font-size:0.9rem;transition:color 0.2s;">
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-message-square-icon lucide-message-square"><path d="M22 17a2 2 0 0 1-2 2H6.828a2 2 0 0 0-1.414.586l-2.202 2.202A.71.71 0 0 1 2 21.286V5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2z"/></svg>
+                                                <span class="comment-count">{{ blog.comments.count }}</span>
+                                            </button>
+                                            <button class="bookmark-btn" data-post-id="{{ blog.id }}" data-post-type="blog" style="border:none;background:none;cursor:pointer;padding:0;display:flex;align-items:center;gap:6px;color:var(--secondary-text);font-size:0.9rem;transition:color 0.2s;">
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-bookmark-check-icon lucide-bookmark-check"><path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2Z"/><path d="m9 10 2 2 4-4"/></svg>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                                <p style="color:var(--secondary-text);margin-top:8px;line-height:1.5;">{{ blog.content|truncatewords:30 }}</p>
                             </div>
                         </div>
-                        <p>{{ blog.content|truncatewords:25 }}</p>
-                        <a href="{% url 'post_detail' blog.id %}" class="read-more-btn">Read Article →</a>
-                    </div>
+                    </article>
                     {% endfor %}
                 </div>
             {% endif %}
@@ -271,25 +332,91 @@ tabs.forEach(tab => {
     });
 });
 
-function filterSubscriptionCards(target) {
-    const cards = document.querySelectorAll('.subscription-card');
-    cards.forEach(card => {
-        const type = card.dataset.type;
-        if (target === 'community-posts') {
-            card.style.display = type === 'community' ? '' : 'none';
-        } else if (target === 'blog-posts') {
-            card.style.display = type === 'author' ? '' : 'none';
-        } else if (target === 'bookmarks') {
-            card.style.display = 'none';
+// AJAX Action Handlers
+function getCSRFToken() {
+    let token = '';
+    const cookies = document.cookie.split(';');
+    for (let cookie of cookies) {
+        cookie = cookie.trim();
+        if (cookie.startsWith('csrftoken=')) {
+            token = cookie.substring('csrftoken='.length);
+            break;
         }
-    });
+    }
+    return token || document.querySelector('[name=csrfmiddlewaretoken]')?.value || '';
 }
 
-tabs.forEach(tab => tab.addEventListener('click', () => {
-    filterSubscriptionCards(tab.dataset.target);
-}));
+document.querySelectorAll('.like-btn').forEach(btn => {
+    btn.addEventListener('click', async (e) => {
+        e.preventDefault();
+        const postId = btn.dataset.postId;
+        const postType = btn.dataset.postType;
+        const endpoint = postType === 'blog' ? `/posts/${postId}/like/` : `/communities/post/${postId}/like/`;
+        
+        try {
+            const res = await fetch(endpoint, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': getCSRFToken(),
+                    'Content-Type': 'application/json'
+                }
+            });
+            if (res.ok) {
+                const data = await res.json();
+                const countEl = btn.querySelector('.like-count');
+                if (countEl) countEl.textContent = data.like_count || 0;
+                btn.style.color = data.is_liked ? 'var(--primary)' : 'var(--secondary-text)';
+            }
+        } catch (err) {
+            console.error('Like failed:', err);
+        }
+    });
+});
 
-const initialTab = document.querySelector('.tab-btn.active');
-if (initialTab) filterSubscriptionCards(initialTab.dataset.target);
+document.querySelectorAll('.bookmark-btn').forEach(btn => {
+    btn.addEventListener('click', async (e) => {
+        e.preventDefault();
+        const postId = btn.dataset.postId;
+        const postType = btn.dataset.postType;
+        const endpoint = postType === 'blog' ? `/posts/${postId}/bookmark/` : `/communities/post/${postId}/bookmark/`;
+        
+        try {
+            const res = await fetch(endpoint, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': getCSRFToken(),
+                    'Content-Type': 'application/json'
+                }
+            });
+            if (res.ok) {
+                const data = await res.json();
+                const svg = btn.querySelector('svg');
+                if (data.is_bookmarked) {
+                    btn.style.color = 'var(--primary)';
+                    svg.setAttribute('class', 'lucide lucide-bookmark-check-icon lucide-bookmark-check');
+                } else {
+                    btn.style.color = 'var(--secondary-text)';
+                    svg.setAttribute('class', 'lucide lucide-bookmark-icon lucide-bookmark');
+                }
+            }
+        } catch (err) {
+            console.error('Bookmark failed:', err);
+        }
+    });
+});
+
+document.querySelectorAll('.comment-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+        e.preventDefault();
+        const postId = btn.dataset.postId;
+        const postType = btn.dataset.postType;
+        if (postType === 'blog') {
+            window.location.href = `/posts/${postId}/#comments`;
+        } else {
+            window.location.href = `/communities/post/${postId}/#comments`;
+        }
+    });
+});
 </script>
+
 {% endblock %}

@@ -238,6 +238,7 @@ def save_user_interests(request):
 
 
 @login_required
+@login_required
 def get_blog_recommendations(request):
     """Get personalized blog post recommendations based on tags."""
     user = request.user

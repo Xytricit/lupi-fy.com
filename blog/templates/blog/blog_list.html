@@ -314,6 +314,7 @@ document.addEventListener('DOMContentLoaded', () => {
     async function fetchBlogForYou() {
         try {
             const res = await fetch('/recommend/blog-recommendations/');
+            if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
             const data = await res.json();
             container.innerHTML = '';
             if (!data.results || data.results.length === 0) {
@@ -338,7 +339,7 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         } catch (err) {
             console.error('Failed to load blog recommendations:', err);
-            container.innerHTML = '<div style="padding:16px;color:var(--secondary-text);">Failed to load recommendations.</div>';
+            container.innerHTML = '<div style="padding:16px;color:var(--secondary-text);">Failed to load recommendations. Please try again.</div>';
         }
     }
 
