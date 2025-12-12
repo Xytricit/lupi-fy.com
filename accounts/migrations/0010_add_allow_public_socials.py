@@ -6,13 +6,13 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('accounts', '0009_customuser_saved_communities'),
+        ("accounts", "0009_customuser_saved_communities"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='customuser',
-            name='allow_public_socials',
+            model_name="customuser",
+            name="allow_public_socials",
             field=models.BooleanField(default=True),
         ),
     ]

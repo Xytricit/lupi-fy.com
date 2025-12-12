@@ -200,6 +200,17 @@
             }
         }
     </style>
+
+        <script>
+        // Initialize theme early to ensure site-wide dark mode applies
+        (function(){
+            const serverPref = "{{ request.user.theme_preference|default:'' }}";
+            let pref = serverPref || null;
+            try { const local = localStorage.getItem('theme_pref'); if(!pref && local) pref = local; }catch(e){}
+            if(!pref) pref = 'light';
+            document.documentElement.setAttribute('data-theme', pref);
+        })();
+        </script>
 </head>
 <body>
 

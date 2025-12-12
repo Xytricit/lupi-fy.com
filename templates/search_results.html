@@ -1,0 +1,87 @@
+{% extends "dashboardhome.html" %}
+{% load static %}
+{% block title %}Search - Lupify{% endblock %}
+
+{% block content %}
+<div class="search-page" style="width:calc(100% - 48px);margin:12px 24px;padding:0 16px;max-width:none;">
+    <div class="search-hero" style="display:flex;gap:12px;align-items:center;margin-bottom:12px;">
+        <input id="searchInput" type="text" placeholder="Search Lupify..." value="{{ q|default:'' }}" style="flex:1;padding:10px 12px;border-radius:8px;border:1px solid #e6e6e6;background:var(--card-bg);"/>
+        <button id="goSearch" style="padding:10px 14px;border-radius:8px;background:var(--primary);color:#fff;border:none;cursor:pointer">Search</button>
+    </div>
+    <div id="results" style="margin-top:8px;display:flex;flex-direction:column;gap:10px;"></div>
+    <div id="loading" class="loading" style="display:none;padding:18px;text-align:center;color:var(--secondary-text)">Loading...</div>
+    <div id="end" class="loading" style="display:none;padding:18px;text-align:center;color:var(--secondary-text)">No more results</div>
+</div>
+
+<link rel="stylesheet" href="{% static 'css/search_results-inline.css' %}">
+
+<script>
+(function(){
+    const q0 = new URLSearchParams(window.location.search).get('q') || '';
+    const input = document.getElementById('searchInput');
+    const resultsEl = document.getElementById('results');
+    const loadingEl = document.getElementById('loading');
+    const endEl = document.getElementById('end');
+
+    let offset = 0; const limit = 20; let loading=false; let endReached=false; let q = q0;
+
+    function showLoading(s){ loadingEl.style.display = s ? 'block' : 'none'; }
+    function showEnd(s){ endEl.style.display = s ? 'block' : 'none'; }
+
+    function renderRow(r){
+        const a = document.createElement('a');
+        a.href = r.url;
+        a.className = 'result-row';
+        a.style.textDecoration='none';
+
+        const thumb = document.createElement('div'); thumb.className='thumb'; thumb.textContent = (r.image? '': (r.type? r.type[0].toUpperCase() : '?'));
+        if(r.image){ const img = document.createElement('img'); img.src = r.image; img.style.width='100%'; img.style.height='100%'; img.style.objectFit='cover'; img.style.borderRadius='6px'; thumb.innerHTML=''; thumb.appendChild(img); }
+        const meta = document.createElement('div'); meta.className='result-meta';
+        const t = document.createElement('div'); t.className='title'; t.textContent = r.title;
+        const s = document.createElement('div'); s.className='subtitle'; s.textContent = r.subtitle || r.type;
+        meta.appendChild(t); meta.appendChild(s);
+        a.appendChild(thumb); a.appendChild(meta);
+        resultsEl.appendChild(a);
+    }
+
+    async function loadMore(){
+        if(loading||endReached) return;
+        if(!q) return;
+        loading=true; showLoading(true);
+        const url = `{% url 'search_api' %}` + `?` + new URLSearchParams({q:q,offset:offset,limit:limit}).toString();
+        try{
+            const res = await fetch(url, {credentials:'include'});
+            const data = await res.json();
+            if(!data.results || data.results.length===0){ endReached=true; showEnd(true); }
+            else{ data.results.forEach(renderRow); offset += data.results.length; if(offset>=data.total){ endReached=true; showEnd(true);} }
+        }catch(e){ console.error(e); }
+        loading=false; showLoading(false);
+    }
+
+    // initial
+    if(q){ loadMore(); }
+
+    // search submit with debounce to avoid spamming the API when typing
+    function submitSearch(){ q = input.value.trim(); offset=0; endReached=false; resultsEl.innerHTML=''; showEnd(false); if(q) loadMore(); window.history.replaceState({},'',`?q=${encodeURIComponent(q)}`); }
+    document.getElementById('goSearch').addEventListener('click', submitSearch);
+    input.addEventListener('keydown', (e)=>{ if(e.key==='Enter') submitSearch(); });
+
+    // debounce helper
+    function debounce(fn, wait){ let t; return function(...args){ clearTimeout(t); t = setTimeout(()=>fn.apply(this,args), wait); }; }
+
+    // only trigger search after user stops typing for 450ms
+    const debounced = debounce(()=>{
+        const val = input.value.trim();
+        if(val && val.length >= 2){ submitSearch(); }
+    }, 450);
+    input.addEventListener('input', debounced);
+
+    // infinite scroll
+    window.addEventListener('scroll', ()=>{
+        if(loading||endReached) return;
+        const nearBottom = (window.innerHeight + window.scrollY) >= (document.body.offsetHeight - 600);
+        if(nearBottom) loadMore();
+    });
+})();
+</script>
+{% endblock %}

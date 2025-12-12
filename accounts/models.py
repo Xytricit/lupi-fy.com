@@ -1,20 +1,28 @@
+import random
+
 from django.conf import settings
 from django.contrib.auth.models import AbstractUser
-from django.db import models
-from django.utils import timezone
 from django.core.exceptions import ValidationError
 from django.core.validators import RegexValidator
-import random
+from django.db import models
+from django.utils import timezone
+
 
 # -------------------------------
 # Utility
 # -------------------------------
 def random_color():
     colors = [
-        "#1f9cee", "#fec76f", "#ef4444", "#3b82f6",
-        "#10b981", "#8b5cf6", "#f59e0b"
+        "#1f9cee",
+        "#fec76f",
+        "#ef4444",
+        "#3b82f6",
+        "#10b981",
+        "#8b5cf6",
+        "#f59e0b",
     ]
     return random.choice(colors)
+
 
 # -------------------------------
 # Custom User
@@ -34,8 +42,16 @@ class CustomUser(AbstractUser):
     social_tiktok = models.URLField(max_length=255, blank=True, null=True)
     social_twitch = models.URLField(max_length=255, blank=True, null=True)
     social_github = models.URLField(max_length=255, blank=True, null=True)
-    public_profile = models.BooleanField(default=True)
+    # Controls whether the user's profile/username can appear in public searches
+    # Default changed to False to opt users out by default.
+    public_profile = models.BooleanField(default=False)
     allow_public_socials = models.BooleanField(default=True)
+    # Whether this user accepts direct messages from other users
+    allow_dms = models.BooleanField(default=True)
+    # Users this user has blocked (they cannot message this user; their messages are hidden)
+    blocked_users = models.ManyToManyField(
+        "self", symmetrical=False, related_name="blocked_by", blank=True
+    )
     warning_count = models.IntegerField(default=0)
     suspended_until = models.DateTimeField(null=True, blank=True)
     phone_number = models.CharField(
@@ -44,22 +60,25 @@ class CustomUser(AbstractUser):
         null=True,
         validators=[
             RegexValidator(
-                regex=r'^\+?\d{9,15}$',
-                message="Phone number must be entered in the format: '+999999999'. Up to 15 digits allowed."
+                regex=r"^\+?\d{9,15}$",
+                message="Phone number must be entered in the format: '+999999999'. Up to 15 digits allowed.",
             )
-        ]
+        ],
     )
     followers = models.ManyToManyField(
-        "self",
-        symmetrical=False,
-        related_name="following",
-        blank=True
+        "self", symmetrical=False, related_name="following", blank=True
     )
     saved_communities = models.ManyToManyField(
-        "communities.Community",
-        related_name="saved_by_users",
-        blank=True
+        "communities.Community", related_name="saved_by_users", blank=True
     )
+    # Appearance preference: light/dark/system
+    THEME_CHOICES = [("light", "Light"), ("dark", "Dark"), ("system", "System")]
+    theme_preference = models.CharField(
+        max_length=10, choices=THEME_CHOICES, default="light"
+    )
+    # User-selected accent color (hex) and base font size
+    accent_color = models.CharField(max_length=9, default="#1f9cee")
+    font_size = models.PositiveSmallIntegerField(default=14)
 
     def __str__(self):
         return self.username
@@ -79,6 +98,7 @@ class CustomUser(AbstractUser):
             author.followers.add(self)
         Subscription.objects.get_or_create(user=self, author=author)
 
+
 # -------------------------------
 # Moderation Report
 # -------------------------------
@@ -92,34 +112,35 @@ class ModerationReport(models.Model):
     def __str__(self):
         return f"Report for {self.user.username} at {self.timestamp}"
 
+
 # -------------------------------
 # Subscription
 # -------------------------------
 class Subscription(models.Model):
     user = models.ForeignKey(
-        settings.AUTH_USER_MODEL,
-        on_delete=models.CASCADE,
-        related_name="subscriptions"
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="subscriptions"
     )
     community = models.ForeignKey(
         "communities.Community",
         on_delete=models.CASCADE,
         related_name="subscribers",
         null=True,
-        blank=True
+        blank=True,
     )
     author = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
         related_name="author_subscribers",
         null=True,
-        blank=True
+        blank=True,
     )
     created_at = models.DateTimeField(auto_now_add=True)
 
     def clean(self):
         if not self.community and not self.author:
-            raise ValidationError("Subscription must have either a community or an author.")
+            raise ValidationError(
+                "Subscription must have either a community or an author."
+            )
         if self.community and self.author:
             raise ValidationError("Subscription can’t have both community and author.")
 
@@ -135,12 +156,12 @@ class Subscription(models.Model):
             models.UniqueConstraint(
                 fields=["user", "community"],
                 name="unique_user_community",
-                condition=models.Q(community__isnull=False)
+                condition=models.Q(community__isnull=False),
             ),
             models.UniqueConstraint(
                 fields=["user", "author"],
                 name="unique_user_author",
-                condition=models.Q(author__isnull=False)
+                condition=models.Q(author__isnull=False),
             ),
         ]
         ordering = ["-created_at"]
@@ -148,50 +169,107 @@ class Subscription(models.Model):
 
 class DirectMessage(models.Model):
     """Model for direct messages between users"""
-    sender = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='sent_messages')
-    recipient = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='received_messages')
+
+    sender = models.ForeignKey(
+        CustomUser, on_delete=models.CASCADE, related_name="sent_messages"
+    )
+    recipient = models.ForeignKey(
+        CustomUser, on_delete=models.CASCADE, related_name="received_messages"
+    )
     content = models.TextField(max_length=500)
     created_at = models.DateTimeField(auto_now_add=True)
     is_read = models.BooleanField(default=False)
-    
+
     class Meta:
-        ordering = ['-created_at']
-    
+        ordering = ["-created_at"]
+
     def __str__(self):
-        return f"{self.sender.username} → {self.recipient.username}: {self.content[:30]}"
+        return (
+            f"{self.sender.username} → {self.recipient.username}: {self.content[:30]}"
+        )
 
 
 class Conversation(models.Model):
     """Model to group messages between two users"""
-    user1 = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='conversations_as_user1')
-    user2 = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='conversations_as_user2')
+
+    user1 = models.ForeignKey(
+        CustomUser, on_delete=models.CASCADE, related_name="conversations_as_user1"
+    )
+    user2 = models.ForeignKey(
+        CustomUser, on_delete=models.CASCADE, related_name="conversations_as_user2"
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    
+
     class Meta:
-        unique_together = ('user1', 'user2')
-        ordering = ['-updated_at']
-    
+        unique_together = ("user1", "user2")
+        ordering = ["-updated_at"]
+
     def __str__(self):
         return f"Conversation: {self.user1.username} ↔ {self.user2.username}"
 
 
 class GameLobbyBan(models.Model):
     """Model to track bans for the Try Not To Get Banned game"""
-    user = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='game_bans')
+
+    user = models.ForeignKey(
+        CustomUser, on_delete=models.CASCADE, related_name="game_bans"
+    )
     banned_until = models.DateTimeField()  # When the ban expires
     created_at = models.DateTimeField(auto_now_add=True)
-    
+
     class Meta:
-        ordering = ['-created_at']
-    
+        ordering = ["-created_at"]
+
     def __str__(self):
         return f"{self.user.username} banned until {self.banned_until}"
-    
+
     def is_active(self):
         """Check if the ban is still active"""
         from django.utils import timezone
+
         return timezone.now() < self.banned_until
+
+
+class Notification(models.Model):
+    """Model for user notifications (admin warnings, post deletions, etc.)"""
+
+    NOTIFICATION_TYPES = (
+        ("admin_warning", "Admin Warning"),
+        ("post_deleted", "Post Deleted"),
+        ("comment_on_post", "Comment on Post"),
+        ("user_mentioned", "User Mentioned"),
+        ("follow", "New Follower"),
+        ("message", "New Message"),
+        ("other", "Other"),
+    )
+
+    user = models.ForeignKey(
+        CustomUser, on_delete=models.CASCADE, related_name="notifications"
+    )
+    notification_type = models.CharField(
+        max_length=20, choices=NOTIFICATION_TYPES, default="other"
+    )
+    title = models.CharField(max_length=255)
+    message = models.TextField()
+    related_user = models.ForeignKey(
+        CustomUser,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="notifs_about_me",
+    )
+    related_post = models.ForeignKey(
+        "blog.Post", on_delete=models.SET_NULL, null=True, blank=True
+    )
+    is_read = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"{self.user.username}: {self.title}"
 
 
 class GameLobbyMessage(models.Model):
@@ -200,14 +278,21 @@ class GameLobbyMessage(models.Model):
     Stores both user messages and system announcements so the lobby can
     show a history and broadcasts to all connected clients.
     """
-    user = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='lobby_messages', null=True, blank=True)
+
+    user = models.ForeignKey(
+        CustomUser,
+        on_delete=models.CASCADE,
+        related_name="lobby_messages",
+        null=True,
+        blank=True,
+    )
     author_name = models.CharField(max_length=150, blank=True, null=True)
     content = models.TextField()
     is_system = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        ordering = ['created_at']
+        ordering = ["created_at"]
 
     def __str__(self):
         if self.is_system:
@@ -222,14 +307,17 @@ class GameLobbyChallenge(models.Model):
     tracks which letters the user has 'ticked' by typing dictionary words that
     contain those letters. When all letters are used, `completed` is True.
     """
-    user = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='lobby_challenges')
+
+    user = models.ForeignKey(
+        CustomUser, on_delete=models.CASCADE, related_name="lobby_challenges"
+    )
     letters = models.JSONField(default=list)  # list of 12 single-character letters
     used_letters = models.JSONField(default=list)  # list of letters already used
     completed = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        ordering = ['-created_at']
+        ordering = ["-created_at"]
 
     def mark_letters(self, letters_to_mark):
         """Mark letters (list) as used; return newly marked letters."""
@@ -252,7 +340,10 @@ class WordListGame(models.Model):
     This tracks a user's active word list, used words, and score. Per-word
     points are 6; completion bonus is 50.
     """
-    user = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='word_list_games')
+
+    user = models.ForeignKey(
+        CustomUser, on_delete=models.CASCADE, related_name="word_list_games"
+    )
     words = models.JSONField(default=list)
     used_words = models.JSONField(default=list)
     score = models.IntegerField(default=0)
@@ -260,7 +351,7 @@ class WordListGame(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-        ordering = ['-updated_at']
+        ordering = ["-updated_at"]
 
     def add_used_words(self, new_words):
         added = 0
@@ -281,31 +372,36 @@ class WordListGame(models.Model):
 
 class LetterSetGame(models.Model):
     """Model to track Letter Set game sessions"""
-    user = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='letter_set_games')
+
+    user = models.ForeignKey(
+        CustomUser, on_delete=models.CASCADE, related_name="letter_set_games"
+    )
     letters = models.CharField(max_length=15)  # 15 random letters from alphabet
     score = models.IntegerField(default=0)
-    completed_words = models.TextField(default='')  # Comma-separated list of completed words
+    completed_words = models.TextField(
+        default=""
+    )  # Comma-separated list of completed words
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    
+
     class Meta:
-        ordering = ['-updated_at']
-    
+        ordering = ["-updated_at"]
+
     def __str__(self):
         return f"{self.user.username} - Letters: {self.letters} - Score: {self.score}"
-    
+
     def get_completed_words_list(self):
         """Get completed words as a list"""
         if not self.completed_words:
             return []
-        return [w.strip() for w in self.completed_words.split(',') if w.strip()]
-    
+        return [w.strip() for w in self.completed_words.split(",") if w.strip()]
+
     def add_word(self, word):
         """Add a word to completed words if not already added"""
         words_list = self.get_completed_words_list()
         if word.lower() not in [w.lower() for w in words_list]:
             words_list.append(word)
-            self.completed_words = ','.join(words_list)
+            self.completed_words = ",".join(words_list)
             self.save()
             return True
         return False

@@ -1,0 +1,351 @@
+{% load static %}
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Creator Dashboard — Lupify</title>
+  <link rel="stylesheet" href="{% static 'style.css' %}">
+  <style>
+    :root{--accent:#1f9cee;--muted:#6b7280;--card:#ffffff;--bg:#f6f8fb}
+    body{margin:0;font-family:Inter,system-ui,Segoe UI,Roboto,Arial;background:var(--bg);color:#0f172a}
+    .topbar{height:72px;background:linear-gradient(90deg,#0ea5e9 0%,#60a5fa 100%);display:flex;align-items:center;justify-content:space-between;padding:0 22px;color:white}
+    .topbar h1{font-size:1.25rem;margin:0}
+    .topbar .actions{display:flex;gap:10px}
+    .container{max-width:1200px;margin:22px auto;padding:0 18px}
+    .grid{display:grid;grid-template-columns:1fr 360px;gap:18px;align-items:start}
+    .card{background:var(--card);border-radius:12px;padding:14px;box-shadow:0 6px 18px rgba(15,23,42,0.06);border:1px solid rgba(15,23,42,0.04)}
+    .metrics{display:flex;gap:12px}
+    .metric{flex:1;padding:12px;border-radius:8px;background:linear-gradient(180deg,rgba(255,255,255,0.6),rgba(249,250,251,0.8));text-align:center}
+    .metric .v{font-size:1.4rem;font-weight:700}
+    .metric .l{color:var(--muted);font-size:0.85rem}
+    .trend{height:220px;margin-top:12px}
+    table{width:100%;border-collapse:collapse}
+    th,td{padding:10px 8px;text-align:left;border-bottom:1px solid #f1f5f9}
+    .btn{background:transparent;border:1px solid rgba(15,23,42,0.06);padding:8px 10px;border-radius:8px;cursor:pointer}
+    .btn.primary{background:var(--accent);color:white;border:0}
+    .small{padding:6px 8px;font-size:0.85rem}
+    .sidebar .section{margin-bottom:12px}
+    .kpi{display:flex;gap:10px;flex-wrap:wrap}
+    .badge{background:#eef2ff;padding:6px 8px;border-radius:8px;color:#1e3a8a;font-weight:600}
+    .modal{position:fixed;inset:0;background:rgba(2,6,23,0.6);display:flex;align-items:center;justify-content:center;z-index:60}
+    .modal .panel{width:96%;max-width:1100px;background:white;border-radius:12px;padding:18px}
+    @media(max-width:980px){.grid{grid-template-columns:1fr}.topbar{padding:0 12px}}
+  </style>
+  <script>
+    // Initialize theme early to ensure site-wide dark mode applies
+    (function(){
+      const serverPref = "{{ request.user.theme_preference|default:'' }}";
+      let pref = serverPref || null;
+      try { const local = localStorage.getItem('theme_pref'); if(!pref && local) pref = local; }catch(e){}
+      if(!pref) pref = 'light';
+      document.documentElement.setAttribute('data-theme', pref);
+    })();
+  </script>
+</head>
+<body>
+  <header class="topbar">
+    <h1>Creator Dashboard</h1>
+    <div class="actions">
+      <a class="btn small" href="{% url 'account_dashboard' %}">Profile</a>
+      <button class="btn primary" id="newContent">Create</button>
+    </div>
+  </header>
+
+  <div class="container">
+    <div class="grid">
+      <main>
+        <section class="card">
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <div>
+              <h2 style="margin:0 0 6px 0">Overview</h2>
+              <div style="color:var(--muted);font-size:0.95rem">Key metrics at a glance</div>
+            </div>
+            <div class="kpi">
+              <div style="display:flex;gap:8px;align-items:center">
+                <button id="tfToday" class="btn small">Today</button>
+                <button id="tfWeek" class="btn small">This Week</button>
+                <button id="tf30" class="btn small primary">30d</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="metrics" style="margin-top:14px">
+            <div class="metric">
+              <div class="v">{{ overview.total_views }}</div>
+              <div class="l">Views</div>
+            </div>
+            <div class="metric">
+              <div class="v">{{ overview.total_likes }}</div>
+              <div class="l">Likes</div>
+            </div>
+            <div class="metric">
+              <div class="v">{{ overview.followers_count }}</div>
+              <div class="l">Followers</div>
+            </div>
+            <div class="metric">
+              <div class="v">${{ overview.earnings.amount }}</div>
+              <div class="l">Earnings</div>
+            </div>
+          </div>
+
+          <div class="trend card" style="margin-top:14px;">
+            <canvas id="overviewTrend" style="width:100%;height:100%"></canvas>
+          </div>
+        </section>
+
+        <section class="card" style="margin-top:18px">
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <h3 style="margin:0">Content Management</h3>
+            <div>
+              <!-- Bulk Upload and Schedule removed until implemented -->
+            </div>
+          </div>
+
+          <div style="margin-top:12px;overflow:auto">
+            <table>
+              <thead>
+                <tr><th>Post</th><th>Created</th><th>Likes</th><th>Views</th><th></th></tr>
+              </thead>
+              <tbody>
+                {% for p in posts %}
+                <tr>
+                  <td style="width:45%">{{ p.title }}</td>
+                  <td>{{ p.created|date:"Y-m-d" }}</td>
+                  <td>{{ p.like_count }}</td>
+                  <td>{{ p.views }}</td>
+                  <td style="text-align:right">
+                    <a class="btn small" href="#" data-post-id-edit="{{ p.id }}">Edit</a>
+                    <button class="btn small analytics-btn" data-post-id="{{ p.id }}">Analytics</button>
+                  </td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="5">You haven't created any posts yet.</td></tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+      </main>
+
+      <aside class="sidebar">
+        <div class="card section">
+          <h4 style="margin:0 0 6px 0">Audience Insights</h4>
+          <div style="color:var(--muted);font-size:0.95rem">Demographics, peak times, and segments (placeholder)</div>
+        </div>
+
+        <div class="card section">
+          <h4 style="margin:0 0 6px 0">Revenue & Monetization</h4>
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <div>
+              <div style="font-weight:700">${{ overview.earnings.amount }}</div>
+              <div style="color:var(--muted);font-size:0.9rem">Estimated (30d)</div>
+            </div>
+            <div><a class="btn small" href="#">Payouts</a></div>
+          </div>
+        </div>
+
+        <div class="card section">
+          <h4 style="margin:0 0 6px 0">Inbox / Moderation</h4>
+          <div style="color:var(--muted);font-size:0.95rem">Messages, comments, moderation tools (placeholder).</div>
+        </div>
+
+        <div class="card section">
+          <h4 style="margin:0 0 6px 0">Growth & AI</h4>
+          <div style="display:flex;flex-direction:column;gap:8px;">
+            <p style="color:var(--muted);margin:0 0 8px 0">Access Lupify's AI assistant for creator help and growth tips.</p>
+            <a class="btn primary" href="/chatbot/">Open AI Assistant</a>
+          </div>
+        </div>
+      </aside>
+    </div>
+  </div>
+
+  <!-- Analytics Modal -->
+  <div id="analyticsModal" class="modal" style="display:none">
+    <div class="panel">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <h3 id="analyticsTitle" style="margin:0">Analytics</h3>
+        <button id="analyticsClose" class="btn small">Close</button>
+      </div>
+      <div style="margin-top:12px">
+        <canvas id="viewsChart" style="width:100%;height:240px"></canvas>
+      </div>
+      <div style="margin-top:12px">
+        <canvas id="likesChart" style="width:100%;height:220px"></canvas>
+      </div>
+    </div>
+  </div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+{{ trend_labels_30|json_script:"trendLabels30" }}
+{{ trend_views_30|json_script:"trendViews30" }}
+{{ trend_likes_30|json_script:"trendLikes30" }}
+
+{{ trend_labels_7|json_script:"trendLabels7" }}
+{{ trend_views_7|json_script:"trendViews7" }}
+{{ trend_likes_7|json_script:"trendLikes7" }}
+
+{{ trend_labels_24|json_script:"trendLabels24" }}
+{{ trend_views_24|json_script:"trendViews24" }}
+{{ trend_likes_24|json_script:"trendLikes24" }}
+
+<script>
+document.addEventListener('DOMContentLoaded', function(){
+  const trendLabels30 = JSON.parse(document.getElementById('trendLabels30').textContent || '[]');
+  const trendViews30 = JSON.parse(document.getElementById('trendViews30').textContent || '[]');
+  const trendLikes30 = JSON.parse(document.getElementById('trendLikes30').textContent || '[]');
+
+  const trendLabels7 = JSON.parse(document.getElementById('trendLabels7').textContent || '[]');
+  const trendViews7 = JSON.parse(document.getElementById('trendViews7').textContent || '[]');
+  const trendLikes7 = JSON.parse(document.getElementById('trendLikes7').textContent || '[]');
+
+  const trendLabels24 = JSON.parse(document.getElementById('trendLabels24').textContent || '[]');
+  const trendViews24 = JSON.parse(document.getElementById('trendViews24').textContent || '[]');
+  const trendLikes24 = JSON.parse(document.getElementById('trendLikes24').textContent || '[]');
+
+  const ctx = document.getElementById('overviewTrend').getContext('2d');
+  let overviewChart = new Chart(ctx, {
+    type: 'line',
+    data: { labels: trendLabels30.map(d=>d.replace(/-/g,'/')), datasets:[
+      { label:'Views', data:trendViews30, borderColor:'#1f9cee', backgroundColor:'rgba(31,156,238,0.08)', fill:true},
+      { label:'Likes', data:trendLikes30, borderColor:'#ff6b6b', backgroundColor:'rgba(255,107,107,0.08)', fill:true}
+    ]},
+    options:{responsive:true,maintainAspectRatio:false}
+  });
+
+  // Timeframe toggles
+  const tfToday = document.getElementById('tfToday');
+  const tfWeek = document.getElementById('tfWeek');
+  const tf30 = document.getElementById('tf30');
+
+  function setActive(btn){
+    [tfToday, tfWeek, tf30].forEach(b=> b.classList.remove('primary'));
+    btn.classList.add('primary');
+  }
+
+  function updateOverview(chart, labels, views, likes){
+    chart.data.labels = labels.map(d=>d.replace(/-/g,'/'));
+    chart.data.datasets[0].data = views;
+    chart.data.datasets[1].data = likes;
+    chart.update();
+  }
+
+  tf30.addEventListener('click', ()=>{ setActive(tf30); updateOverview(overviewChart, trendLabels30, trendViews30, trendLikes30); });
+  tfWeek.addEventListener('click', ()=>{ setActive(tfWeek); updateOverview(overviewChart, trendLabels7, trendViews7, trendLikes7); });
+  tfToday.addEventListener('click', ()=>{ setActive(tfToday); updateOverview(overviewChart, trendLabels24, trendViews24, trendLikes24); });
+
+  // Analytics modal handlers
+  const modal = document.getElementById('analyticsModal');
+  const closeBtn = document.getElementById('analyticsClose');
+  const titleEl = document.getElementById('analyticsTitle');
+  let viewsChart = null, likesChart = null;
+
+  closeBtn.addEventListener('click', ()=> modal.style.display='none');
+
+  document.querySelectorAll('.analytics-btn').forEach(btn=>{
+    btn.addEventListener('click', async ()=>{
+      const postId = btn.getAttribute('data-post-id');
+      titleEl.textContent = 'Loading...'; modal.style.display = 'flex';
+      try{
+        const res = await fetch(`/accounts/api/post-analytics/${postId}/`);
+        if(!res.ok) throw new Error('fetch failed');
+        const data = await res.json();
+        titleEl.textContent = data.post.title;
+        const labels = data.labels.map(d=>d.replace(/-/g,'/'));
+
+        const ctx1 = document.getElementById('viewsChart').getContext('2d');
+        if(viewsChart) viewsChart.destroy();
+        viewsChart = new Chart(ctx1,{type:'line',data:{labels,datasets:[{label:'Views',data:data.views,borderColor:'#1f9cee',backgroundColor:'rgba(31,156,238,0.08)',fill:true}]},options:{responsive:true,maintainAspectRatio:false}});
+
+        const ctx2 = document.getElementById('likesChart').getContext('2d');
+        if(likesChart) likesChart.destroy();
+        likesChart = new Chart(ctx2,{type:'line',data:{labels,datasets:[{label:'Likes',data:data.likes,borderColor:'#ff6b6b',backgroundColor:'rgba(255,107,107,0.08)',fill:true}]},options:{responsive:true,maintainAspectRatio:false}});
+      }catch(err){
+        titleEl.textContent = 'Error loading analytics';
+        console.error(err);
+      }
+    });
+  });
+
+  // close on outside click
+  window.addEventListener('click', (e)=>{ if(e.target === modal) modal.style.display='none' });
+
+  // Creator chat widget
+  const chatWindow = document.getElementById('chatWindow');
+  const chatInput = document.getElementById('chatInput');
+  const chatSend = document.getElementById('chatSend');
+
+  function appendMessage(text, who='bot'){
+    const d = document.createElement('div');
+    d.style.marginBottom = '8px';
+    d.style.whiteSpace = 'pre-wrap';
+    if(who==='user'){
+      d.style.textAlign = 'right'; d.textContent = text; d.style.color='#0f172a'; d.style.fontWeight='600';
+    } else {
+      d.style.textAlign = 'left'; d.textContent = text; d.style.color='#374151';
+    }
+    chatWindow.appendChild(d);
+    chatWindow.scrollTop = chatWindow.scrollHeight;
+  }
+
+  chatSend.addEventListener('click', async ()=>{
+    const msg = (chatInput.value || '').trim();
+    if(!msg) return;
+    appendMessage(msg, 'user');
+    chatInput.value = '';
+    appendMessage('Thinking...', 'bot');
+    try{
+      const res = await fetch('{% url "creator_chat_api" %}', {method:'POST', headers:{'Content-Type':'application/json','X-CSRFToken': (document.cookie.match(/csrftoken=([^;]+)/)||[])[1]}, body: JSON.stringify({message: msg})});
+      const data = await res.json();
+      // Remove the 'Thinking...' last node
+      if(chatWindow.lastChild && chatWindow.lastChild.textContent === 'Thinking...') chatWindow.removeChild(chatWindow.lastChild);
+      if(data && data.reply) {
+        appendMessage(data.reply, 'bot');
+        
+        // Handle commands
+        if(data.action){
+          if(data.action === 'open_create_post'){
+            // Redirect to create post page
+            window.location.href = '{% url "create_post" %}';
+          } else if(typeof data.action === 'object' && data.action.type === 'open_edit_post'){
+            // Redirect to post detail (no edit view exists); show post detail
+            window.location.href = `/posts/blog/${data.action.post_id}/`;
+          } else if(data.action === 'refresh_dashboard'){
+            // Refresh dashboard
+            setTimeout(()=>location.reload(), 800);
+          }
+        }
+      } else {
+        appendMessage('No response from assistant.', 'bot');
+      }
+    }catch(err){
+      if(chatWindow.lastChild && chatWindow.lastChild.textContent === 'Thinking...') chatWindow.removeChild(chatWindow.lastChild);
+      appendMessage('Error contacting assistant.', 'bot');
+      console.error(err);
+    }
+  });
+
+  // Wire dashboard buttons: Create and Edit links
+  const newContentBtn = document.getElementById('newContent');
+  if(newContentBtn){
+    newContentBtn.addEventListener('click', ()=>{
+      window.location.href = '{% url "create_post" %}';
+    });
+  }
+
+  // Edit buttons: redirect to post detail (no inline edit available)
+  document.querySelectorAll('[data-post-id-edit]').forEach(a=>{
+    a.addEventListener('click', (e)=>{
+      e.preventDefault();
+      const id = a.getAttribute('data-post-id-edit');
+      if(id) window.location.href = `/posts/blog/${id}/`;
+    });
+  });
+});
+</script>
+
+</body>
+</html>

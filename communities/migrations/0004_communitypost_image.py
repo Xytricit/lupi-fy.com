@@ -6,13 +6,16 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('communities', '0003_community_banner_image_community_community_image_and_more'),
+        (
+            "communities",
+            "0003_community_banner_image_community_community_image_and_more",
+        ),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='communitypost',
-            name='image',
-            field=models.ImageField(blank=True, null=True, upload_to='posts/'),
+            model_name="communitypost",
+            name="image",
+            field=models.ImageField(blank=True, null=True, upload_to="posts/"),
         ),
     ]

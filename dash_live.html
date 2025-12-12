@@ -1,0 +1,531 @@
+
+
+<!DOCTYPE html>
+<html lang="en">
+<script>
+// Auth pages should remain light-mode for consistent sign-in UX
+document.documentElement.setAttribute('data-theme','light');
+</script>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body { display: flex; align-items: center; justify-content: center; padding: 20px; }
+
+        .auth-container {
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+            overflow: hidden;
+            max-width: 450px;
+            width: 100%;
+            animation: slideUp 0.5s ease-out;
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .auth-header {
+            background: linear-gradient(135deg, #1f9cee 0%, #fec76f 100%);
+            color: white;
+            padding: 40px 30px;
+            text-align: center;
+        }
+
+        .auth-header h1 {
+            font-size: 32px;
+            margin-bottom: 10px;
+            font-weight: 700;
+        }
+
+        .auth-header p {
+            font-size: 14px;
+            opacity: 0.9;
+        }
+
+        .auth-body {
+            padding: 40px 30px;
+        }
+
+        .form-group {
+            margin-bottom: 18px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 700;
+            color: #1f2937;
+            font-size: 13px;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+        }
+
+        .form-group input,
+        .form-group textarea {
+            width: 100%;
+            padding: 13px 16px;
+            border: 2px solid #e5e7eb;
+            border-radius: 12px;
+            font-size: 14px;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            font-family: inherit;
+            background: linear-gradient(135deg, #f9fafb 0%, #ffffff 100%);
+        }
+
+        .form-group input:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: #1f9cee;
+            box-shadow: 0 0 0 4px rgba(31, 156, 238, 0.12);
+            background: white;
+            transform: translateY(-2px);
+        }
+
+        .form-group input::placeholder {
+            color: #d1d5db;
+            font-weight: 400;
+        }
+
+        .password-toggle {
+            position: relative;
+        }
+
+        .password-toggle input {
+            padding-right: 45px;
+        }
+
+        .toggle-btn {
+            position: absolute;
+            right: 12px;
+            top: 38px;
+            background: none;
+            border: none;
+            cursor: pointer;
+            color: #1f9cee;
+            font-size: 18px;
+            padding: 4px 8px;
+            transition: all 0.2s ease;
+        }
+
+        .toggle-btn:hover {
+            color: #fec76f;
+            transform: scale(1.15);
+        }
+
+        .toggle-btn:active {
+            transform: scale(0.95);
+        }
+
+        .btn {
+            width: 100%;
+            padding: 14px 24px;
+            border: none;
+            border-radius: 12px;
+            font-size: 15px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            margin-top: 12px;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+            font-size: 14px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #1f9cee 0%, #fec76f 100%);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 16px 40px rgba(31, 156, 238, 0.4);
+        }
+
+        .btn-primary:active {
+            transform: translateY(-1px);
+        }
+
+        .btn-google {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            background: linear-gradient(135deg, #ffffff 0%, #f9fafb 100%);
+            color: #333;
+            border: 2px solid #e5e7eb;
+            margin-top: 15px;
+            font-weight: 700;
+        }
+
+        .btn-google:hover:not(:disabled) {
+            background: white;
+            border-color: #1f9cee;
+            box-shadow: 0 8px 20px rgba(31, 156, 238, 0.15);
+            transform: translateY(-2px);
+        }
+
+        .btn-google:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            color: #9ca3af;
+        }
+
+        .google-logo {
+            width: 20px;
+            height: 20px;
+        }
+
+        .divider {
+            display: flex;
+            align-items: center;
+            margin: 32px 0;
+            color: #9ca3af;
+            font-size: 13px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .divider::before,
+        .divider::after {
+            content: '';
+            flex: 1;
+            height: 2px;
+            background: linear-gradient(90deg, #e5e7eb 0%, transparent 100%);
+        }
+
+        .divider::before {
+            margin-right: 15px;
+        }
+
+        .divider::after {
+            margin-left: 15px;
+            background: linear-gradient(90deg, transparent 0%, #e5e7eb 100%);
+        }
+
+        .auth-footer {
+            text-align: center;
+            padding: 20px 30px;
+            border-top: 1px solid #f0f0f0;
+            font-size: 14px;
+            color: #666;
+        }
+
+        .auth-footer a {
+            color: #667eea;
+            text-decoration: none;
+            font-weight: 600;
+        }
+
+        .auth-footer a:hover {
+            text-decoration: underline;
+        }
+
+                /* Theme script for auth pages (no user object available reliably) */
+        </style>
+        <script>
+            (function(){
+                try{
+                    // If running on login/register pages there may be no authenticated user.
+                    // Use system time to pick default when unauthenticated.
+                    let theme = 'light';
+                    try{ const t = localStorage.getItem('theme_override'); if(t) theme = t; }
+                    catch(e){}
+                    if(!localStorage.getItem('theme_override')){
+                        const hr = new Date().getHours();
+                        theme = (hr >= 7 && hr < 19) ? 'light' : 'dark';
+                    }
+                    document.documentElement.setAttribute('data-theme', theme);
+                }catch(e){/* ignore */}
+            })();
+        </script>
+        <style>
+
+        .error-message {
+            background: linear-gradient(135deg, #fef3f2 0%, #fdeaea 100%);
+            border-left: 4px solid #ff5444;
+            padding: 14px 16px;
+            margin-bottom: 20px;
+            border-radius: 10px;
+            color: #c3341f;
+            font-size: 13px;
+            font-weight: 600;
+        }
+
+        .success-message {
+            background: linear-gradient(135deg, #f0fdf4 0%, #ecfdec 100%);
+            border-left: 4px solid #22c55e;
+            padding: 14px 16px;
+            margin-bottom: 20px;
+            border-radius: 10px;
+            color: #166534;
+            font-size: 13px;
+            font-weight: 600;
+        }
+
+        .info-box {
+            background: linear-gradient(135deg, #f0f7ff 0%, #e0eeff 100%);
+            border-left: 4px solid #1f9cee;
+            padding: 14px 16px;
+            margin-bottom: 20px;
+            border-radius: 10px;
+            color: #0951b8;
+            font-size: 13px;
+            font-weight: 600;
+        }
+
+        .validation-icon {
+            display: inline-block;
+            margin-left: 5px;
+            font-size: 16px;
+        }
+
+        .validation-icon.valid {
+            color: #4caf50;
+        }
+
+        .validation-icon.invalid {
+            color: #f44336;
+        }
+
+        .spinner {
+            display: inline-block;
+            width: 4px;
+            height: 4px;
+            border-radius: 50%;
+            background: #1f9cee;
+            animation: spin 1.5s infinite;
+            margin-left: 5px;
+        }
+
+        @keyframes spin {
+            0%, 100% { opacity: 0; }
+            50% { opacity: 1; }
+        }
+
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .checkbox-group input[type="checkbox"] {
+            width: auto;
+            margin-right: 8px;
+            cursor: pointer;
+        }
+
+        .checkbox-group label {
+            margin: 0;
+            font-weight: 400;
+            font-size: 13px;
+            cursor: pointer;
+        }
+
+        @media (max-width: 640px) {
+            .auth-container {
+                max-width: 100%;
+            }
+
+            .auth-header {
+                padding: 30px 20px;
+            }
+
+            .auth-header h1 {
+                font-size: 24px;
+            }
+
+            .auth-body {
+                padding: 30px 20px;
+            }
+
+            .auth-footer {
+                padding: 15px 20px;
+            }
+        }
+
+        /* ============ Decorative Elements ============ */
+        .floating-item {
+            position: fixed;
+            pointer-events: none;
+            opacity: 0.1;
+            z-index: -1;
+        }
+
+        .floating-item.item-1 {
+            top: 10%;
+            left: 5%;
+            width: 200px;
+            height: 200px;
+            background: radial-gradient(circle, rgba(0, 122, 255, 0.3) 0%, transparent 70%);
+            border-radius: 50%;
+            animation: float 8s ease-in-out infinite;
+        }
+
+        .floating-item.item-2 {
+            bottom: 15%;
+            right: 10%;
+            width: 300px;
+            height: 300px;
+            background: radial-gradient(circle, rgba(0, 81, 213, 0.3) 0%, transparent 70%);
+            border-radius: 50%;
+            animation: float 10s ease-in-out infinite 2s;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(30px); }
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Fade in effects */
+        .fade-in-up {
+            opacity: 0;
+            transform: translateY(20px);
+            animation: slideUp 0.6s ease-out forwards;
+        }
+
+        .form-group {
+            animation: slideUp 0.5s ease-out backwards;
+        }
+
+        .form-group:nth-child(1) { animation-delay: 0.1s; }
+        .form-group:nth-child(2) { animation-delay: 0.2s; }
+        .form-group:nth-child(3) { animation-delay: 0.3s; }
+        .form-group:nth-child(4) { animation-delay: 0.4s; }
+
+        .btn {
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: rgba(255, 255, 255, 0.2);
+            transition: left 0.3s ease;
+            z-index: 1;
+        }
+
+        .btn:hover::before {
+            left: 100%;
+        }
+
+        /* Success animation */
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(0, 122, 255, 0.7); }
+            70% { box-shadow: 0 0 0 10px rgba(0, 122, 255, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(0, 122, 255, 0); }
+        }
+
+        .success-pulse {
+            animation: pulse 1.5s infinite;
+        }
+
+        
+    </style>
+</head>
+<body>
+    <div class="floating-item item-1"></div>
+    <div class="floating-item item-2"></div>
+    <div class="auth-container">
+        
+<div class="auth-header">
+    <h1>Lupify</h1>
+    <p>Sign in to your community</p>
+</div>
+
+<div class="auth-body">
+    
+
+    
+
+    
+
+    <div style="margin-bottom:12px; font-size: 14px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #1f9cee;">Continue with Google</div>
+
+    
+    <a href="/accounts/google/login/?next=%2Fdashboard%2F" class="btn btn-google" style="display: flex; align-items: center; justify-content: center; gap: 12px; background: linear-gradient(135deg, #f9fafb 0%, #f3f4f6 100%); color: #1f2937; border: 2px solid #e5e7eb; padding: 14px 24px; border-radius: 12px; font-weight: 700; text-decoration: none; width: 100%; font-size: 14px; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);" onmouseover="this.style.background='white'; this.style.borderColor='#1f9cee'; this.style.boxShadow='0 8px 20px rgba(31, 156, 238, 0.15)'; this.style.transform='translateY(-2px)'; this.style.color='#1f9cee';" onmouseout="this.style.background='linear-gradient(135deg, #f9fafb 0%, #f3f4f6 100%)'; this.style.borderColor='#e5e7eb'; this.style.boxShadow='none'; this.style.transform='translateY(0)'; this.style.color='#1f2937';">
+        <svg class="google-logo" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" style="width: 20px; height: 20px; flex-shrink: 0;">
+            <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+            <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+            <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
+            <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+        </svg>
+        Continue with Google
+    </a>
+    
+
+    <div style="display: flex; align-items: center; gap: 12px; margin: 24px 0; font-size: 13px; color: #9ca3af; font-weight: 600;">
+        <div style="flex: 1; height: 1px; background: linear-gradient(to right, transparent, #e5e7eb, transparent);"></div>
+        or
+        <div style="flex: 1; height: 1px; background: linear-gradient(to right, transparent, #e5e7eb, transparent);"></div>
+    </div>
+
+    <!-- Local login fallback -->
+    <form method="POST" action="/accounts/login/local/" novalidate>
+        <input type="hidden" name="csrfmiddlewaretoken" value="Pc8LkbWtI9FEtPLXR82bM8m3ZGGwEILWhdYyYxbkQ1SB9legZPi74w70PtSlAaQb">
+
+        <div class="form-group">
+            <label for="id_username">Username or Email</label>
+            <input type="text" id="id_username" name="username" placeholder="Enter your username or email" required>
+        </div>
+
+        <div class="form-group password-toggle">
+            <label for="id_password">Password</label>
+            <input type="password" id="id_password" name="password" placeholder="Enter your password" required>
+            <button type="button" class="toggle-btn" onclick="togglePassword()">👁</button>
+        </div>
+
+        <button type="submit" class="btn btn-primary">Sign In</button>
+    </form>
+
+    <div style="margin-top:18px; font-size:13px; text-align: center;"><span style="color: #6b7280;">Don't have an account? </span><a href="/accounts/register/" style="color: #1f9cee; font-weight: 700; text-decoration: none; transition: all 0.3s ease;" onmouseover="this.style.color='#fec76f'; this.style.textDecoration='underline';" onmouseout="this.style.color='#1f9cee'; this.style.textDecoration='none';">Sign up</a></div>
+</div>
+
+<div class="auth-footer">
+    By signing in you agree to our <a href="/terms-of-service">Terms of Service</a>.
+</div>
+
+<script>
+function togglePassword() {
+    const input = document.getElementById('id_password');
+    const btn = event.target;
+    if (!input) return;
+    if (input.type === 'password') { 
+        input.type = 'text'; 
+        btn.textContent = '👁‍🗨'; 
+    } else { 
+        input.type = 'password'; 
+        btn.textContent = '👁'; 
+    }
+}
+</script>
+
+
+    </div>
+</body>
+</html>

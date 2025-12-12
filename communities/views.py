@@ -1,24 +1,29 @@
-from django.contrib import messages
-from django.shortcuts import render, redirect, get_object_or_404
-from django.contrib.auth.decorators import login_required
-from django.http import JsonResponse
-from .models import Community, CommunityPost, CommunityPostComment, ModerationReport
-from .forms import CommunityForm, CommunityPostForm
-from accounts.models import Subscription
-from django.core.files.base import ContentFile
 import base64
+
+from django.contrib import messages
+from django.contrib.auth.decorators import login_required
+from django.core.files.base import ContentFile
+from django.http import JsonResponse
+from django.shortcuts import get_object_or_404, redirect, render
+
+from accounts.models import Subscription
+
+from .forms import CommunityForm, CommunityPostForm
+from .models import (Community, CommunityPost, CommunityPostComment,
+                     ModerationReport)
 
 
 # -------------------------------
 # List all communities
 # -------------------------------
 def communities_list(request):
-    communities = Community.objects.all().order_by('category', '-created_at')
+    communities = Community.objects.all().order_by("category", "-created_at")
     categories = Community.CATEGORY_CHOICES
-    return render(request, 'communities/communities_list.html', {
-        'communities': communities,
-        'categories': categories
-    })
+    return render(
+        request,
+        "communities/communities_list.html",
+        {"communities": communities, "categories": categories},
+    )
 
 
 # -------------------------------
@@ -26,26 +31,30 @@ def communities_list(request):
 # -------------------------------
 @login_required
 def create_community(request):
-    if request.method == 'POST':
+    if request.method == "POST":
         form = CommunityForm(request.POST, request.FILES)
         if form.is_valid():
             community = form.save(commit=False)
             community.creator = request.user
 
             # Handle cropped banner/logo data if provided (base64 dataURLs)
-            banner_data = request.POST.get('cropped_banner')
-            logo_data = request.POST.get('cropped_logo')
+            banner_data = request.POST.get("cropped_banner")
+            logo_data = request.POST.get("cropped_logo")
             try:
                 if banner_data:
-                    format, imgstr = banner_data.split(';base64,')
-                    ext = format.split('/')[-1]
-                    data = ContentFile(base64.b64decode(imgstr), name=f"{community.name}_banner.{ext}")
+                    format, imgstr = banner_data.split(";base64,")
+                    ext = format.split("/")[-1]
+                    data = ContentFile(
+                        base64.b64decode(imgstr), name=f"{community.name}_banner.{ext}"
+                    )
                     community.banner_image = data
                 # if no cropped banner but file uploaded via form, form.save will handle it
                 if logo_data:
-                    format, imgstr = logo_data.split(';base64,')
-                    ext = format.split('/')[-1]
-                    data = ContentFile(base64.b64decode(imgstr), name=f"{community.name}_logo.{ext}")
+                    format, imgstr = logo_data.split(";base64,")
+                    ext = format.split("/")[-1]
+                    data = ContentFile(
+                        base64.b64decode(imgstr), name=f"{community.name}_logo.{ext}"
+                    )
                     community.community_image = data
             except Exception as e:
                 messages.error(request, f"Failed to process uploaded images: {e}")
@@ -57,10 +66,10 @@ def create_community(request):
             Subscription.objects.get_or_create(user=request.user, community=community)
 
             messages.success(request, "Community created successfully.")
-            return redirect('communities_list')
+            return redirect("communities_list")
     else:
         form = CommunityForm()
-    return render(request, 'communities/create_community.html', {'form': form})
+    return render(request, "communities/create_community.html", {"form": form})
 
 
 # -------------------------------
@@ -79,7 +88,7 @@ def toggle_join_community(request, community_id):
         # Add subscription
         Subscription.objects.get_or_create(user=request.user, community=community)
 
-    return redirect('communities_list')
+    return redirect("communities_list")
 
 
 # -------------------------------
@@ -102,12 +111,16 @@ def community_detail(request, community_id):
             Subscription.objects.filter(user=request.user, community=community).delete()
         return redirect("community_detail", community_id=community.id)
 
-    return render(request, "communities/community_detail.html", {
-        "community": community,
-        "posts": posts,
-        "members": members,
-        "admins": admins,
-    })
+    return render(
+        request,
+        "communities/community_detail.html",
+        {
+            "community": community,
+            "posts": posts,
+            "members": members,
+            "admins": admins,
+        },
+    )
 
 
 # -------------------------------
@@ -125,7 +138,7 @@ def save_community(request, community_id):
         user.saved_communities.add(community)
         messages.success(request, "Saved successfully.")
 
-    return redirect('community_detail', community_id=community.id)
+    return redirect("community_detail", community_id=community.id)
 
 
 # -------------------------------
@@ -133,10 +146,12 @@ def save_community(request, community_id):
 # -------------------------------
 @login_required
 def create_community_post(request, community_id=None):
-    all_communities = Community.objects.all().order_by('category', 'name')
-    selected_community = get_object_or_404(Community, id=community_id) if community_id else None
+    all_communities = Community.objects.all().order_by("category", "name")
+    selected_community = (
+        get_object_or_404(Community, id=community_id) if community_id else None
+    )
 
-    if request.method == 'POST':
+    if request.method == "POST":
         form = CommunityPostForm(request.POST, request.FILES)
         if form.is_valid():
             post = form.save(commit=False)
@@ -144,15 +159,19 @@ def create_community_post(request, community_id=None):
             post.community = get_object_or_404(Community, id=community_id_from_form)
             post.author = request.user
             post.save()
-            return redirect('community_detail', community_id=post.community.id)
+            return redirect("community_detail", community_id=post.community.id)
     else:
         form = CommunityPostForm()
 
-    return render(request, 'communities/create_community_post.html', {
-        'form': form,
-        'communities': all_communities,
-        'selected_community': selected_community,
-    })
+    return render(
+        request,
+        "communities/create_community_post.html",
+        {
+            "form": form,
+            "communities": all_communities,
+            "selected_community": selected_community,
+        },
+    )
 
 
 # -------------------------------
@@ -160,9 +179,9 @@ def create_community_post(request, community_id=None):
 # -------------------------------
 @login_required
 def create_community_post_generic(request):
-    all_communities = Community.objects.all().order_by('category', 'name')
+    all_communities = Community.objects.all().order_by("category", "name")
 
-    if request.method == 'POST':
+    if request.method == "POST":
         form = CommunityPostForm(request.POST, request.FILES)
         if form.is_valid():
             post = form.save(commit=False)
@@ -170,15 +189,19 @@ def create_community_post_generic(request):
             post.community = get_object_or_404(Community, id=community_id_from_form)
             post.author = request.user
             post.save()
-            return redirect('community_detail', community_id=post.community.id)
+            return redirect("community_detail", community_id=post.community.id)
     else:
         form = CommunityPostForm()
 
-    return render(request, 'communities/create_community_post.html', {
-        'form': form,
-        'communities': all_communities,
-        'selected_community': None,
-    })
+    return render(
+        request,
+        "communities/create_community_post.html",
+        {
+            "form": form,
+            "communities": all_communities,
+            "selected_community": None,
+        },
+    )
 
 
 # -------------------------------
@@ -186,17 +209,23 @@ def create_community_post_generic(request):
 # -------------------------------
 def community_post_detail(request, post_id):
     post = get_object_or_404(CommunityPost, id=post_id)
-    comments = post.comments.filter(parent__isnull=True).prefetch_related('replies')
+    comments = post.comments.filter(parent__isnull=True).prefetch_related("replies")
     user_liked = request.user.is_authenticated and request.user in post.likes.all()
-    user_disliked = request.user.is_authenticated and request.user in post.dislikes.all()
-    return render(request, 'communities/community_post_detail.html', {
-        'post': post,
-        'comments': comments,
-        'likes_count': post.likes.count(),
-        'dislikes_count': post.dislikes.count(),
-        'user_liked': user_liked,
-        'user_disliked': user_disliked,
-    })
+    user_disliked = (
+        request.user.is_authenticated and request.user in post.dislikes.all()
+    )
+    return render(
+        request,
+        "communities/community_post_detail.html",
+        {
+            "post": post,
+            "comments": comments,
+            "likes_count": post.likes.count(),
+            "dislikes_count": post.dislikes.count(),
+            "user_liked": user_liked,
+            "user_disliked": user_disliked,
+        },
+    )
 
 
 # -------------------------------
@@ -204,8 +233,8 @@ def community_post_detail(request, post_id):
 # -------------------------------
 @login_required
 def toggle_community_post_like(request, post_id):
-    if request.method != 'POST':
-        return JsonResponse({'error': 'POST request required.'}, status=400)
+    if request.method != "POST":
+        return JsonResponse({"error": "POST request required."}, status=400)
 
     post = get_object_or_404(CommunityPost, id=post_id)
     user = request.user
@@ -218,11 +247,13 @@ def toggle_community_post_like(request, post_id):
         post.dislikes.remove(user)  # Remove dislike if present
         liked = True
 
-    return JsonResponse({
-        'liked': liked,
-        'likes_count': post.likes.count(),
-        'dislikes_count': post.dislikes.count()
-    })
+    return JsonResponse(
+        {
+            "liked": liked,
+            "likes_count": post.likes.count(),
+            "dislikes_count": post.dislikes.count(),
+        }
+    )
 
 
 # -------------------------------
@@ -230,8 +261,8 @@ def toggle_community_post_like(request, post_id):
 # -------------------------------
 @login_required
 def toggle_community_post_dislike(request, post_id):
-    if request.method != 'POST':
-        return JsonResponse({'error': 'POST request required.'}, status=400)
+    if request.method != "POST":
+        return JsonResponse({"error": "POST request required."}, status=400)
 
     post = get_object_or_404(CommunityPost, id=post_id)
     user = request.user
@@ -244,11 +275,13 @@ def toggle_community_post_dislike(request, post_id):
         post.likes.remove(user)  # Remove like if present
         disliked = True
 
-    return JsonResponse({
-        'disliked': disliked,
-        'likes_count': post.likes.count(),
-        'dislikes_count': post.dislikes.count()
-    })
+    return JsonResponse(
+        {
+            "disliked": disliked,
+            "likes_count": post.likes.count(),
+            "dislikes_count": post.dislikes.count(),
+        }
+    )
 
 
 # -------------------------------
@@ -256,8 +289,8 @@ def toggle_community_post_dislike(request, post_id):
 # -------------------------------
 @login_required
 def toggle_community_post_bookmark(request, post_id):
-    if request.method != 'POST':
-        return JsonResponse({'error': 'POST request required.'}, status=400)
+    if request.method != "POST":
+        return JsonResponse({"error": "POST request required."}, status=400)
 
     post = get_object_or_404(CommunityPost, id=post_id)
     user = request.user
@@ -269,10 +302,9 @@ def toggle_community_post_bookmark(request, post_id):
         post.bookmarks.add(user)
         bookmarked = True
 
-    return JsonResponse({
-        'bookmarked': bookmarked,
-        'bookmarks_count': post.bookmarks.count()
-    })
+    return JsonResponse(
+        {"bookmarked": bookmarked, "bookmarks_count": post.bookmarks.count()}
+    )
 
 
 # -------------------------------
@@ -280,35 +312,34 @@ def toggle_community_post_bookmark(request, post_id):
 # -------------------------------
 @login_required
 def add_community_post_comment(request, post_id):
-    if request.method != 'POST':
-        return JsonResponse({'error': 'POST request required.'}, status=400)
+    if request.method != "POST":
+        return JsonResponse({"error": "POST request required."}, status=400)
 
     post = get_object_or_404(CommunityPost, id=post_id)
-    text = request.POST.get('text', '').strip()
-    parent_id = request.POST.get('parent_id')
+    text = request.POST.get("text", "").strip()
+    parent_id = request.POST.get("parent_id")
 
     if not text:
-        return JsonResponse({'error': 'Comment text required.'}, status=400)
+        return JsonResponse({"error": "Comment text required."}, status=400)
 
     parent = None
     if parent_id:
         parent = get_object_or_404(CommunityPostComment, id=parent_id)
 
     comment = CommunityPostComment.objects.create(
-        post=post,
-        author=request.user,
-        text=text,
-        parent=parent
+        post=post, author=request.user, text=text, parent=parent
     )
 
-    return JsonResponse({
-        'id': comment.id,
-        'user': comment.author.username,
-        'text': comment.text,
-        'created_at': comment.created_at.strftime('%b %d, %Y %I:%M %p'),
-        'likes_count': 0,
-        'dislikes_count': 0
-    })
+    return JsonResponse(
+        {
+            "id": comment.id,
+            "user": comment.author.username,
+            "text": comment.text,
+            "created_at": comment.created_at.strftime("%b %d, %Y %I:%M %p"),
+            "likes_count": 0,
+            "dislikes_count": 0,
+        }
+    )
 
 
 # -------------------------------
@@ -316,8 +347,8 @@ def add_community_post_comment(request, post_id):
 # -------------------------------
 @login_required
 def toggle_community_comment_like(request, comment_id):
-    if request.method != 'POST':
-        return JsonResponse({'error': 'POST request required.'}, status=400)
+    if request.method != "POST":
+        return JsonResponse({"error": "POST request required."}, status=400)
 
     comment = get_object_or_404(CommunityPostComment, id=comment_id)
     user = request.user
@@ -330,11 +361,13 @@ def toggle_community_comment_like(request, comment_id):
         comment.dislikes.remove(user)
         liked = True
 
-    return JsonResponse({
-        'liked': liked,
-        'likes_count': comment.likes.count(),
-        'dislikes_count': comment.dislikes.count()
-    })
+    return JsonResponse(
+        {
+            "liked": liked,
+            "likes_count": comment.likes.count(),
+            "dislikes_count": comment.dislikes.count(),
+        }
+    )
 
 
 # -------------------------------
@@ -342,8 +375,8 @@ def toggle_community_comment_like(request, comment_id):
 # -------------------------------
 @login_required
 def toggle_community_comment_dislike(request, comment_id):
-    if request.method != 'POST':
-        return JsonResponse({'error': 'POST request required.'}, status=400)
+    if request.method != "POST":
+        return JsonResponse({"error": "POST request required."}, status=400)
 
     comment = get_object_or_404(CommunityPostComment, id=comment_id)
     user = request.user
@@ -356,11 +389,13 @@ def toggle_community_comment_dislike(request, comment_id):
         comment.likes.remove(user)
         disliked = True
 
-    return JsonResponse({
-        'disliked': disliked,
-        'likes_count': comment.likes.count(),
-        'dislikes_count': comment.dislikes.count()
-    })
+    return JsonResponse(
+        {
+            "disliked": disliked,
+            "likes_count": comment.likes.count(),
+            "dislikes_count": comment.dislikes.count(),
+        }
+    )
 
 
 # -------------------------------
@@ -368,18 +403,23 @@ def toggle_community_comment_dislike(request, comment_id):
 # -------------------------------
 @login_required
 def report_community_post(request, post_id):
-    if request.method != 'POST':
-        return JsonResponse({'error': 'POST request required.'}, status=400)
+    if request.method != "POST":
+        return JsonResponse({"error": "POST request required."}, status=400)
 
     post = get_object_or_404(CommunityPost, id=post_id)
-    report_type = request.POST.get('type', 'other')
-    description = request.POST.get('description', '').strip()
+    report_type = request.POST.get("type", "other")
+    description = request.POST.get("description", "").strip()
 
     ModerationReport.objects.create(
         post=post,
         reported_by=request.user,
         report_type=report_type,
-        description=description
+        description=description,
     )
 
-    return JsonResponse({'success': True, 'message': 'Report submitted. Thank you for keeping our community safe.'})
+    return JsonResponse(
+        {
+            "success": True,
+            "message": "Report submitted. Thank you for keeping our community safe.",
+        }
+    )

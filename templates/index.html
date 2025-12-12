@@ -40,6 +40,17 @@
 
     <!-- Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+
+    <script>
+    // Initialize theme on page load
+    (function(){
+      const serverPref = "{{ request.user.theme_preference|default:'' }}";
+      let pref = serverPref || null;
+      try { const local = localStorage.getItem('theme_pref'); if(!pref && local) pref = local; }catch(e){}
+      if(!pref) pref = 'system';
+      document.documentElement.setAttribute('data-theme', pref);
+    })();
+    </script>
 </head>
 
 <body class="layout">

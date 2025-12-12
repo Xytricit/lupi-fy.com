@@ -10,7 +10,16 @@
     {% if post.category %}
         <p><strong>Category:</strong> {{ post.category.name }}</p>
     {% endif %}
-    <p>{{ post.content }}</p>
+    {% comment %} Cover image placed before content for better visual reading flow {% endcomment %}
+    {% if post.images.all %}
+        <div class="post-cover-wrapper">
+            {% for img in post.images.all %}
+                {% if forloop.first %}
+                    <img src="{{ img.image.url }}" alt="{{ post.title }} cover" class="post-cover">
+                {% endif %}
+            {% endfor %}
+        </div>
+    {% endif %}
 
     <!-- Post Header + Actions -->
     <div class="post-header">
@@ -20,19 +29,20 @@
                  alt="{{ post.author.username }}" class="creator-pfp user-profile-trigger" 
                  data-user-id="{{ post.author.id }}" data-username="{{ post.author.username }}"
                  data-allow-public-socials="{{ post.author.allow_public_socials }}" style="cursor: pointer;">
-            <div class="creator-details">
-                <strong>{{ post.author.username }}</strong>
-                <span class="followers-count">{{ post.author.followers.count }} Followers</span>
-            </div>
+            <div class="creator-details user-profile-trigger" data-user-id="{{ post.author.id }}" data-username="{{ post.author.username }}" data-allow-public-socials="{{ post.author.allow_public_socials }}">
+                    <strong class="user-profile-trigger" data-user-id="{{ post.author.id }}" data-username="{{ post.author.username }}" data-allow-public-socials="{{ post.author.allow_public_socials }}">{{ post.author.username }}</strong>
+                    <span class="followers-count">{{ post.author.followers.count }} Followers</span>
+                </div>
 
             <!-- Follow Button -->
-            <button type="button" class="follow-btn" data-author-id="{{ post.author.id }}">
+            <button type="button" class="follow-btn no-profile-click" data-author-id="{{ post.author.id }}">
                 {% if request.user in post.author.followers.all %}
                     Following
                 {% else %}
                     Follow
                 {% endif %}
             </button>
+            <span class="reading-time" aria-hidden="true">{{ reading_minutes }} min read</span>
         </div>
 
         <!-- Right: Post Actions -->
@@ -88,6 +98,10 @@
             </div>
         </div>
     </div>
+
+    <article class="post-body">
+        {{ post.content|linebreaks }}
+    </article>
 
     <!-- Comments Section -->
     <div class="comments-section">
@@ -167,7 +181,68 @@
 
 
 <style>
-    :root{ --primary: #1f9cee; }
+    :root{ --primary: #1f9cee; --muted:#6b6b6b; --bg:#ffffff; --text:#1c1c1c; }
+
+    /* Page layout */
+    .single-post {
+        max-width: 880px;
+        margin: 28px auto;
+        padding: 26px;
+        background: var(--bg);
+        border-radius: 14px;
+        box-shadow: 0 8px 28px rgba(22,28,37,0.06);
+        color: var(--text);
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial;
+    }
+
+    /* Cover image */
+    .post-cover-wrapper { margin: 0 0 20px 0; }
+    .post-cover {
+        width: 100%;
+        height: auto;
+        display: block;
+        border-radius: 12px;
+        object-fit: cover;
+        box-shadow: 0 6px 18px rgba(16,24,40,0.06);
+    }
+
+    /* Article typography */
+    .post-body {
+        font-size: 18px;
+        line-height: 1.72;
+        color: rgba(12,12,12,0.94);
+        margin-top: 20px;
+        font-weight: 400;
+        letter-spacing: -0.2px;
+    }
+
+    /* Make the first letter a tasteful drop-cap */
+    .post-body p:first-of-type::first-letter {
+        float: left;
+        font-size: 3.4rem;
+        line-height: 1;
+        padding-right: 12px;
+        padding-top: 4px;
+        font-weight: 700;
+        color: var(--primary);
+    }
+
+    /* Improve readability for headings inside post body */
+    .post-body h2, .post-body h3, .post-body h4 { color: #0f1720; margin-top: 1.25em; }
+    .post-body p { margin: 0 0 1.05em 0; }
+
+    /* Small, muted meta text */
+    .single-post > p, .post-meta, .creator-details span { color: var(--muted); }
+
+    /* Reading time */
+    .reading-time {
+        color: #8b8b8b;
+        margin-left: 12px;
+        font-size: 0.95rem;
+        font-weight: 500;
+        vertical-align: middle;
+    }
+
 .post-header {
     display: flex;
     justify-content: space-between;
@@ -205,20 +280,20 @@
     cursor: button;
 }
 
-.more-btn {
-    background: none;
-    border: none;
-    font-size: 20px;
-    color: #000; /* black */
-    cursor: pointer;
+    more-menu {
+    display: none;
+    position: absolute;
+    top: 36px;
+    right: 0;
+    background: var(--card-bg);
+    border: 1px solid #dcdcdc;
+    border-radius: 8px;
+    box-shadow: 0 6px 18px rgba(0,0,0,0.12);
+    z-index: 1000;
+    flex-direction: column;
+    padding: 6px 0;
+    min-width: 160px;
 }
-.more-menu { min-width: 160px; }
-
-/* Mobile responsiveness tweaks */
-@media (max-width: 700px) {
-    .post-header { flex-direction: column; align-items: flex-start; gap: 12px; }
-    .post-actions { width: 100%; justify-content: flex-start; }
-    .creator-info { gap: 8px; }
 }
 
 .post-actions {
@@ -266,7 +341,7 @@
     position: absolute;
     top: 36px;
     right: 0;
-    background: #fff;
+    background: var(--card-bg);
     border: 1px solid #dcdcdc;
     border-radius: 8px;
     box-shadow: 0 6px 18px rgba(0,0,0,0.12);

@@ -1,403 +1,87 @@
-{% load static %}
+{% extends "dashboardhome.html" %}
 
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Try Not To Get Banned - Lupify</title>
-    <link rel="stylesheet" href="{% static 'css/main.css' %}">
-    <style>
-        :root {
-            --primary: #1f9cee;
-            --primary-dark: #167ac6;
-            --accent: #fec76f;
-            --bg: #f8f9fa;
-            --card-bg: #ffffff;
-            --text-dark: #111827;
-            --secondary-text: #6b7280;
-            --danger: #ef4444;
-        }
+{% block title %}Try Not To Get Banned - Lupify{% endblock %}
 
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+{% block content %}
+<div class="game-hero" style="padding:20px;border-radius:12px;background:linear-gradient(135deg,var(--primary),var(--primary-dark));color:#fff;margin-bottom:18px;text-align:center;">
+    <h1 style="margin:0;font-size:2rem;">🎮 Try Not To Get Banned</h1>
+    <p style="margin-top:8px;opacity:0.95;">Fast, social lobby where chat powers a letter challenge — trigger all letters to earn points while avoiding banned words.</p>
+</div>
 
-        body {
-            font-family: 'Segoe UI', sans-serif;
-            background: var(--bg);
-            color: var(--text-dark);
-        }
+<div class="game-grid" style="max-width:1000px;margin:0 auto;display:grid;grid-template-columns:280px 1fr;gap:18px;align-items:start;">
+    <aside style="background:var(--card-bg);padding:16px;border-radius:12px;box-shadow:0 8px 24px rgba(0,0,0,0.04);">
+        <div style="font-weight:700;color:var(--text-dark);margin-bottom:8px;">Your Points</div>
+        <div style="font-size:1.6rem;font-weight:800;color:var(--primary);">{{ lobby_score|default:0 }}</div>
+        <div style="font-size:0.85rem;color:var(--secondary-text);margin-top:8px;">Points earned from lobby challenges</div>
 
-        .game-container {
-            max-width: 1000px;
-            margin: 0 auto;
-            padding: 20px;
-        }
+        <hr style="margin:12px 0;border:none;border-top:1px solid var(--border-color);" />
 
-        .game-header {
-            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
-            color: white;
-            padding: 30px;
-            border-radius: 12px;
-            margin-bottom: 30px;
-            text-align: center;
-        }
+        <div style="font-weight:700;color:var(--text-dark);margin-bottom:8px;">Lobby Leaderboard</div>
+        {% if lobby_leaderboard %}
+        <ol style="margin-left:18px;color:var(--text-dark);">
+            {% for entry in lobby_leaderboard %}
+            <li style="margin-bottom:6px;">{{ entry.username }} — <strong style="color:var(--primary)">{{ entry.score }}</strong></li>
+            {% endfor %}
+        </ol>
+        {% else %}
+        <div style="color:var(--secondary-text);">No scores yet — be the first to complete the challenge!</div>
+        {% endif %}
+    </aside>
 
-        .game-header h1 {
-            font-size: 2.5rem;
-            margin-bottom: 10px;
-        }
-
-        .game-header p {
-            font-size: 1.1rem;
-            opacity: 0.9;
-        }
-
-        .rules {
-            background: var(--card-bg);
-            padding: 20px;
-            border-radius: 12px;
-            margin-bottom: 30px;
-            border-left: 4px solid var(--accent);
-        }
-
-        .rules h3 {
-            margin-bottom: 15px;
-            color: var(--text-dark);
-        }
-
-        .rules ol {
-            margin-left: 20px;
-            line-height: 1.8;
-        }
-
-        .rules li {
-            margin-bottom: 8px;
-        }
-
-        .chat-container {
-            display: flex;
-            flex-direction: column;
-            height: 600px;
-            background: var(--card-bg);
-            border-radius: 12px;
-            box-shadow: 0 6px 18px rgba(0,0,0,0.05);
-            overflow: hidden;
-        }
-
-        .chat-messages {
-            flex: 1;
-            overflow-y: auto;
-            padding: 20px;
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-        }
-
-        .message {
-            padding: 12px 16px;
-            background: #f0f9ff;
-            border-radius: 8px;
-            border-left: 3px solid var(--primary);
-        }
-
-        .message.own {
-            background: #fef3c7;
-            border-left-color: var(--accent);
-            align-self: flex-end;
-            max-width: 70%;
-        }
-
-        .message-header {
-            font-weight: 600;
-            margin-bottom: 4px;
-            font-size: 0.9rem;
-            color: var(--primary);
-        }
-
-        .message.own .message-header {
-            color: #ca8a04;
-        }
-
-        .message-content {
-            word-wrap: break-word;
-        }
-
-        .message-time {
-            font-size: 0.75rem;
-            color: var(--secondary-text);
-            margin-top: 4px;
-        }
-
-        .chat-input-section {
-            padding: 20px;
-            border-top: 1px solid #e5e7eb;
-            display: flex;
-            gap: 12px;
-        }
-
-        .chat-input-section input {
-            flex: 1;
-            border: 2px solid #e5e7eb;
-            border-radius: 8px;
-            padding: 12px 16px;
-            font-size: 1rem;
-            transition: border-color 0.3s;
-        }
-
-        .chat-input-section input:focus {
-            outline: none;
-            border-color: var(--primary);
-        }
-
-        .chat-input-section input:disabled {
-            background: #f3f4f6;
-            cursor: not-allowed;
-        }
-
-        .chat-input-section button {
-            background: var(--primary);
-            color: white;
-            border: none;
-            border-radius: 8px;
-            padding: 12px 24px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: background 0.3s;
-        }
-
-        .chat-input-section button:hover:not(:disabled) {
-            background: var(--primary-dark);
-        }
-
-        .chat-input-section button:disabled {
-            background: #9ca3af;
-            cursor: not-allowed;
-        }
-
-        /* Ban Modal */
-        .ban-modal {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(0, 0, 0, 0.7);
-            z-index: 1000;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .ban-modal.active {
-            display: flex;
-        }
-
-        .ban-modal-content {
-            background: white;
-            border-radius: 12px;
-            padding: 40px;
-            text-align: center;
-            max-width: 400px;
-            box-shadow: 0 20px 25px rgba(0, 0, 0, 0.2);
-        }
-
-        .ban-icon {
-            width: 80px;
-            height: 80px;
-            background: #fee2e2;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin: 0 auto 20px;
-            font-size: 40px;
-        }
-
-        .ban-modal-content h2 {
-            color: var(--danger);
-            margin-bottom: 10px;
-            font-size: 1.8rem;
-        }
-
-        .ban-modal-content p {
-            color: var(--secondary-text);
-            margin-bottom: 20px;
-            line-height: 1.6;
-        }
-
-        .countdown-timer {
-            font-size: 3rem;
-            font-weight: 700;
-            color: var(--danger);
-            margin: 30px 0;
-            font-family: 'Courier New', monospace;
-        }
-
-        .reenter-btn {
-            background: var(--primary);
-            color: white;
-            border: none;
-            border-radius: 8px;
-            padding: 12px 32px;
-            font-size: 1rem;
-            font-weight: 600;
-            cursor: pointer;
-            transition: background 0.3s;
-            margin-top: 20px;
-        }
-
-        .reenter-btn:hover {
-            background: var(--primary-dark);
-        }
-
-        .reenter-btn:disabled {
-            background: #9ca3af;
-            cursor: not-allowed;
-        }
-
-        .empty-chat {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            height: 100%;
-            color: var(--secondary-text);
-            flex-direction: column;
-            gap: 10px;
-        }
-
-        .empty-chat-icon {
-            font-size: 3rem;
-            opacity: 0.5;
-        }
-
-        .back-button {
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            background: var(--primary);
-            color: white;
-            text-decoration: none;
-            padding: 12px 24px;
-            border-radius: 8px;
-            margin-bottom: 20px;
-            font-weight: 600;
-            transition: background 0.3s;
-        }
-
-        .back-button:hover {
-            background: var(--primary-dark);
-        }
-
-        .back-button svg {
-            width: 20px;
-            height: 20px;
-        }
-    </style>
-</head>
-<body>
-    <div class="game-container">
-        <a href="{% url 'dashboard_home' %}" class="back-button">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M19 12H5M12 19l-7-7 7-7"/>
-            </svg>
-            Back to Dashboard
-        </a>
-
-        <div class="game-header">
-            <h1>🎮 Try Not To Get Banned</h1>
-            <p>Chat freely. You'll also receive a 12-letter challenge — type words containing those letters to turn them green and earn <strong>20 points</strong> when you collect all 12. Avoid banned words or be banned for 1 minute.</p>
-            <div style="margin-top:12px; display:flex; gap:12px; justify-content:center;">
-                <!-- Letter Set entry removed from lobby per request -->
-            </div>
-        </div>
-
-        <!-- Score and leaderboard panel -->
-        <div style="max-width:1000px;margin:12px auto 0;display:flex;gap:12px;align-items:flex-start;">
-            <div style="background:#fff;border-radius:8px;padding:12px 16px;box-shadow:0 6px 18px rgba(0,0,0,0.04);flex:0 0 220px;">
-                <div style="font-weight:700;color:#111;margin-bottom:6px;">Your Points</div>
-                <div style="font-size:1.6rem;font-weight:800;color:#1f9cee;">{{ lobby_score|default:0 }}</div>
-                <div style="font-size:0.85rem;color:#6b7280;margin-top:6px;">Points earned from lobby challenges</div>
-            </div>
-            <div style="background:#fff;border-radius:8px;padding:12px 16px;box-shadow:0 6px 18px rgba(0,0,0,0.04);flex:1;">
-                <div style="font-weight:700;color:#111;margin-bottom:8px;">Lobby Leaderboard</div>
-                {% if lobby_leaderboard %}
-                <ol style="margin-left:18px;color:#111;">
-                    {% for entry in lobby_leaderboard %}
-                    <li style="margin-bottom:6px;">{{ entry.username }} — <strong style="color:#1f9cee">{{ entry.score }}</strong></li>
-                    {% endfor %}
-                </ol>
-                {% else %}
-                <div style="color:#6b7280;">No scores yet — be the first to complete the challenge!</div>
-                {% endif %}
-            </div>
-        </div>
-
-        <!-- Link to full Letter Set page (inline panel removed) -->
-
-        <div class="rules">
-            <h3>📋 Game Rules</h3>
-            <ol>
+    <main>
+        <div class="rules" style="background:var(--card-bg);padding:18px;border-radius:12px;border-left:4px solid var(--accent);margin-bottom:16px;">
+            <h3 style="margin:0 0 12px;">📋 Game Rules</h3>
+            <ol style="margin:0 0 0 18px;line-height:1.7;color:var(--secondary-text)">
                 <li><strong>Stay Clean:</strong> Don't use prohibited words in chat.</li>
                 <li><strong>One Strike:</strong> Use a banned word and you'll be banned for 1 minute.</li>
-                <li><strong>Letters:</strong> A 12-letter challenge appears below. When you type a message, any of the challenge letters present in the words you typed will be marked (turn green).</li>
-                <li><strong>Reward:</strong> When all 12 letters have been triggered, you earn <strong>20 points</strong>.</li>
-                <li><strong>Re-enter:</strong> Click "Re-enter Game" when the ban expires.</li>
-                <li><strong>Play Again:</strong> You can chat and play as many times as you want.</li>
+                <li><strong>Letters:</strong> A 12-letter challenge appears below — type messages containing those letters to trigger them.</li>
+                <li><strong>Reward:</strong> Trigger all 12 letters to earn <strong>20 points</strong>.</li>
             </ol>
         </div>
 
-        <div class="chat-container" id="chatContainer">
-            <div class="chat-messages" id="chatMessages">
+        <div class="chat-container" id="chatContainer" style="background:var(--card-bg);border-radius:12px;box-shadow:0 8px 24px rgba(0,0,0,0.04);overflow:hidden;">
+            <div class="chat-messages" id="chatMessages" style="padding:18px;min-height:240px;">
                 <div class="empty-chat">
                     <div class="empty-chat-icon">💬</div>
                     <p>No messages yet. Be the first to chat!</p>
                 </div>
             </div>
-            <div class="chat-input-section">
-                <input 
-                    type="text" 
-                    id="messageInput" 
-                    placeholder="Type your message..." 
-                    {% if is_banned %}disabled{% endif %}
-                >
-                <button type="button" id="sendBtn" {% if is_banned %}disabled{% endif %}>Send</button>
+            <div class="chat-input-section" style="padding:12px;border-top:1px solid var(--border-color);display:flex;gap:12px;">
+                <input type="text" id="messageInput" placeholder="Type your message..." {% if is_banned %}disabled{% endif %} style="flex:1;border:2px solid var(--border-color);border-radius:8px;padding:10px 12px;">
+                <button type="button" id="sendBtn" {% if is_banned %}disabled{% endif %} style="background:var(--primary);color:#fff;padding:10px 14px;border-radius:8px;font-weight:700;border:none;">Send</button>
             </div>
         </div>
-        <div id="postError" style="color:#b91c1c; padding:8px 20px; display:none;
-            background:#fff7f7; border-left:4px solid #fecaca; border-radius:8px; margin-top:8px; max-width:1000px; margin-left:auto; margin-right:auto;">
-        </div>
 
-        <!-- Lobby 12-word challenge -->
-        <div class="rules" style="margin-top:12px;">
-            <h3>🔤 12-Letter Challenge</h3>
-            <p>Use words in chat that contain the letters below. When you trigger all 12 letters you'll earn <strong>20 points</strong>.</p>
+        <div id="postError" style="display:none;padding:8px 12px;margin-top:12px;border-radius:8px;background:var(--bg);border-left:4px solid var(--danger);color:var(--danger);"></div>
+
+        <div class="rules" style="margin-top:12px;background:var(--card-bg);padding:12px;border-radius:12px;">
+            <h3 style="margin:0 0 8px;">🔤 12-Letter Challenge</h3>
+            <p style="margin:0 0 8px;color:var(--secondary-text);">Use words in chat that contain the letters below. When you trigger all 12 letters you'll earn <strong>20 points</strong>.</p>
             <div id="challengeWords" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:8px;">
-                <!-- letters loaded by JS -->
                 <div class="empty-chat" id="challengeLoading">Loading letters...</div>
             </div>
         </div>
-    </div>
+    </main>
+</div>
 
-    <!-- Ban Modal -->
-    <div class="ban-modal" id="banModal">
-        <div class="ban-modal-content">
-            <div class="ban-icon">⛔</div>
-            <h2>You've Been Banned!</h2>
-            <p>You used a banned word and were kicked from the game.</p>
-            <div class="countdown-timer" id="countdownTimer">1:00</div>
-            <p>Come back when the timer runs out to try again.</p>
-            <button class="reenter-btn" id="reenterBtn" disabled>Re-enter Game</button>
-        </div>
+<!-- Ban Modal remains same, but uses variables -->
+<div class="ban-modal" id="banModal">
+    <div class="ban-modal-content" style="background:var(--card-bg);color:var(--text-dark);">
+        <div class="ban-icon" style="background:#fee2e2;">⛔</div>
+        <h2 style="color:var(--danger)">You've Been Banned!</h2>
+        <p style="color:var(--secondary-text)">You used a banned word and were kicked from the game.</p>
+        <div class="countdown-timer" id="countdownTimer" style="color:var(--danger)">1:00</div>
+        <button class="reenter-btn" id="reenterBtn" disabled style="background:var(--primary);color:#fff;padding:10px 16px;border-radius:8px;border:none;font-weight:700;">Re-enter Game</button>
     </div>
+</div>
 
-    <script>
-        // Try template-injected token first; fall back to cookie if not present
-        let CSRF_TOKEN = '{{ csrf_token }}';
-        function getCookie(name) {
+<style>
+.game-hero { margin-bottom: 12px; }
+.chat-messages .message { background: var(--bg); border-left:3px solid var(--primary); }
+.chat-messages .message.own { background: var(--card-bg); border-left-color:var(--accent); }
+</style>
+
+{% endblock %}
             const value = `; ${document.cookie}`;
             const parts = value.split(`; ${name}=`);
             if (parts.length === 2) return parts.pop().split(';').shift();

@@ -6,7 +6,18 @@
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Account - Lupify</title>
 
-<link rel="stylesheet" href="{% static 'css/main.css' %}">
+<script>
+// Initialize theme on page load (before rendering to avoid flash)
+(() => {
+  const serverPref = "{{ request.user.theme_preference|default:'light' }}";
+  let pref = serverPref || null;
+  try { const local = localStorage.getItem('theme_pref'); if(!pref && local) pref = local; }catch(e){}
+  if(!pref) pref = 'light';
+  document.documentElement.setAttribute('data-theme', pref);
+})();
+</script>
+
+<link rel="stylesheet" href="{% static 'style.css' %}">
 <link href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.css" rel="stylesheet"/>
 
 <style>
@@ -22,6 +33,17 @@
     --card-bg: #fff;
     --shadow: rgba(0,0,0,0.05);
     --radius: 12px;
+  }
+
+  /* Dark theme overrides */
+  [data-theme="dark"] {
+    --bg: #0f1724;
+    --text: #e6eef6;
+    --muted: #9aa6b2;
+    --primary: #1e90ff;
+    --primary-dark: #1b7ae6;
+    --card-bg: #0b1116;
+    --shadow: rgba(0,0,0,0.6);
   }
 
   html,body {
@@ -442,6 +464,9 @@
     <a href="{% url 'account_dashboard' %}?section=settings" class="{% if section == 'settings' %}active{% endif %}">
       <img src="{% static 'icons/settings.svg' %}" width="18" alt=""> Settings
     </a>
+    <a href="{% url 'appearance' %}" class="{% if section == 'appearance' %}active{% endif %}">
+      <img src="{% static 'icons/palette.svg' %}" width="18" alt=""> Appearance
+    </a>
     {% else %}
     <a href="{% url 'public_profile_view' user_id=user.id %}?section=profile" class="{% if section == 'profile' %}active{% endif %}">
       <img src="{% static 'icons/user.svg' %}" width="18" alt=""> Profile
@@ -699,7 +724,7 @@
         {% if not viewing_other_user %}
         <h3 style="margin-top:1rem;">Profile Visibility</h3>
         <label class="toggle-container">
-          <span>Allow people to view my profile</span>
+          <span>Allow my username/profile to appear in search results</span>
           <input type="checkbox" name="public_profile" {% if user.public_profile %}checked{% endif %}>
           <span class="slider"></span>
         </label>
@@ -707,6 +732,12 @@
         <label class="toggle-container">
           <span>Allow people to see my socials</span>
           <input type="checkbox" name="allow_public_socials" {% if user.allow_public_socials %}checked{% endif %}>
+          <span class="slider"></span>
+        </label>
+
+        <label class="toggle-container">
+          <span>Allow people to send me direct messages (DMs)</span>
+          <input type="checkbox" name="allow_dms" {% if user.allow_dms %}checked{% endif %}>
           <span class="slider"></span>
         </label>
 
@@ -921,6 +952,59 @@ const closeUpgrade = document.getElementById('close-upgrade');
 upgradeBtns.forEach(btn => btn.addEventListener('click', () => upgradeModal.style.display = 'flex'));
 if(closeUpgrade) closeUpgrade.addEventListener('click', () => upgradeModal.style.display = 'none');
 window.addEventListener('click', e => { if(e.target === upgradeModal) upgradeModal.style.display='none'; });
+
+/* ================================
+   Theme System (with System Mode Dynamic Switching)
+   ================================ */
+(() => {
+  const appearanceUrl = '{% url "appearance" %}';
+  const setApplied = (applied) => document.documentElement.setAttribute('data-theme', applied);
+  let systemMql = null;
+  let systemListener = null;
+
+  function systemApplyListener(e){
+    const applied = e.matches ? 'dark' : 'light';
+    setApplied(applied);
+  }
+
+  function applyChoice(pref){
+    try{ if(systemMql && systemListener) { systemMql.removeEventListener('change', systemListener); systemListener = null; systemMql = null; } }catch(e){}
+    if(pref === 'system'){
+      if(window.matchMedia){
+        systemMql = window.matchMedia('(prefers-color-scheme: dark)');
+        const applied = systemMql.matches ? 'dark' : 'light';
+        setApplied(applied);
+        systemListener = systemApplyListener;
+        try{ systemMql.addEventListener('change', systemListener); }catch(e){ try{ systemMql.addListener(systemListener); }catch(e){} }
+      } else {
+        const hr = new Date().getHours();
+        setApplied((hr>=7 && hr<19)?'light':'dark');
+      }
+    } else if(pref === 'dark'){
+      setApplied('dark');
+    } else {
+      setApplied('light');
+    }
+  }
+
+  (function initTheme(){
+    let pref = "{{ request.user.theme_preference|default:'' }}" || null;
+    try{ const local = localStorage.getItem('theme_pref'); if(!pref && local) pref = local; }catch(e){}
+    if(!pref) pref = 'light';
+    applyChoice(pref);
+  })();
+
+  window.applyThemeChoice = function(pref, persist=true){
+    if(persist){
+      try{ localStorage.setItem('theme_pref', pref); }catch(e){}
+      try{
+        const csrftoken = (document.cookie.match(/csrftoken=([^;]+)/)||[])[1];
+        fetch(appearanceUrl, {method:'POST', headers:{'Content-Type':'application/x-www-form-urlencoded','X-CSRFToken':csrftoken,'X-Requested-With':'XMLHttpRequest'}, body: new URLSearchParams({theme:pref})});
+      }catch(e){}
+    }
+    applyChoice(pref);
+  };
+})();
 
 /* ================================
    Sidebar Toggle for Mobile

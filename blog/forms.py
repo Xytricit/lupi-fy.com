@@ -1,17 +1,19 @@
 # forms.py
 from django import forms
-from .models import Post, Tag, Category, Comment
+
+from .models import Category, Comment, Post, Tag
+
 
 class PostForm(forms.ModelForm):
     tags = forms.ModelMultipleChoiceField(
         queryset=Tag.objects.all(),
         required=False,
-        widget=forms.SelectMultiple(attrs={'class': 'form-multi-select'})
+        widget=forms.SelectMultiple(attrs={"class": "form-multi-select"}),
     )
     category = forms.ModelChoiceField(
         queryset=Category.objects.all(),
         required=False,
-        widget=forms.Select(attrs={'class': 'form-select'})
+        widget=forms.Select(attrs={"class": "form-select"}),
     )
 
     class Meta:
@@ -19,13 +21,13 @@ class PostForm(forms.ModelForm):
         # Only include fields that exist in your model
         fields = ["title", "content", "category", "tags"]  # removed 'description'
 
+
 class CommentForm(forms.ModelForm):
     class Meta:
         model = Comment
         fields = ["text"]
         widgets = {
-            "text": forms.Textarea(attrs={
-                "placeholder": "Write a comment...",
-                "rows": 2
-            })
+            "text": forms.Textarea(
+                attrs={"placeholder": "Write a comment...", "rows": 2}
+            )
         }

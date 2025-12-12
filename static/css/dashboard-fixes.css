@@ -1,0 +1,94 @@
+/* Sidebar width tweak to avoid clipping */
+.sidebar{width:80px !important;min-width:80px !important}
+@media (min-width:769px){.main-wrapper{margin-left:80px !important}}
+
+/* Dark mode contrast fixes: ensure components use theme vars */
+html[data-theme="dark"] .avatar-menu,
+html[data-theme="dark"] .post-card,
+html[data-theme="dark"] .create-modal .modal-content,
+html[data-theme="dark"] .interests-modal-content,
+html[data-theme="dark"] .notification-dropdown,
+html[data-theme="dark"] .for-you-card,
+html[data-theme="dark"] .interest-chip,
+html[data-theme="dark"] .filter-bubble {
+  background: var(--card-bg) !important;
+  color: var(--text-dark) !important;
+  border-color: rgba(255,255,255,0.06) !important;
+}
+
+/* Fix elements that were hardcoded to white */
+html[data-theme="dark"] .post-media,
+html[data-theme="dark"] .post-media img,
+html[data-theme="dark"] .avatar-menu a,
+html[data-theme="dark"] .avatar-menu p {
+  background: var(--card-bg) !important;
+  color: var(--text-dark) !important;
+}
+
+/* Avatar text color in dark mode (improve contrast if needed) */
+html[data-theme="dark"] .pfp, html[data-theme="dark"] .pfp-fallback {
+  color: var(--text-dark) !important;
+}
+
+/* Ensure inline SVGs are not visually clipped and scale nicely */
+svg{overflow:visible !important;display:inline-block;vertical-align:middle}
+svg *{vector-effect:non-scaling-stroke}
+
+/* Blog / Post cards in dark mode */
+html[data-theme="dark"] .post-card,
+html[data-theme="dark"] .post-card .post-content,
+html[data-theme="dark"] .post-card .post-title,
+html[data-theme="dark"] .post-card .author-line,
+html[data-theme="dark"] article.post-card.full-bleed {
+  background: var(--card-bg) !important;
+  color: var(--text-dark) !important;
+  border-color: rgba(255,255,255,0.04) !important;
+}
+
+/* Ensure lucide / svg icons use theme-aware stroke in dark mode */
+html[data-theme="dark"] .lucide, html[data-theme="dark"] svg.lucide { stroke: var(--icon-default) !important; color: var(--icon-default) !important }
+
+/* Creator dashboard dark mode card adjustments */
+html[data-theme="dark"] .creator-card, html[data-theme="dark"] .card { background: var(--card-bg) !important; color: var(--text-dark) !important; border-color: rgba(255,255,255,0.04) !important }
+
+/* Global dark theme variable overrides */
+html[data-theme="dark"] {
+  --bg: #000000;
+  --card-bg: #07070a;
+  --text-dark: #e6eef8;
+  --secondary-text: #9ca3af;
+  --icon-default: #9ca3af;
+  --border-color: rgba(255,255,255,0.06);
+  --primary: #7c3aed; /* default primary in dark mode (purple) */
+}
+
+/* Creator page specific: purple topbar in dark mode */
+html[data-theme="dark"] .topbar { background: linear-gradient(90deg,#7c3aed 0%,#8b5cf6 100%) !important }
+html[data-theme="dark"] .btn.primary, html[data-theme="dark"] .metric .v { background: var(--primary) !important; color: #fff !important }
+
+/* Ensure body uses theme background */
+html[data-theme="dark"] body { background: var(--bg) !important; }
+
+/* Ensure filter bubbles remain clickable and above overlays */
+.filter-bubble {
+  position: relative !important;
+  z-index: 200 !important;
+  pointer-events: auto !important;
+}
+
+html[data-theme="dark"] .filter-bubble {
+  z-index: 200 !important;
+  pointer-events: auto !important;
+}
+
+/* Make active filter bubble clearly visible in dark mode */
+html[data-theme="dark"] .filter-bubble.active {
+  background: var(--primary) !important;
+  color: #fff !important;
+  border-color: var(--primary) !important;
+  box-shadow: 0 6px 18px rgba(31,156,238,0.12) !important;
+}
+
+html[data-theme="dark"] .filter-bubble.active:hover {
+  filter: brightness(1.04) !important;
+}

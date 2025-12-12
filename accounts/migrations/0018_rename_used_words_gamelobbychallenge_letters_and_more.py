@@ -6,18 +6,18 @@ from django.db import migrations
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('accounts', '0017_gamelobbychallenge_wordlistgame'),
+        ("accounts", "0017_gamelobbychallenge_wordlistgame"),
     ]
 
     operations = [
         migrations.RenameField(
-            model_name='gamelobbychallenge',
-            old_name='used_words',
-            new_name='letters',
+            model_name="gamelobbychallenge",
+            old_name="used_words",
+            new_name="letters",
         ),
         migrations.RenameField(
-            model_name='gamelobbychallenge',
-            old_name='words',
-            new_name='used_letters',
+            model_name="gamelobbychallenge",
+            old_name="words",
+            new_name="used_letters",
         ),
     ]

@@ -6,14 +6,19 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('accounts', '0008_alter_subscription_community'),
-        ('communities', '0003_community_banner_image_community_community_image_and_more'),
+        ("accounts", "0008_alter_subscription_community"),
+        (
+            "communities",
+            "0003_community_banner_image_community_community_image_and_more",
+        ),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='customuser',
-            name='saved_communities',
-            field=models.ManyToManyField(blank=True, related_name='saved_by_users', to='communities.community'),
+            model_name="customuser",
+            name="saved_communities",
+            field=models.ManyToManyField(
+                blank=True, related_name="saved_by_users", to="communities.community"
+            ),
         ),
     ]

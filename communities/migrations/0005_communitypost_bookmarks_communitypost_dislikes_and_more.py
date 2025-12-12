@@ -7,24 +7,36 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('communities', '0004_communitypost_image'),
+        ("communities", "0004_communitypost_image"),
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='communitypost',
-            name='bookmarks',
-            field=models.ManyToManyField(blank=True, related_name='bookmarked_community_posts', to=settings.AUTH_USER_MODEL),
+            model_name="communitypost",
+            name="bookmarks",
+            field=models.ManyToManyField(
+                blank=True,
+                related_name="bookmarked_community_posts",
+                to=settings.AUTH_USER_MODEL,
+            ),
         ),
         migrations.AddField(
-            model_name='communitypost',
-            name='dislikes',
-            field=models.ManyToManyField(blank=True, related_name='disliked_community_posts', to=settings.AUTH_USER_MODEL),
+            model_name="communitypost",
+            name="dislikes",
+            field=models.ManyToManyField(
+                blank=True,
+                related_name="disliked_community_posts",
+                to=settings.AUTH_USER_MODEL,
+            ),
         ),
         migrations.AddField(
-            model_name='communitypost',
-            name='likes',
-            field=models.ManyToManyField(blank=True, related_name='liked_community_posts', to=settings.AUTH_USER_MODEL),
+            model_name="communitypost",
+            name="likes",
+            field=models.ManyToManyField(
+                blank=True,
+                related_name="liked_community_posts",
+                to=settings.AUTH_USER_MODEL,
+            ),
         ),
     ]

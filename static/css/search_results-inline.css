@@ -1,0 +1,9 @@
+/* extracted from templates/search_results.html */
+/* Hide header on search page (only sidebar visible) */
+header { display: none !important; }
+
+.result-row{display:flex;gap:12px;padding:12px;border-radius:10px;background:var(--card-bg);align-items:center;box-shadow:var(--card-shadow);border:1px solid rgba(0,0,0,0.03)}
+.result-row .thumb{width:56px;height:56px;border-radius:8px;background:#f6f6f6;display:flex;align-items:center;justify-content:center;color:#888;font-weight:700}
+.result-meta{flex:1}
+.result-meta .title{font-weight:600;color:var(--text-dark)}
+.result-meta .subtitle{color:var(--secondary-text);font-size:0.95rem}

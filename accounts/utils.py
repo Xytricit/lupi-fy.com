@@ -1,5 +1,4 @@
 from .models import ModerationReport
-from django.utils import timezone
 
 
 def check_post_for_banned_words(user, content, banned_words):
@@ -23,9 +22,7 @@ def check_post_for_banned_words(user, content, banned_words):
 
         # Create moderation log record
         ModerationReport.objects.create(
-            user=user,
-            post_content=content,
-            banned_words_found=", ".join(banned_found)
+            user=user, post_content=content, banned_words_found=", ".join(banned_found)
         )
 
         return banned_found  # signals violation

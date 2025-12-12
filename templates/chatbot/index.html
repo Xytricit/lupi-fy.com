@@ -1,0 +1,112 @@
+{% extends 'dashboardhome.html' %}
+{% load static %}
+
+{% block title %}Lupify AI Assistant{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/chatbot.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="chatbot-container">
+    <!-- Sidebar: User Analytics -->
+    <div class="chat-sidebar">
+        <div class="user-profile">
+            <h3>{{ username }}</h3>
+            <div class="level-badge level-{{ level_num }}">
+                {{ creator_level }}
+            </div>
+        </div>
+
+        <div class="analytics-section">
+            <h4>Your Stats</h4>
+            <div class="stat-item">
+                <span class="stat-label">Posts</span>
+                <span class="stat-value">{{ analytics.total_posts }}</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-label">Engagement</span>
+                <span class="stat-value">{{ analytics.total_engagement }}</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-label">Score</span>
+                <span class="stat-value">{{ analytics.engagement_score }}</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-label">Communities</span>
+                <span class="stat-value">{{ analytics.communities_joined }}</span>
+            </div>
+        </div>
+
+        <div class="insights-section">
+            <h4>Quick Insights</h4>
+            <div class="insight-text" id="insightText">
+                Loading insights...
+            </div>
+        </div>
+
+        <button class="clear-chat-btn" id="clearChatBtn">Clear Chat</button>
+    </div>
+
+    <!-- Main Chat Area -->
+    <div class="chat-main">
+        <!-- Header -->
+        <div class="chat-header">
+            <h1>Lupify AI Coach</h1>
+            <p>Your creative growth partner</p>
+        </div>
+
+        <!-- Messages Container -->
+        <div class="chat-messages" id="chatMessages">
+            <div class="message assistant-message">
+                <div class="message-content">
+                    <p>Hey {{ username }}! 👋 I'm your AI content coach. I'm here to help you grow your audience, improve your content, and unlock your creative potential.</p>
+                    <p>Tell me about your goals, ask for content ideas, get feedback on your posts, or let me help you execute actions like creating new posts or exploring communities.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Task Execution Buttons -->
+        <div class="task-buttons" id="taskButtons"></div>
+
+        <!-- Input Area -->
+        <div class="chat-input-area">
+            <form id="chatForm" class="chat-form">
+                <input 
+                    type="text" 
+                    id="messageInput" 
+                    placeholder="Ask me anything about your content strategy..." 
+                    autocomplete="off"
+                    required
+                >
+                <button type="submit" class="send-btn">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="22" y1="2" x2="11" y2="13"></line>
+                        <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                    </svg>
+                </button>
+            </form>
+            <div class="typing-indicator" id="typingIndicator" style="display: none;">
+                <span></span><span></span><span></span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Task Execution Modal (for confirmation) -->
+<div class="task-modal" id="taskModal">
+    <div class="modal-content">
+        <h3 id="taskModalTitle">Execute Action</h3>
+        <p id="taskModalDescription">Are you sure?</p>
+        <div class="modal-buttons">
+            <button class="btn btn-secondary" id="taskCancelBtn">Cancel</button>
+            <button class="btn btn-primary" id="taskConfirmBtn">Confirm</button>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/chatbot.js' %}"></script>
+{% endblock %}

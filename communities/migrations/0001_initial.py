@@ -15,15 +15,52 @@ class Migration(migrations.Migration):
 
     operations = [
         migrations.CreateModel(
-            name='Community',
+            name="Community",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('name', models.CharField(max_length=100, unique=True)),
-                ('category', models.CharField(choices=[('technology', 'Technology'), ('design', 'Design'), ('business', 'Business'), ('lifestyle', 'Lifestyle'), ('gaming', 'Gaming'), ('photography', 'Photography'), ('writing', 'Writing'), ('music', 'Music')], max_length=50)),
-                ('description', models.TextField(blank=True)),
-                ('created_at', models.DateTimeField(auto_now_add=True)),
-                ('creator', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='created_communities', to=settings.AUTH_USER_MODEL)),
-                ('members', models.ManyToManyField(blank=True, related_name='joined_communities', to=settings.AUTH_USER_MODEL)),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("name", models.CharField(max_length=100, unique=True)),
+                (
+                    "category",
+                    models.CharField(
+                        choices=[
+                            ("technology", "Technology"),
+                            ("design", "Design"),
+                            ("business", "Business"),
+                            ("lifestyle", "Lifestyle"),
+                            ("gaming", "Gaming"),
+                            ("photography", "Photography"),
+                            ("writing", "Writing"),
+                            ("music", "Music"),
+                        ],
+                        max_length=50,
+                    ),
+                ),
+                ("description", models.TextField(blank=True)),
+                ("created_at", models.DateTimeField(auto_now_add=True)),
+                (
+                    "creator",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="created_communities",
+                        to=settings.AUTH_USER_MODEL,
+                    ),
+                ),
+                (
+                    "members",
+                    models.ManyToManyField(
+                        blank=True,
+                        related_name="joined_communities",
+                        to=settings.AUTH_USER_MODEL,
+                    ),
+                ),
             ],
         ),
     ]

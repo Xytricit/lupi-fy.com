@@ -6,494 +6,28 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+{% if request.user.is_authenticated %}
+<meta name="current-user-id" content="{{ request.user.id }}">
+{% endif %}
 <title>{% block title %}Lupify - Dashboard{% endblock %}</title>
 <link rel="stylesheet" href="{% static 'css/main.css' %}">
-<style>
-:root {
-    --primary: #1f9cee;
-    --primary-dark: #167ac6;
-    --accent: #fec76f;
-    --bg: #f8f9fa;
-    --card-bg: #ffffff;
-    --text-dark: #111827;
-    --secondary-text: #6b7280;
-    --icon-default: #6b7280;
-    --card-shadow: 0 6px 18px rgba(0,0,0,0.05);
-}
-
-/* ---------- Base Body ---------- */
-body {
-font-family: 'Segoe UI', sans-serif;
-margin: 0;
-background: var(--bg);
-color: var(--text-dark);
-overflow-x: hidden;
-}
-
-/* ---------- Header ---------- */
-header {
-    background: #fff;
-    padding: 10px 20px; /* slightly smaller */
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    box-shadow: 0 2px 6px rgba(0,0,0,0.05);
-    position: sticky;
-    top: 0;
-    z-index: 100;
-    height: 80px; 
-}
-.toc {
-display: none;
-align-items: center;
-justify-content: center;
-cursor: pointer;
-gap: 6px;
-}
-
-.toc svg {
-width: 24px;
-height: 24px;
-stroke: var(--icon-default);
-}
-
-.logo {
-font-size: 1.8rem;
-font-weight: 700;
-color: var(--primary);
-min-width: 120px;
-margin-right: 20px;
-}
-
-.search-wrapper {
-flex: 1;
-display: flex;
-justify-content: center;
-position: relative;
-}
-
-.search-bar {
-width: 60%;
-max-width: 550px;
-display: flex;
-align-items: center;
-background: #fff;
-border: 2px solid var(--primary);
-border-radius: 50px;
-padding: 8px 14px;
-transition: all 0.3s ease;
-}
-
-.search-bar svg {
-width: 20px;
-height: 20px;
-margin-right: 8px;
-stroke: var(--text-dark);
-cursor: pointer;
-}
-
-.search-bar input {
-flex: 1;
-border: none;
-outline: none;
-font-size: 1rem;
-padding: 5px 10px;
-background: none;
-color: var(--text-dark);
-}
-.search-bar.collapsed input {
-    width: 0;
-    opacity: 0;
-    padding: 0;
-    transition: all 0.3s ease;
-}
-
-.search-bar.expanded input {
-    width: 100%;
-    opacity: 1;
-    padding: 5px 10px;
-    pointer-events: auto; /* now works for all screen sizes */
-    display: block;
-}
-
-
-
-/* Nav Actions */
-.nav-actions {
-    display: flex;
-    align-items: center;
-    gap: 24px;
-    flex-shrink: 0;  /* prevent shrinking */
-}
-
-.icon-btn {
-width: 38px;
-height: 38px;
-display: flex;
-align-items: center;
-justify-content: center;
-background: var(--card-bg);
-border-radius: 50%;
-cursor: pointer;
-transition: 0.2s;
-border: 1px solid rgba(0,0,0,0.08);
-position: relative;
-}
-
-.icon-btn:hover {
-background: var(--accent);
-}
-
-.create-btn {
-padding: 8px 14px;
-background: var(--primary);
-color: #fff;
-border-radius: 8px;
-font-weight: 600;
-cursor: pointer;
-transition: 0.2s;
-}
-
-.create-btn:hover {
-background: var(--primary-dark);
-}
-
-/* Sidebar */
-.sidebar {
-position: fixed;
-left: 0;
-top: 0;
-bottom: 0;
-width: 60px;
-background: var(--card-bg);
-display: flex;
-flex-direction: column;
-align-items: center;
-padding-top: 100px;
-box-shadow: 2px 0 6px rgba(0,0,0,0.05);
-z-index: 10;
-transition: transform 0.3s ease-in-out;
-}
-
-.sidebar ul {
-list-style: none;
-padding: 0;
-margin: 0;
-width: 100%;
-}
-
-.sidebar ul li {
-width: 100%;
-height: 60px;
-display: flex;
-align-items: center;
-justify-content: center;
-cursor: pointer;
-border-radius: 12px;
-transition: background 0.2s, transform 0.2s;
-}
-
-.sidebar ul li.active {
-background: var(--primary);
-}
-
-.sidebar ul li.active svg {
-stroke: #fff;
-}
-
-.sidebar ul li svg {
-width: 28px;
-height: 28px;
-stroke: var(--icon-default);
-}
-
-.sidebar ul li:hover {
-background: var(--accent);
-transform: translateX(4px);
-}
-
-.sidebar ul li:hover svg {
-stroke: #111827;
-}
-
-.sidebar ul li a {
-display: flex;
-align-items: center;
-justify-content: center;
-width: 100%;
-height: 100%;
-text-decoration: none;
-}
-
-/* Slide-in mobile sidebar */
-/* Slide-in mobile sidebar */
-.sidebar.mobile {
-    width: 250px; /* percentage works too, but fixed px is safer for clicks */
-    transform: translateX(-100%);
-    padding-top: 80px;
-    z-index: 1000; /* above overlay */
-    transition: transform 0.3s ease-in-out;
-    display: flex;
-}
-
-.sidebar.mobile.active {
-    transform: translateX(0);
-}
-
-
-/* Overlay for mobile sidebar */
-#sidebarOverlay {
-    position: fixed;
-    inset: 0;
-    background: rgba(0,0,0,0.2);
-    z-index: 90;
-    opacity: 0;
-    pointer-events: none;
-    transition: opacity 0.3s ease;
-}
-
-#sidebarOverlay.active {
-    opacity: 1;
-    pointer-events: auto;
-}
-
-
-
-/* Main wrapper */
-.main-wrapper {
-display: flex;
-margin-left: 60px;
-padding: 20px 30px;
-flex-direction: column;
-gap: 20px;
-transition: margin-left 0.3s;
-}
-
-.feed {
-flex: 1;
-display: flex;
-flex-direction: column;
-gap: 20px;
-}
-
-/* Post Cards */
-.post-card {
-background: var(--card-bg);
-padding: 18px 20px;
-border-radius: 12px;
-box-shadow: var(--card-shadow);
-transition: transform 0.2s;
-}
-
-.post-card:hover {
-transform: translateY(-4px);
-}
-
-/* Filter Bubble Styling */
-.filter-bubble {
-    padding: 8px 16px;
-    border: 2px solid #ddd;
-    background: #fff;
-    color: var(--text-dark);
-    border-radius: 20px;
-    cursor: pointer;
-    font-weight: 500;
-    transition: all 0.2s;
-    font-size: 0.9rem;
-}
-
-.filter-bubble:hover {
-    border-color: var(--primary);
-    color: var(--primary);
-}
-
-.filter-bubble.active {
-    border-color: var(--primary);
-    background: var(--primary);
-    color: #fff;
-}
-
-/* Avatar */
-.pfp, .pfp-fallback {
-width: 38px;
-height: 38px;
-border-radius: 50%;
-display: flex;
-align-items: center;
-justify-content: center;
-font-weight: bold;
-color: #fff;
-font-size: 1rem;
-}
-
-.pfp {
-object-fit: cover;
-}
-
-.avatar-wrapper {
-position: relative;
-cursor: pointer;
-}
-
-.avatar-menu {
-    position: fixed;       /* float above everything */
-    top: 90px;             /* just below header (adjust to match header height) */
-    right: 30px;           /* aligns with the avatar */
-    display: none;         /* still hidden by default */
-    flex-direction: column;
-    background: #fff;
-    border: 1px solid rgba(0,0,0,0.15);
-    border-radius: 8px;
-    padding: 8px 0;
-    min-width: 150px;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-    z-index: 9999;
-    overflow: visible;
-}
-
-
-.avatar-menu a, .avatar-menu p {
-display: block;
-padding: 10px 16px;
-font-size: 0.95rem;
-color: var(--text-dark);
-text-decoration: none;
-cursor: pointer;
-transition: background 0.2s;
-}
-
-.avatar-menu a:hover, .avatar-menu p:hover {
-background: var(--accent);
-color: var(--text-dark);
-}
-
-/* Modal */
-.create-modal {
-display: none;
-position: fixed;
-inset: 0;
-background: rgba(0,0,0,0.5);
-backdrop-filter: blur(3px);
-z-index: 100;
-align-items: center;
-justify-content: center;
-}
-
-.create-modal .modal-content {
-background: #fff;
-padding: 30px 40px;
-border-radius: 12px;
-text-align: center;
-min-width: 300px;
-box-shadow: 0 10px 25px rgba(0,0,0,0.15);
-}
-
-.create-modal .modal-content h3 {
-margin-bottom: 20px;
-font-size: 1.3rem;
-color: var(--primary);
-}
-
-.create-modal .modal-options {
-display: flex;
-gap: 20px;
-justify-content: center;
-flex-wrap: wrap;
-}
-
-.create-modal .modal-option {
-padding: 12px 20px;
-border-radius: 10px;
-background: var(--primary);
-color: #fff;
-cursor: pointer;
-font-weight: 600;
-transition: 0.2s;
-}
-
-.create-modal .modal-option:hover {
-background: var(--accent);
-color: #111827;
-}
-
-/* ---------- MOBILE ---------- */
-@media (max-width: 992px) {
-.main-wrapper { margin-left: 0; padding: 12px 16px; }
-.search-bar { width: 90%; }
-.avatar-menu {
-        position: fixed;
-        top: 60px;      /* adjust for header */
-        right: 10px;    /* align nicely */
-        max-height: 50vh;
-        overflow-y: auto;
-    }
-
-}
-
-@media (max-width: 768px) {
-header { flex-wrap: nowrap; height: 60px; padding: 8px 12px; }
-.toc { display: flex; }
-.search-bar { width: 40px; padding: 6px; border-radius: 50%; margin: 0; }
-.search-bar.expanded { width: 80%; padding: 8px 14px; border-radius: 50px; }
-.nav-actions { gap: 16px; transition: 0.3s; }
-.sidebar { display: none; }
-.pfp, .pfp-fallback { width: 32px; height: 32px; }
-.create-btn { padding: 6px 12px; font-size: 0.9rem; }
-.post-card { padding: 14px 16px; font-size: 0.95rem; }
-.main-wrapper { margin-left: 0; padding: 12px; }
-}
-
-/* Collapsible Search on Mobile */
-.search-bar.collapsed input { display: none; }
-.search-bar.expanded input { display: block; width: 100%; }
-.nav-actions.hide-on-search { display: none !important; }
-
-@media (max-width: 480px) {
-.logo { font-size: 1.4rem; margin-right: 10px; }
-.icon-btn { width: 32px; height: 32px; }
-.search-bar input { font-size: 0.9rem; }
-.search-bar {
-    background: transparent; /* default: no bubble */
-    border: none;
-}
-
-.search-bar.expanded {
-    background: #fff; /* show bubble only when expanded */
-    border: 2px solid var(--primary);
-    border-radius: 50px;
-    padding: 8px 14px;
-}
-}
-
-/* Prevent horizontal scroll on mobile */
-body, html { overflow-x: hidden; }
-
-/* Sidebar mobile logo */
-.sidebar-logo {
-    display: none; /* hidden by default */
-    width: 100%;
-    text-align: center;
-    font-size: 1.5rem;
-    font-weight: 700;
-    color: var(--primary);
-    padding: 10px 0; /* small padding for spacing */
-}
-
-/* Show logo only on mobile */
-@media (max-width: 768px) {
-    .sidebar-logo {
-        display: block;
-        margin: 0;         /* remove default margin */
-    }
-}
-@media (max-width: 768px) {
-    .sidebar.mobile {
-        padding-top: 10px;  /* instead of 80px or 100px */
-    }
-}
-
-</style>
-
+<link rel="stylesheet" href="{% static 'css/dashboard.css' %}">
+<link rel="stylesheet" href="{% static 'css/dashboard-complete.css' %}">
+<link rel="stylesheet" href="{% static 'css/dashboard-fixes.css' %}">
+    {% block extra_css %}{% endblock %}
+        <script>
+        (function(){
+            try{
+                const serverTheme = "{{ request.user.theme_preference|default:'' }}";
+                if(serverTheme === 'dark') document.documentElement.setAttribute('data-theme','dark');
+                else if(serverTheme === 'light') document.documentElement.setAttribute('data-theme','light');
+                const accent = "{{ request.user.accent_color|default:'#1f9cee' }}";
+                if(accent) document.documentElement.style.setProperty('--primary', accent);
+                const fs = {{ request.user.font_size|default:14 }};
+                if(fs) document.documentElement.style.fontSize = fs + 'px';
+            }catch(e){ /* ignore */ }
+        })();
+        </script>
 </head>
 <body>
 
@@ -516,19 +50,44 @@ body, html { overflow-x: hidden; }
         </div>
     </div>
     <div class="nav-actions">
+        <!-- Notifications Bell -->
+        <div class="icon-btn notification-btn" id="notificationBell" style="position: relative; cursor: pointer;">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-bell-icon lucide-bell">
+                <path d="M10.268 21a2 2 0 0 0 3.464 0"/>
+                <path d="M3.262 15.326A1 1 0 0 0 4 17h16a1 1 0 0 0 .74-1.673C19.41 13.956 18 12.499 18 8A6 6 0 0 0 6 8c0 4.499-1.411 5.956-2.738 7.326"/>
+            </svg>
+            <div id="notificationBadge" style="display: none; position: absolute; top: -4px; right: -4px; width: 20px; height: 20px; background: var(--danger); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 0.75rem; font-weight: bold;"></div>
+            
+            <!-- Notification Dropdown -->
+            <div id="notificationDropdown" class="notification-dropdown" style="display: none; position: absolute; top: 100%; right: 0; background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 12px; box-shadow: 0 8px 24px rgba(0,0,0,0.12); z-index: 1000; min-width: 320px; max-height: 400px; overflow-y: auto; margin-top: 8px;">
+                <div style="padding: 12px; border-bottom: 1px solid var(--border-color); font-weight: 600; display: flex; justify-content: space-between; align-items: center;">
+                    <span>Recent Notifications</span>
+                    <a href="{% url 'notifications_page' %}" style="font-size: 0.85rem; color: var(--primary); text-decoration: none; display: flex; align-items: center; gap: 4px;">
+                        More
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="m9 18 6-6-6-6"/>
+                        </svg>
+                    </a>
+                </div>
+                <div id="notificationList" style="max-height: 320px; overflow-y: auto;">
+                    <!-- Notifications will be loaded here via JS -->
+                </div>
+            </div>
+        </div>
+        
         <div class="create-btn">Create</div>
         <div class="icon-btn avatar-wrapper">
             {% if user.avatar %}
-                <img src="{{ user.avatar.url }}" class="pfp">
+                <img src="{{ user.avatar.url }}" class="pfp user-profile-trigger" data-user-id="{{ user.id }}" data-username="{{ user.username }}" data-allow-public-socials="{{ user.allow_public_socials|yesno:'true,false' }}">
             {% else %}
-                <div class="pfp-fallback" style="background: {{ user.color|default:'#999' }}">
+                <div class="pfp-fallback user-profile-trigger" style="background: {{ user.color|default:'#999' }}" data-user-id="{{ user.id }}" data-username="{{ user.username }}" data-allow-public-socials="{{ user.allow_public_socials|yesno:'true,false' }}">
                     {{ user.username|slice:":1"|upper }}
                 </div>
             {% endif %}
             <div class="avatar-menu">
                 <a href="{% url 'account_dashboard' %}">Accounts</a>
-                <a href="#">Creators</a>
-                <a href="#">Appearance</a>
+                <a href="{% url 'creator_dashboard' %}">Creators</a>
+                <a href="{% url 'appearance' %}">Appearance</a>
                 <p id="logout">Logout</p>
             </div>
         </div>
@@ -602,9 +161,8 @@ body, html { overflow-x: hidden; }
 
 <div class="main-wrapper">
     {% block content %}
-    <div class="feed" id="feed">
-        <!-- Recently Played (Horizontal Scroller) -->
-        <section style="margin-bottom:32px;">
+    <!-- Recently Played spans full width -->
+    <section class="full-width" style="margin-bottom:32px;">
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
                 <h2 style="margin:0;font-size:1.5rem;color:var(--text-dark);">Recently Played</h2>
                 <a href="{% url 'games_hub' %}" style="color:var(--primary);font-weight:500;text-decoration:none;transition:color 0.2s;" onmouseover="this.style.color='var(--primary-dark)'" onmouseout="this.style.color='var(--primary)'">See all →</a>
@@ -614,7 +172,9 @@ body, html { overflow-x: hidden; }
                     {% for g in recent_games %}
                         <a href="{% url 'games_hub' %}" style="text-decoration:none;color:inherit;min-width:160px;flex-shrink:0;">
                             <div style="background:linear-gradient(135deg, #1f9cee15, #fec76f15);padding:16px;border-radius:12px;border:1px solid rgba(31,156,238,0.1);transition:all 0.3s ease;" onmouseover="this.style.transform='translateY(-4px)';this.style.boxShadow='0 8px 16px rgba(31,156,238,0.15)'" onmouseout="this.style.transform='none';this.style.boxShadow='none'">
-                                <div style="font-size:2rem;margin-bottom:8px;">🎮</div>
+                                <div style="font-size:2rem;margin-bottom:8px;">
+                                    <img src="{% static 'svg/game-controller.svg' %}" alt="game" style="width:36px;height:36px;display:inline-block;vertical-align:middle;"/>
+                                </div>
                                 <div style="font-weight:600;font-size:0.95rem;color:var(--text-dark);margin-bottom:4px;">{{ g.user.username }}</div>
                                 <div style="color:var(--primary);font-weight:700;font-size:1.1rem;margin-bottom:6px;">{{ g.score }}</div>
                                 <div style="font-size:0.8rem;color:var(--secondary-text);">{{ g.updated_at|date:'M d, Y' }}</div>
@@ -627,26 +187,114 @@ body, html { overflow-x: hidden; }
             </div>
         </section>
 
-        <!-- Bubble Filters -->
-        <section style="margin-bottom:20px;">
-            <h2 style="margin:0 0 16px 0;font-size:1.5rem;color:var(--text-dark);">Community Posts</h2>
-            <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
-                <button class="filter-bubble active" data-sort="latest" style="padding:8px 16px;border:2px solid var(--primary);background:var(--primary);color:#fff;border-radius:20px;cursor:pointer;font-weight:500;transition:all 0.2s;font-size:0.9rem;">Latest</button>
-                <button class="filter-bubble" data-sort="popular" style="padding:8px 16px;border:2px solid #ddd;background:#fff;color:var(--text-dark);border-radius:20px;cursor:pointer;font-weight:500;transition:all 0.2s;font-size:0.9rem;">Most likes</button>
-                <button class="filter-bubble" data-sort="popular" style="padding:8px 16px;border:2px solid #ddd;background:#fff;color:var(--text-dark);border-radius:20px;cursor:pointer;font-weight:500;transition:all 0.2s;font-size:0.9rem;">Most viewed</button>
-                <button class="filter-bubble" data-sort="engaged" style="padding:8px 16px;border:2px solid #ddd;background:#fff;color:var(--text-dark);border-radius:20px;cursor:pointer;font-weight:500;transition:all 0.2s;font-size:0.9rem;">Trending</button>
+        <!-- Creator Insights (creators only) -->
+        <section id="creator-insights-section" class="full-width" style="margin-bottom:20px; display:none;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+                <h2 style="margin:0;font-size:1.25rem;color:var(--text-dark);">Creator Insights</h2>
+                <div style="display:flex;gap:8px;align-items:center;">
+                    <button id="refreshInsights" class="btn-secondary" style="padding:6px 10px;border-radius:8px;border:1px solid var(--border-color);background:transparent;color:var(--primary);cursor:pointer;">Refresh</button>
+                    <small style="color:var(--secondary-text);">Powered by your analytics and local AI</small>
+                </div>
+            </div>
+            <div id="creator-insights" style="padding:12px;border-radius:12px;background:var(--card-bg);border:1px solid var(--border-color);min-height:64px;color:var(--text-dark);">Loading insights…</div>
+        </section>
+
+        <!-- For You Section (Recommendations) -->
+        <section class="full-width for-you-section" id="forYouSection" style="display:none;">
+            <div class="for-you-header">
+                <h2>For You</h2>
+                <button class="for-you-refresh" id="refreshRecommendations">Refresh</button>
+            </div>
+            <div id="forYouContainer" class="for-you-grid">
+                <!-- Recommendations will be loaded here via JS -->
             </div>
         </section>
 
-        <!-- Community posts feed (infinite scroll) -->
-        <section id="community-feed" style="display:flex;flex-direction:column;gap:14px;">
-            <!-- posts will be appended here by JS -->
+        <!-- Bubble Filters (span full width) -->
+        <section class="full-width" style="margin-bottom:20px;">
+            <!-- Blog For You (header purposely removed per UX request) -->
+            <div id="blogForYouContainer" class="for-you-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:14px;">
+                <!-- Blog recommendations will be loaded here (cards will match community post layout) -->
+            </div>
         </section>
 
-        <div id="feed-loading" style="text-align:center;padding:20px;color:var(--secondary-text);display:none;font-weight:500;">Loading more posts...</div>
-        <div id="feed-end" style="text-align:center;padding:20px;color:var(--secondary-text);display:none;font-weight:500;">No more posts.</div>
-    </div>
+        <!-- Bubble Filters (span full width) -->
+            <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+                <button id="homeForYouToggle" type="button" class="filter-bubble" data-sort="for_you" style="padding:8px 16px;border-radius:20px;cursor:pointer;font-weight:600;transition:all 0.2s;font-size:0.9rem;margin-right:6px;">For You</button>
+                <button class="filter-bubble active" type="button" data-sort="latest" style="padding:8px 16px;border-radius:20px;cursor:pointer;font-weight:500;transition:all 0.2s;font-size:0.9rem;">Latest</button>
+                <button class="filter-bubble" type="button" data-sort="most_liked" style="padding:8px 16px;border-radius:20px;cursor:pointer;font-weight:500;transition:all 0.2s;font-size:0.9rem;">Most liked</button>
+                <button class="filter-bubble" type="button" data-sort="most_viewed" style="padding:8px 16px;border-radius:20px;cursor:pointer;font-weight:500;transition:all 0.2s;font-size:0.9rem;">Most viewed</button>
+                <button class="filter-bubble" type="button" data-sort="trending" style="padding:8px 16px;border-radius:20px;cursor:pointer;font-weight:500;transition:all 0.2s;font-size:0.9rem;">Trending</button>
+                <button class="filter-bubble" type="button" data-sort="bookmarks" style="padding:8px 16px;border-radius:20px;cursor:pointer;font-weight:500;transition:all 0.2s;font-size:0.9rem;">Bookmarks</button>
+            </div>
+        </section>
+
+        <!-- For You - Community Posts -->
+        <section class="full-width" style="margin-bottom:20px;">
+            <!-- Community For You (header removed) -->
+            <div id="communityForYouContainer" class="for-you-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:14px;">
+                <!-- Community recommendations will be loaded here -->
+            </div>
+        </section>
+
+        <!-- Community posts feed (centered column) -->
+        <div class="posts-center">
+            <section id="community-feed" style="display:flex;flex-direction:column;gap:14px;">
+                <!-- posts will be appended here by JS -->
+            </section>
+
+            <div id="feed-loading" style="text-align:center;padding:20px;color:var(--secondary-text);display:none;font-weight:500;">Loading more posts...</div>
+            <div id="feed-end" style="text-align:center;padding:20px;color:var(--secondary-text);display:none;font-weight:500;">No more posts.</div>
+        </div>
+    
     {% endblock %}
+</div>
+
+<!-- Interests Onboarding Modal -->
+<div class="interests-modal" id="interestsModal">
+    <div class="interests-modal-content">
+        <h2>What games interest you?</h2>
+        <p>Help us personalize your recommendations by selecting your interests</p>
+        <div class="interests-grid" id="interestsGrid">
+            <div class="interest-chip" data-category="word">Word Games</div>
+            <div class="interest-chip" data-category="puzzle">Puzzle Games</div>
+            <div class="interest-chip" data-category="strategy">Strategy Games</div>
+            <div class="interest-chip" data-category="casual">Casual Games</div>
+            <div class="interest-chip" data-category="trivia">Trivia</div>
+            <div class="interest-chip" data-category="educational">Educational</div>
+        </div>
+        <div class="interests-modal-actions">
+            <button class="btn-primary" id="saveInterestsBtn" disabled>Save Interests</button>
+        </div>
+    </div>
+</div>
+
+<!-- Blog Tags Selection Modal -->
+<div class="interests-modal" id="blogTagsModal">
+    <div class="interests-modal-content">
+        <h2>What blog topics interest you?</h2>
+        <p>Select at least 3 topics to personalize blog recommendations</p>
+        <div class="interests-grid" id="blogTagsGrid">
+            <!-- Blog tags will be loaded dynamically -->
+        </div>
+        <div class="interests-modal-actions">
+            <button class="btn-primary" id="saveBlogTagsBtn" disabled>Save Preferences</button>
+        </div>
+    </div>
+</div>
+
+<!-- Community Tags Selection Modal -->
+<div class="interests-modal" id="communityTagsModal">
+    <div class="interests-modal-content">
+        <h2>What community topics interest you?</h2>
+        <p>Select at least 3 topics to personalize community recommendations</p>
+        <div class="interests-grid" id="communityTagsGrid">
+            <!-- Community tags will be loaded dynamically -->
+        </div>
+        <div class="interests-modal-actions">
+            <button class="btn-primary" id="saveCommunityTagsBtn" disabled>Save Preferences</button>
+        </div>
+    </div>
 </div>
 
 <!-- Create Modal -->
@@ -666,60 +314,539 @@ body, html { overflow-x: hidden; }
 </form>
 
 <script>
+// Theme handling: initialize and listen for system changes when in 'system' mode
+ (() => {
+    const serverPref = "{{ request.user.theme_preference|default:'system' }}";
+    const appearanceUrl = '{% url "appearance" %}';
+    const setApplied = (applied) => document.documentElement.setAttribute('data-theme', applied);
+
+    let systemMql = null;
+    let systemListener = null;
+
+    function systemApplyListener(e){
+        const applied = e.matches ? 'dark' : 'light';
+        setApplied(applied);
+    }
+
+    function scheduleTimeFallback(){
+        // fallback: switch at 07:00 and 19:00 local time
+        const now = new Date();
+        const hour = now.getHours();
+        let next = new Date(now);
+        if(hour >=7 && hour < 19){
+            // switch to dark at 19:00
+            next.setHours(19,0,5,0);
+        } else {
+            // switch to light at 7:00 next day
+            if(hour >=19) next.setDate(next.getDate()+1);
+            next.setHours(7,0,5,0);
+        }
+        const delay = Math.max(1000, next.getTime() - now.getTime());
+        setTimeout(()=>{
+            // re-evaluate local time
+            const h = new Date().getHours();
+            setApplied((h>=7 && h<19)?'light':'dark');
+            scheduleTimeFallback();
+        }, delay + 50);
+    }
+
+    async function persistPreference(pref){
+        // Save to localStorage and server (best-effort)
+        try{ localStorage.setItem('theme_pref', pref); }catch(e){}
+        try{
+            const csrftoken = (document.cookie.match(/csrftoken=([^;]+)/)||[])[1];
+            await fetch(appearanceUrl, {method:'POST', headers:{'Content-Type':'application/x-www-form-urlencoded','X-CSRFToken':csrftoken,'X-Requested-With':'XMLHttpRequest'}, body: new URLSearchParams({theme:pref})});
+        }catch(e){console.warn('Failed to persist theme pref', e)}
+    }
+
+    function applyChoice(pref){
+        // remove previous system listener
+        try{ if(systemMql && systemListener) { systemMql.removeEventListener('change', systemListener); systemListener = null; systemMql = null; } }catch(e){}
+
+        if(pref === 'system'){
+            if(window.matchMedia){
+                systemMql = window.matchMedia('(prefers-color-scheme: dark)');
+                const applied = systemMql.matches ? 'dark' : 'light';
+                setApplied(applied);
+                systemListener = systemApplyListener;
+                try{ systemMql.addEventListener('change', systemListener); }catch(e){ try{ systemMql.addListener(systemListener); }catch(e){} }
+            } else {
+                // fallback to time-of-day
+                const hr = new Date().getHours();
+                setApplied((hr>=7 && hr<19)?'light':'dark');
+                scheduleTimeFallback();
+            }
+        } else if(pref === 'dark'){
+            setApplied('dark');
+        } else {
+            setApplied('light');
+        }
+        // update active buttons
+        document.querySelectorAll('.avatar-menu .theme-option').forEach(b=> b.classList.toggle('active', b.getAttribute('data-theme')===pref));
+    }
+
+    // Initialization: preference resolution: server -> localStorage -> default 'dark'
+    (function initTheme(){
+        let pref = serverPref || null;
+        try{ const local = localStorage.getItem('theme_pref'); if(!pref && local) pref = local; }catch(e){}
+        if(!pref) pref = 'system';
+        applyChoice(pref);
+    })();
+
+    // expose helper for buttons
+    window.applyThemeChoice = function(pref, persist=true){ if(persist) persistPreference(pref); applyChoice(pref); };
+ })();
+
 // ----------------------------------------------------
 // AVATAR DROPDOWN
 // ----------------------------------------------------
 const avatarWrapper = document.querySelector('.avatar-wrapper');
 const avatarMenu = document.querySelector('.avatar-menu');
 
-avatarWrapper.addEventListener('click', e => {
-    e.stopPropagation();
-    avatarMenu.style.display = avatarMenu.style.display === 'flex' ? 'none' : 'flex';
-});
+if (avatarWrapper && avatarMenu) {
+    avatarWrapper.addEventListener('click', e => {
+        e.stopPropagation();
+        avatarMenu.style.display = avatarMenu.style.display === 'flex' ? 'none' : 'flex';
+    });
 
-document.addEventListener('click', () => { 
-    avatarMenu.style.display = 'none';
-});
+    document.addEventListener('click', () => {
+        avatarMenu.style.display = 'none';
+    });
+}
 
 // ----------------------------------------------------
 // LOGOUT
 // ----------------------------------------------------
-document.getElementById('logout').addEventListener('click', () => {
-    document.getElementById('logout-form').submit();
-});
+const logoutBtn = document.getElementById('logout');
+if (logoutBtn) {
+    logoutBtn.addEventListener('click', () => {
+        document.getElementById('logout-form').submit();
+    });
+}
 
 // ----------------------------------------------------
 // CREATE MODAL
 // ----------------------------------------------------
-const createBtn = document.querySelector('.create-btn');
-const createModal = document.getElementById('createModal');
+(function initCreateModal() {
+    console.log('initCreateModal running...');
+    const createBtn = document.querySelector('.create-btn');
+    const createModal = document.getElementById('createModal');
+    
+    console.log('createBtn:', createBtn);
+    console.log('createModal:', createModal);
+    
+    if (!createBtn || !createModal) {
+        console.warn('Create modal elements not found');
+        return;
+    }
 
-const blogPostBtn = document.getElementById('blog-post');          // Create Post
-const communityPostBtn = document.getElementById('community-post'); // Create Community
+    const blogPostBtn = document.getElementById('blog-post');
+    const communityPostBtn = document.getElementById('community-post');
+    
+    console.log('blogPostBtn:', blogPostBtn);
+    console.log('communityPostBtn:', communityPostBtn);
 
-// Open modal
-createBtn.addEventListener('click', () => { 
-    createModal.style.display = 'flex'; 
-});
+    // Open modal
+    createBtn.addEventListener('click', (e) => { 
+        console.log('Create button clicked!');
+        e.stopPropagation();
+        createModal.style.display = 'flex'; 
+    });
 
-// Close modal by clicking outside
-createModal.addEventListener('click', e => { 
-    if (e.target === createModal) {
-        createModal.style.display = 'none';
+    // Close modal by clicking outside
+    createModal.addEventListener('click', (e) => { 
+        if (e.target === createModal) {
+            console.log('Modal background clicked, closing');
+            createModal.style.display = 'none';
+        }
+    });
+
+    // Redirect: Create Post
+    if (blogPostBtn) {
+        blogPostBtn.addEventListener('click', () => { 
+            console.log('Blog post button clicked');
+            window.location.href = "{% url 'create_post' %}";
+        });
+    }
+
+    // Redirect: Create Community Post
+    if (communityPostBtn) {
+        communityPostBtn.addEventListener('click', () => { 
+            console.log('Community post button clicked');
+            window.location.href = "{% url 'create_community_post_generic' %}";
+        });
+    }
+    
+    console.log('initCreateModal setup complete');
+})();
+
+// ----------------------------------------------------
+// INTERESTS ONBOARDING MODAL
+// ----------------------------------------------------
+const interestsModal = document.getElementById('interestsModal');
+const blogTagsModal = document.getElementById('blogTagsModal');
+const communityTagsModal = document.getElementById('communityTagsModal');
+
+const interestsGrid = document.getElementById('interestsGrid');
+const blogTagsGrid = document.getElementById('blogTagsGrid');
+const communityTagsGrid = document.getElementById('communityTagsGrid');
+
+const saveBtn = document.getElementById('saveInterestsBtn');
+const saveBlogBtn = document.getElementById('saveBlogTagsBtn');
+const saveCommunityBtn = document.getElementById('saveCommunityTagsBtn');
+
+let selectedGameCategories = [];
+let selectedBlogTags = [];
+let selectedCommunityTags = [];
+
+// Load tag options dynamically
+async function loadTagOptions() {
+    try {
+        const res = await fetch('/recommend/tag-options/?type=blog');
+        const data = await res.json();
+        
+        // Populate blog tags
+        blogTagsGrid.innerHTML = '';
+        data.tags.forEach(tag => {
+            const chip = document.createElement('div');
+            chip.className = 'interest-chip';
+            chip.textContent = tag.label;
+            chip.dataset.category = tag.slug;
+            blogTagsGrid.appendChild(chip);
+        });
+
+        // Populate community tags
+        communityTagsGrid.innerHTML = '';
+        data.tags.forEach(tag => {
+            const chip = document.createElement('div');
+            chip.className = 'interest-chip';
+            chip.textContent = tag.label;
+            chip.dataset.category = tag.slug;
+            communityTagsGrid.appendChild(chip);
+        });
+    } catch (err) {
+        console.error('Failed to load tag options:', err);
+    }
+}
+
+// Generic chip selection handler
+function makeChipSelectionHandler(gridElement, selectedArray, saveButton, minRequired = 3) {
+    gridElement.addEventListener('click', (e) => {
+        if (!e.target.classList.contains('interest-chip')) return;
+        const chip = e.target;
+        const category = chip.dataset.category;
+        
+        if (chip.classList.contains('selected')) {
+            chip.classList.remove('selected');
+            selectedArray.splice(selectedArray.indexOf(category), 1);
+        } else {
+            chip.classList.add('selected');
+            selectedArray.push(category);
+        }
+        
+        saveButton.disabled = selectedArray.length < minRequired;
+    });
+}
+
+// Set up chip selection for all modals
+makeChipSelectionHandler(interestsGrid, selectedGameCategories, saveBtn, 1);
+makeChipSelectionHandler(blogTagsGrid, selectedBlogTags, saveBlogBtn, 3);
+makeChipSelectionHandler(communityTagsGrid, selectedCommunityTags, saveCommunityBtn, 3);
+
+// Check onboarding status and show modals
+async function checkOnboardingStatus() {
+    try {
+        const res = await fetch('/recommend/interests/');
+        const data = await res.json();
+        
+        // Show game modal if not completed
+        if (!data.completed_game_onboarding) {
+            interestsModal.classList.add('show');
+            return;  // Don't proceed until games are done
+        }
+        
+        // Show blog modal if not completed
+        if (!data.completed_blog_onboarding) {
+            await loadTagOptions();
+            blogTagsModal.classList.add('show');
+            return;  // Don't proceed until blog is done
+        }
+        
+        // Show community modal if not completed
+        if (!data.completed_community_onboarding) {
+            await loadTagOptions();
+            communityTagsModal.classList.add('show');
+            return;  // Don't proceed until community is done
+        }
+        
+        // All onboarding done, load recommendations
+        loadAllRecommendations();
+    } catch (err) {
+        console.error('Failed to check onboarding status:', err);
+    }
+}
+
+// Save game interests
+saveBtn.addEventListener('click', async () => {
+    try {
+        const res = await fetch('/recommend/interests/save/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCSRF()
+            },
+            body: JSON.stringify({ type: 'game', items: selectedGameCategories })
+        });
+        const data = await res.json();
+        if (data.success) {
+            interestsModal.classList.remove('show');
+            // Show blog modal next
+            await loadTagOptions();
+            blogTagsModal.classList.add('show');
+        }
+    } catch (err) {
+        console.error('Failed to save game interests:', err);
     }
 });
 
-// Redirect: Create Post
-blogPostBtn.addEventListener('click', () => { 
-    window.location.href = "{% url 'create_post' %}";
+
+// Save blog interests
+saveBlogBtn.addEventListener('click', async () => {
+    try {
+        const res = await fetch('/recommend/interests/save/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCSRF()
+            },
+            body: JSON.stringify({ type: 'blog', items: selectedBlogTags })
+        });
+        const data = await res.json();
+        if (data.success) {
+            blogTagsModal.classList.remove('show');
+            // Show community modal next
+            communityTagsModal.classList.add('show');
+        }
+    } catch (err) {
+        console.error('Failed to save blog interests:', err);
+    }
 });
 
-// Redirect: Create Community (REPLACED ALERT)
-// Redirect: Create Community Post
-communityPostBtn.addEventListener('click', () => { 
-    window.location.href = "{% url 'create_community_post_generic' %}";
+
+// Save community interests
+saveCommunityBtn.addEventListener('click', async () => {
+    try {
+        const res = await fetch('/recommend/interests/save/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCSRF()
+            },
+            body: JSON.stringify({ type: 'community', items: selectedCommunityTags })
+        });
+        const data = await res.json();
+        if (data.success) {
+            communityTagsModal.classList.remove('show');
+            // All done, load recommendations
+            loadAllRecommendations();
+        }
+    } catch (err) {
+        console.error('Failed to save community interests:', err);
+    }
 });
 
+// Onboarding is mandatory; skips removed so users must select required tags.
+
+// Load all recommendation sections
+async function loadAllRecommendations() {
+    loadForYouRecommendations();
+    loadBlogRecommendations();
+    loadCommunityRecommendations();
+}
+
+// Load "For You" game recommendations
+async function loadForYouRecommendations() {
+    try {
+        const res = await fetch('/recommend/for-you/');
+        const data = await res.json();
+
+        // Prepare containers
+        const blogContainer = document.getElementById('blogForYouContainer');
+        const communityContainer = document.getElementById('communityForYouContainer');
+        const gamesForYou = [];
+
+        if (data.results && data.results.length > 0) {
+            // Clear containers
+            if (blogContainer) blogContainer.innerHTML = '';
+            if (communityContainer) communityContainer.innerHTML = '';
+
+            data.results.forEach(rec => {
+                // Backend provides a `type` field now: 'blog', 'community', 'game', or 'unknown'
+                if (rec.type === 'blog') {
+                    if (!blogContainer) return;
+                    const card = document.createElement('div');
+                    card.className = 'for-you-card';
+                    card.style.cursor = 'pointer';
+                    card.onclick = () => window.location.href = `/posts/${rec.id}/`;
+                    card.innerHTML = `
+                        <div style="width:100%;height:140px;display:flex;align-items:center;justify-content:center;background:var(--muted-bg, #f3f4f6);border-radius:8px;overflow:hidden;">
+                            ${rec.image ? `<img src="${rec.image}" alt="${rec.title}" style="max-width:100%;max-height:100%;object-fit:contain;"/>` : `<div style=\"width:60%;height:60%;background:linear-gradient(135deg,#eaeef9,#f7f5f0);border-radius:6px;\"></div>`}
+                        </div>
+                        <div style="margin-top:8px;font-weight:700;color:var(--text-dark);">${rec.title}</div>
+                        ${rec.excerpt ? `<div style="color:var(--secondary-text);font-size:0.95rem;margin-top:6px;">${rec.excerpt}</div>` : ''}
+                    `;
+                    blogContainer.appendChild(card);
+                } else if (rec.type === 'community') {
+                    if (!communityContainer) return;
+                    const card = document.createElement('div');
+                    card.className = 'for-you-card';
+                    card.style.cursor = 'pointer';
+                    card.onclick = () => { window.location.href = `/communities/post/${rec.id}/`; };
+                    card.innerHTML = `
+                        <div style="width:100%;height:140px;display:flex;align-items:center;justify-content:center;background:var(--muted-bg, #f3f4f6);border-radius:8px;overflow:hidden;">
+                            ${rec.image ? `<img src="${rec.image}" alt="${rec.title}" style="max-width:100%;max-height:100%;object-fit:contain;"/>` : `<div style=\"width:60%;height:60%;background:linear-gradient(135deg,#f0f4f8,#f7f5f0);border-radius:6px;\"></div>`}
+                        </div>
+                        <div style="margin-top:8px;font-weight:700;color:var(--text-dark);">${rec.title}</div>
+                        ${rec.excerpt ? `<div style="color:var(--secondary-text);font-size:0.95rem;margin-top:6px;">${rec.excerpt}</div>` : ''}
+                    `;
+                    communityContainer.appendChild(card);
+                } else if (rec.type === 'game') {
+                    // Don't render games on the home dashboard; store them for the Games page to use
+                    gamesForYou.push(rec);
+                } else {
+                    // Unknown type: append to community container as a fallback
+                    if (communityContainer) {
+                        const card = document.createElement('div');
+                        card.className = 'for-you-card';
+                        card.textContent = rec.title || `Item #${rec.object_id || rec.id}`;
+                        communityContainer.appendChild(card);
+                    }
+                }
+            });
+
+            // Persist game recommendations temporarily for the games hub
+            try { sessionStorage.setItem('forYouGames', JSON.stringify(gamesForYou)); } catch (e) { /* ignore */ }
+
+            // Show blog/community sections if they have content
+            const forYouSectionEl = document.getElementById('forYouSection');
+            if ((blogContainer && blogContainer.children.length > 0) || (communityContainer && communityContainer.children.length > 0)) {
+                if (forYouSectionEl) forYouSectionEl.style.display = 'block';
+            } else {
+                // Hide the main For You games section if no post recs exist
+                if (forYouSectionEl) forYouSectionEl.style.display = 'none';
+            }
+
+            // Make the home For You toggle active by default when recommendations load (if there are post recs)
+            const homeToggle = document.getElementById('homeForYouToggle');
+            if (homeToggle && ((blogContainer && blogContainer.children.length>0) || (communityContainer && communityContainer.children.length>0))) {
+                document.querySelectorAll('.filter-bubble').forEach(b => b.classList.remove('active'));
+                homeToggle.classList.add('active');
+            }
+        }
+    } catch (err) {
+        console.error('Failed to load recommendations:', err);
+    }
+}
+
+// Load blog recommendations
+async function loadBlogRecommendations() {
+    try {
+        const res = await fetch('/recommend/blog-recommendations/');
+        const data = await res.json();
+        if (data.results && data.results.length > 0) {
+            const container = document.getElementById('blogForYouContainer');
+            container.innerHTML = '';
+            // Use the community-like card layout: centered image, title, excerpt
+            data.results.forEach(rec => {
+                const card = document.createElement('div');
+                card.className = 'for-you-card';
+                card.style.cursor = 'pointer';
+                card.onclick = () => window.location.href = `/posts/${rec.id}/`;
+                card.innerHTML = `
+                    <div style="width:100%;height:140px;display:flex;align-items:center;justify-content:center;background:#f3f4f6;border-radius:8px;overflow:hidden;">
+                        ${rec.image ? `<img src="${rec.image}" alt="${rec.title}" style="max-width:100%;max-height:100%;object-fit:contain;"/>` : `<div style=\"width:60%;height:60%;background:linear-gradient(135deg,#eaeef9,#f7f5f0);border-radius:6px;\"></div>`}
+                    </div>
+                    <div style="margin-top:8px;font-weight:700;color:var(--text-dark);">${rec.title}</div>
+                    ${rec.excerpt ? `<div style="color:var(--secondary-text);font-size:0.95rem;margin-top:6px;">${rec.excerpt}</div>` : ''}
+                `;
+                container.appendChild(card);
+            });
+            // Activate blog For You bubble on dashboard when blog recs load
+            const blogToggle = document.getElementById('blogForYouToggle');
+            if (blogToggle) {
+                document.querySelectorAll('.filter-bubble').forEach(b => b.classList.remove('active'));
+                blogToggle.classList.add('active');
+            }
+        }
+    } catch (err) {
+        console.error('Failed to load blog recommendations:', err);
+    }
+}
+
+// Load community recommendations
+async function loadCommunityRecommendations() {
+    try {
+        const res = await fetch('/recommend/community-recommendations/');
+        const data = await res.json();
+        if (data.results && data.results.length > 0) {
+            const container = document.getElementById('communityForYouContainer');
+            container.innerHTML = '';
+                // Render community cards with centered image + title + excerpt
+                data.results.forEach(rec => {
+                    const card = document.createElement('div');
+                    card.className = 'for-you-card';
+                    card.style.cursor = 'pointer';
+                    card.onclick = () => { window.location.href = `/communities/post/${rec.id}/`; };
+                    card.innerHTML = `
+                        <div style="width:100%;height:140px;display:flex;align-items:center;justify-content:center;background:#f3f4f6;border-radius:8px;overflow:hidden;">
+                            ${rec.image ? `<img src="${rec.image}" alt="${rec.title}" style="max-width:100%;max-height:100%;object-fit:contain;"/>` : `<div style=\"width:60%;height:60%;background:linear-gradient(135deg,#f0f4f8,#f7f5f0);border-radius:6px;\"></div>`}
+                        </div>
+                        <div style="margin-top:8px;font-weight:700;color:var(--text-dark);">${rec.title}</div>
+                        ${rec.excerpt ? `<div style="color:var(--secondary-text);font-size:0.95rem;margin-top:6px;">${rec.excerpt}</div>` : ''}
+                    `;
+                    container.appendChild(card);
+                });
+        }
+    } catch (err) {
+        console.error('Failed to load community recommendations:', err);
+    }
+}
+
+// Refresh recommendations
+document.getElementById('refreshRecommendations')?.addEventListener('click', loadForYouRecommendations);
+document.getElementById('refreshBlogRecommendations')?.addEventListener('click', loadBlogRecommendations);
+document.getElementById('refreshCommunityRecommendations')?.addEventListener('click', loadCommunityRecommendations);
+
+// Home "For You" bubble handler: toggles the main For You section without reloading
+const homeForYouToggle = document.getElementById('homeForYouToggle');
+if (homeForYouToggle) {
+    homeForYouToggle.addEventListener('click', async (e) => {
+        e.preventDefault();
+        const isActive = homeForYouToggle.classList.contains('active');
+        const forYouSectionEl = document.getElementById('forYouSection');
+        if (isActive) {
+            homeForYouToggle.classList.remove('active');
+            // revert to default "Latest" bubble state
+            document.querySelectorAll('.filter-bubble').forEach(b => b.classList.remove('active'));
+            document.querySelector('.filter-bubble[data-sort="latest"]')?.classList.add('active');
+            if (forYouSectionEl) forYouSectionEl.style.display = 'none';
+            return;
+        }
+        // activate For You and load recommendations
+        document.querySelectorAll('.filter-bubble').forEach(b => b.classList.remove('active'));
+        homeForYouToggle.classList.add('active');
+        if (forYouSectionEl) forYouSectionEl.style.display = 'block';
+        await loadForYouRecommendations();
+        // smooth scroll into view a bit above the section
+        const y = (forYouSectionEl) ? Math.max(forYouSectionEl.getBoundingClientRect().top + window.scrollY - 100, 0) : 0;
+        window.scrollTo({ top: y, behavior: 'smooth' });
+    });
+}
+
+// Check interests on page load
+document.addEventListener('DOMContentLoaded', () => {
+    setTimeout(checkOnboardingStatus, 500);
+});
 
 
 
@@ -747,7 +874,117 @@ const toggleSearch = (e) => {
 };
 
 searchIcon.addEventListener('click', toggleSearch);
-searchBar.addEventListener('click', toggleSearch);
+// Only toggle when clicking the empty bar (not when interacting with the input)
+searchBar.addEventListener('click', (e)=>{ if(e.target===searchBar) toggleSearch(e); });
+
+// --- Search suggestions dropdown ---
+const suggestionsBox = document.createElement('div');
+suggestionsBox.style.position = 'absolute';
+suggestionsBox.style.left = '0';
+suggestionsBox.style.right = '0';
+suggestionsBox.style.top = '100%';
+suggestionsBox.style.background = '#fff';
+suggestionsBox.style.border = '1px solid #eee';
+suggestionsBox.style.borderRadius = '8px';
+suggestionsBox.style.boxShadow = '0 6px 18px rgba(0,0,0,0.06)';
+suggestionsBox.style.zIndex = '1200';
+suggestionsBox.style.display = 'none';
+suggestionsBox.style.maxHeight = '320px';
+suggestionsBox.style.overflow = 'auto';
+suggestionsBox.style.marginTop = '8px';
+suggestionsBox.className = 'search-suggestions-box';
+searchBar.style.position = 'relative';
+searchBar.appendChild(suggestionsBox);
+
+let sugActive = -1;
+let currentSuggestions = [];
+let sugTimer = null;
+
+function clearSuggestions(){ suggestionsBox.innerHTML=''; suggestionsBox.style.display='none'; currentSuggestions=[]; sugActive=-1; }
+
+function renderSuggestions(list){
+    suggestionsBox.innerHTML = '';
+    if(!list || list.length===0){ clearSuggestions(); return; }
+    list.forEach((it, idx) => {
+        const row = document.createElement('a');
+        row.href = it.url || '#';
+        row.className = 'suggestion-row';
+        row.style.display='flex'; row.style.gap='8px'; row.style.padding='8px 12px'; row.style.alignItems='center'; row.style.textDecoration='none'; row.style.color='var(--text-dark)';
+        row.onmouseover = () => { setActiveSuggestion(idx); };
+        row.onclick = (e) => { /* allow navigation */ };
+
+        const kind = document.createElement('div'); kind.style.width='36px'; kind.style.height='36px'; kind.style.borderRadius='6px'; kind.style.background='#f5f5f5'; kind.style.display='flex'; kind.style.alignItems='center'; kind.style.justifyContent='center'; kind.style.fontWeight='700'; kind.style.color='#666'; kind.textContent = it.type ? it.type[0].toUpperCase() : '?';
+        const meta = document.createElement('div');
+        const title = document.createElement('div'); title.textContent = it.title; title.style.fontWeight='600';
+        const sub = document.createElement('div'); sub.textContent = it.subtitle || ''; sub.style.fontSize='0.9rem'; sub.style.color='var(--secondary-text)';
+        meta.appendChild(title); meta.appendChild(sub);
+        row.appendChild(kind); row.appendChild(meta);
+        suggestionsBox.appendChild(row);
+    });
+    suggestionsBox.style.display = 'block';
+    currentSuggestions = list;
+    sugActive = -1;
+}
+
+function setActiveSuggestion(i){
+    const children = Array.from(suggestionsBox.children);
+    children.forEach((ch, idx) => {
+        ch.style.background = (idx===i) ? '#f0f8ff' : 'transparent';
+    });
+    sugActive = i;
+}
+
+function fetchSuggestions(q){
+    if(!q || q.length<1){ clearSuggestions(); return; }
+    fetch(`{% url 'search_suggestions' %}?` + new URLSearchParams({q:q}), {credentials:'include'})
+        .then(r=>r.json()).then(d=>{
+            try{
+                if(!d) return clearSuggestions();
+                const groups = d.groups || {};
+                const out = [];
+                const order = ['users','blogs','community_posts','games'];
+                const limits = {users:4, blogs:4, community_posts:4, games:2};
+                for(const k of order){
+                    const arr = groups[k] || [];
+                    for(let i=0;i<Math.min(arr.length, limits[k]); i++){
+                        out.push(Object.assign({type:k}, arr[i]));
+                        if(out.length>=10) break;
+                    }
+                    if(out.length>=10) break;
+                }
+                if(out.length) renderSuggestions(out); else clearSuggestions();
+            }catch(err){ console.error('suggestions parse error', err); clearSuggestions(); }
+        }).catch(e=>{ console.error('suggestions error', e); clearSuggestions(); });
+}
+
+// debounce input
+searchInput.addEventListener('input', (e)=>{
+    const v = e.target.value.trim();
+    if(sugTimer) clearTimeout(sugTimer);
+    sugTimer = setTimeout(()=> fetchSuggestions(v), 220);
+});
+
+// keyboard navigation & Enter behavior
+searchInput.addEventListener('keydown', (e)=>{
+    if(suggestionsBox.style.display==='none') return;
+    if(e.key==='ArrowDown'){
+        e.preventDefault(); setActiveSuggestion(Math.min(sugActive+1, currentSuggestions.length-1));
+    } else if(e.key==='ArrowUp'){
+        e.preventDefault(); setActiveSuggestion(Math.max(sugActive-1, 0));
+    } else if(e.key==='Enter'){
+        if(sugActive>=0 && currentSuggestions[sugActive]){
+            // navigate to suggestion
+            window.location.href = currentSuggestions[sugActive].url;
+            return;
+        }
+        // otherwise go to full search page
+        const q = searchInput.value.trim();
+        if(q) window.location.href = `{% url 'search_page' %}` + `?q=${encodeURIComponent(q)}`;
+    }
+});
+
+// hide suggestions when clicking outside
+document.addEventListener('click', (e)=>{ if(!searchBar.contains(e.target)) clearSuggestions(); });
 
 // Close search when clicking outside
 document.addEventListener('click', (e) => {
@@ -797,6 +1034,25 @@ window.addEventListener('resize', () => {
 <script src="{% static 'script.js' %}" defer></script>
 
 <script>
+// Ensure filter-bubble active state is robust across pages
+(function(){
+    try{
+        const bubbles = document.querySelectorAll('.filter-bubble');
+        bubbles.forEach(b => {
+            if (b.dataset.managed === 'true') return;
+            b.dataset.managed = 'true';
+            b.addEventListener('click', (e) => {
+                // let dedicated handlers run for home/blog toggles; for others ensure visual state
+                const id = b.id || '';
+                if (id === 'homeForYouToggle' || id === 'blogForYouToggle') return;
+                // toggle active visual
+                document.querySelectorAll('.filter-bubble').forEach(x => x.classList.remove('active'));
+                b.classList.add('active');
+            });
+        });
+    }catch(err){ console.warn('filter-bubble manager init failed', err); }
+})();
+
 // Community posts infinite scroll
 (() => {
     const feedEl = document.getElementById('community-feed');
@@ -809,16 +1065,29 @@ window.addEventListener('resize', () => {
     const limit = 8;
     let loading = false;
     let endReached = false;
+
+    // Get CSRF token from cookie or hidden csrf input
+    function csrfToken() {
+        let token = '';
+        const cookies = document.cookie.split(';');
+        for (let cookie of cookies) {
+            cookie = cookie.trim();
+            if (cookie.startsWith('csrftoken=')) {
+                token = cookie.substring('csrftoken='.length);
+                break;
+            }
+        }
+        return token || document.querySelector('[name=csrfmiddlewaretoken]')?.value || '';
+    }
     let sort = 'latest';
 
     function showLoading(show) { loadingEl.style.display = show ? 'block' : 'none'; }
     function showEnd(show) { endEl.style.display = show ? 'block' : 'none'; }
 
     function mapSort(s) {
-        if (s === 'latest') return 'latest';
-        if (s === 'popular') return 'popular';
-        if (s === 'engaged') return 'engaged';
-        return 'latest';
+        // Our API understands these keys directly. Default to 'latest'.
+        const allowed = new Set(['latest','most_liked','most_viewed','trending','engaged','popular','bookmarks']);
+        return allowed.has(s) ? s : 'latest';
     }
 
     function renderPost(p) {
@@ -839,8 +1108,9 @@ window.addEventListener('resize', () => {
         headerLeft.style.gap = '10px';
         headerLeft.style.alignItems = 'center';
 
-        // Community icon
+        // Community icon (clickable)
         const communityIconDiv = document.createElement('div');
+        communityIconDiv.style.cursor = 'pointer';
         if (p.community_image) {
             const img = document.createElement('img');
             img.src = p.community_image;
@@ -862,6 +1132,7 @@ window.addEventListener('resize', () => {
             fallback.textContent = p.community_name ? p.community_name.slice(0,1).toUpperCase() : 'C';
             communityIconDiv.appendChild(fallback);
         }
+        communityIconDiv.onclick = () => { window.location.href = `/communities/${p.community_id}/`; };
 
         // Community name and date
         const headerInfo = document.createElement('div');
@@ -923,30 +1194,7 @@ window.addEventListener('resize', () => {
         reportBtn.onmouseover = () => reportBtn.style.background = '#f5f5f5';
         reportBtn.onmouseout = () => reportBtn.style.background = 'none';
 
-        const bookmarkBtn = document.createElement('button');
-        bookmarkBtn.style.display = 'block';
-        bookmarkBtn.style.width = '100%';
-        bookmarkBtn.style.padding = '10px 12px';
-        bookmarkBtn.style.border = 'none';
-        bookmarkBtn.style.background = 'none';
-        bookmarkBtn.style.cursor = 'pointer';
-        bookmarkBtn.style.textAlign = 'left';
-        bookmarkBtn.style.fontSize = '0.9rem';
-        bookmarkBtn.style.color = 'var(--text-dark)';
-        bookmarkBtn.innerHTML = p.user_bookmarked ? `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 24 24" style="display:inline;margin-right:6px;"><path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2Z"/></svg>✓ Bookmarked` : `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="display:inline;margin-right:6px;"><path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z"/></svg>Bookmark`;
-        bookmarkBtn.onclick = (e) => {
-            e.stopPropagation();
-            fetch(`/communities/api/post/${p.id}/bookmark/`, { method: 'POST', credentials: 'include' })
-                .then(r => r.json())
-                .then(d => {
-                    bookmarkBtn.innerHTML = d.bookmarked ? `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 24 24" style="display:inline;margin-right:6px;"><path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2Z"/></svg>✓ Bookmarked` : `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="display:inline;margin-right:6px;"><path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z"/></svg>Bookmark`;
-                });
-        };
-        bookmarkBtn.onmouseover = () => bookmarkBtn.style.background = '#f5f5f5';
-        bookmarkBtn.onmouseout = () => bookmarkBtn.style.background = 'none';
-
         menu.appendChild(reportBtn);
-        menu.appendChild(bookmarkBtn);
 
         menuBtn.onclick = (e) => {
             e.stopPropagation();
@@ -970,34 +1218,46 @@ window.addEventListener('resize', () => {
         titleEl.textContent = p.title;
         card.appendChild(titleEl);
 
-        // Post image (square with gradient background fallback)
+        // Post media (square responsive wrapper - desktop keeps aesthetic padding)
+        const mediaWrap = document.createElement('div');
+        mediaWrap.className = 'post-media';
+        mediaWrap.style.width = '100%';
+        mediaWrap.style.maxWidth = '';
+        mediaWrap.style.margin = '0';
+        mediaWrap.style.borderRadius = '10px';
+        mediaWrap.style.overflow = 'hidden';
+        // prefer modern aspect-ratio; remove absolute positioning so CSS controls sizing
+        mediaWrap.style.position = '';
+        mediaWrap.style.paddingTop = '';
+        mediaWrap.style.aspectRatio = '1 / 1';
+
         if (p.image) {
             const imgEl = document.createElement('img');
             imgEl.src = p.image;
-            imgEl.style.width = '100%';
-            imgEl.style.aspectRatio = '1/1';
-            imgEl.style.objectFit = 'cover';
-            imgEl.style.borderRadius = '10px';
-            card.appendChild(imgEl);
+            // Set background image so the blurred gradient can use it
+            mediaWrap.style.backgroundImage = `url(${p.image})`;
+            mediaWrap.appendChild(imgEl);
         } else {
+            // No image: set fallback gradient
+            mediaWrap.style.backgroundImage = 'linear-gradient(135deg, #1f9cee15, #fec76f15)';
             const imgFallback = document.createElement('div');
             imgFallback.style.width = '100%';
-            imgFallback.style.aspectRatio = '1/1';
-            imgFallback.style.background = 'linear-gradient(135deg, #1f9cee15, #fec76f15)';
-            imgFallback.style.borderRadius = '10px';
+            imgFallback.style.height = '100%';
             imgFallback.style.display = 'flex';
             imgFallback.style.alignItems = 'center';
             imgFallback.style.justifyContent = 'center';
             imgFallback.style.color = 'var(--secondary-text)';
+            imgFallback.style.position = 'relative';
+            imgFallback.style.zIndex = '2';
             imgFallback.textContent = '📸 No image';
-            card.appendChild(imgFallback);
+            mediaWrap.appendChild(imgFallback);
         }
 
-        // Content
+        card.appendChild(mediaWrap);
+
+        // Content (clamped so posts fit in viewport)
         const contentEl = document.createElement('p');
-        contentEl.style.margin = '8px 0';
-        contentEl.style.color = 'var(--secondary-text)';
-        contentEl.style.fontSize = '0.95rem';
+        contentEl.className = 'post-content';
         contentEl.textContent = p.content;
         card.appendChild(contentEl);
 
@@ -1012,13 +1272,15 @@ window.addEventListener('resize', () => {
         actions.style.position = 'relative';
         actions.style.zIndex = '10';
         actions.style.overflow = 'visible';
+        actions.style.flexWrap = 'wrap';
 
         // Like button
         const likeBtn = document.createElement('button');
+        likeBtn.className = p.user_liked ? 'post-like-btn liked' : 'post-like-btn';
         likeBtn.style.background = 'none';
         likeBtn.style.border = 'none';
         likeBtn.style.cursor = 'pointer';
-        likeBtn.style.padding = '4px 8px';
+        likeBtn.style.padding = '6px 8px';
         likeBtn.style.fontSize = '0.9rem';
         likeBtn.style.color = p.user_liked ? 'var(--primary)' : 'var(--secondary-text)';
         likeBtn.style.display = 'flex';
@@ -1028,27 +1290,44 @@ window.addEventListener('resize', () => {
         likeBtn.style.position = 'relative';
         likeBtn.style.zIndex = '260';
         likeBtn.style.overflow = 'visible';
-        likeBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="butt" stroke-linejoin="miter"><path d="M7 10v12"/><path d="M15 5.88 14 10h5.83a2 2 0 0 1 1.92 2.56l-2.33 8A2 2 0 0 1 17.5 22H4a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2h2.76a2 2 0 0 0 1.79-1.11L12 2a3.13 3.13 0 0 1 3 3.88Z"/></svg><span class="like-count">${p.likes_count}</span>`;
-        likeBtn.onclick = (e) => {
+        likeBtn.style.whiteSpace = 'nowrap';
+        likeBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24" style="flex-shrink:0;"><path d="M7 10v12"/><path d="M15 5.88 14 10h5.83a2 2 0 0 1 1.92 2.56l-2.33 8A2 2 0 0 1 17.5 22H4a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2h2.76a2 2 0 0 0 1.79-1.11L12 2a3.13 3.13 0 0 1 3 3.88Z"/></svg><span class="like-count">${p.likes_count}</span>`;
+        likeBtn.onclick = async (e) => {
             e.stopPropagation();
             e.preventDefault();
-            fetch(`/communities/api/post/${p.id}/like/`, { method: 'POST', credentials: 'include' })
-                .then(r => r.json())
-                .then(d => {
-                    likeBtn.style.color = d.liked ? 'var(--primary)' : 'var(--secondary-text)';
-                    likeBtn.querySelector('.like-count').textContent = d.likes_count;
-                    dislikeBtn.querySelector('.dislike-count').textContent = d.dislikes_count;
-                    dislikeBtn.style.color = 'var(--secondary-text)';
-                })
-                .catch(e => console.error('Like error:', e));
+            try {
+                const res = await fetch(`/communities/api/post/${p.id}/like/`, {
+                    method: 'POST',
+                    credentials: 'include',
+                    headers: {
+                        'X-CSRFToken': csrfToken(),
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                });
+                if (!res.ok) throw new Error('Network error');
+                const d = await res.json();
+                likeBtn.querySelector('.like-count').textContent = d.likes_count;
+                dislikeBtn.querySelector('.dislike-count').textContent = d.dislikes_count;
+                if (d.liked) {
+                    likeBtn.classList.add('liked');
+                    dislikeBtn.classList.remove('disliked');
+                } else {
+                    likeBtn.classList.remove('liked');
+                }
+            } catch (err) {
+                console.error('Like error:', err);
+            }
         };
+        likeBtn.onmouseover = () => likeBtn.style.opacity = '0.8';
+        likeBtn.onmouseout = () => likeBtn.style.opacity = '1';
 
         // Dislike button
         const dislikeBtn = document.createElement('button');
+        dislikeBtn.className = p.user_disliked ? 'post-dislike-btn disliked' : 'post-dislike-btn';
         dislikeBtn.style.background = 'none';
         dislikeBtn.style.border = 'none';
         dislikeBtn.style.cursor = 'pointer';
-        dislikeBtn.style.padding = '4px 8px';
+        dislikeBtn.style.padding = '6px 8px';
         dislikeBtn.style.fontSize = '0.9rem';
         dislikeBtn.style.color = p.user_disliked ? '#e74c3c' : 'var(--secondary-text)';
         dislikeBtn.style.display = 'flex';
@@ -1058,20 +1337,71 @@ window.addEventListener('resize', () => {
         dislikeBtn.style.position = 'relative';
         dislikeBtn.style.zIndex = '260';
         dislikeBtn.style.overflow = 'visible';
-        dislikeBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="butt" stroke-linejoin="miter"><path d="M17 14V2"/><path d="M9 18.12 10 14H4.17a2 2 0 0 1-1.92-2.56l2.33-8A2 2 0 0 1 6.5 2H20a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-2.76a2 2 0 0 0-1.79 1.11L12 22a3.13 3.13 0 0 1-3-3.88Z"/></svg><span class="dislike-count">${p.dislikes_count}</span>`;
-        dislikeBtn.onclick = (e) => {
+        dislikeBtn.style.whiteSpace = 'nowrap';
+        dislikeBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24" style="flex-shrink:0;"><path d="M17 14V2"/><path d="M9 18.12 10 14H4.17a2 2 0 0 1-1.92-2.56l2.33-8A2 2 0 0 1 6.5 2H20a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-2.76a2 2 0 0 0-1.79 1.11L12 22a3.13 3.13 0 0 1-3-3.88Z"/></svg><span class="dislike-count">${p.dislikes_count}</span>`;
+        dislikeBtn.onclick = async (e) => {
             e.stopPropagation();
             e.preventDefault();
-            fetch(`/communities/api/post/${p.id}/dislike/`, { method: 'POST', credentials: 'include' })
-                .then(r => r.json())
-                .then(d => {
-                    dislikeBtn.style.color = d.disliked ? '#e74c3c' : 'var(--secondary-text)';
-                    dislikeBtn.querySelector('.dislike-count').textContent = d.dislikes_count;
-                    likeBtn.querySelector('.like-count').textContent = d.likes_count;
-                    likeBtn.style.color = 'var(--secondary-text)';
-                })
-                .catch(e => console.error('Dislike error:', e));
+            try {
+                const res = await fetch(`/communities/api/post/${p.id}/dislike/`, {
+                    method: 'POST',
+                    credentials: 'include',
+                    headers: {
+                        'X-CSRFToken': csrfToken(),
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                });
+                if (!res.ok) throw new Error('Network error');
+                const d = await res.json();
+                dislikeBtn.querySelector('.dislike-count').textContent = d.dislikes_count;
+                likeBtn.querySelector('.like-count').textContent = d.likes_count;
+                if (d.disliked) {
+                    dislikeBtn.classList.add('disliked');
+                    likeBtn.classList.remove('liked');
+                } else {
+                    dislikeBtn.classList.remove('disliked');
+                }
+            } catch (err) {
+                console.error('Dislike error:', err);
+            }
         };
+        dislikeBtn.onmouseover = () => dislikeBtn.style.opacity = '0.8';
+        dislikeBtn.onmouseout = () => dislikeBtn.style.opacity = '1';
+
+        // Bookmark button
+        const bookmarkBtn = document.createElement('button');
+        bookmarkBtn.className = p.user_bookmarked ? 'post-bookmark-btn bookmarked' : 'post-bookmark-btn';
+        bookmarkBtn.style.background = 'none';
+        bookmarkBtn.style.border = 'none';
+        bookmarkBtn.style.cursor = 'pointer';
+        bookmarkBtn.style.padding = '6px 8px';
+        bookmarkBtn.style.fontSize = '0.9rem';
+        bookmarkBtn.style.color = p.user_bookmarked ? 'var(--primary)' : 'var(--secondary-text)';
+        bookmarkBtn.style.display = 'flex';
+        bookmarkBtn.style.alignItems = 'center';
+        bookmarkBtn.style.gap = '6px';
+        bookmarkBtn.style.transition = 'color 0.2s';
+        bookmarkBtn.style.position = 'relative';
+        bookmarkBtn.style.zIndex = '260';
+        bookmarkBtn.style.overflow = 'visible';
+        bookmarkBtn.style.whiteSpace = 'nowrap';
+        bookmarkBtn.innerHTML = p.user_bookmarked ? `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" viewBox="0 0 24 24" style="flex-shrink:0;"><path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2Z"/></svg><span>Bookmarked</span>` : `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="flex-shrink:0;"><path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z"/></svg><span>Bookmark</span>`;
+        bookmarkBtn.onclick = async (e) => {
+            e.stopPropagation();
+            e.preventDefault();
+            try {
+                const res = await fetch(`/communities/api/post/${p.id}/bookmark/`, { method: 'POST', credentials: 'include', headers: { 'X-CSRFToken': csrfToken(), 'X-Requested-With': 'XMLHttpRequest' } });
+                if (!res.ok) throw new Error('Network error');
+                const d = await res.json();
+                bookmarkBtn.style.color = d.bookmarked ? 'var(--primary)' : 'var(--secondary-text)';
+                bookmarkBtn.innerHTML = d.bookmarked ? `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" viewBox="0 0 24 24" style="flex-shrink:0;"><path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2Z"/></svg><span>Bookmarked</span>` : `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="flex-shrink:0;"><path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z"/></svg><span>Bookmark</span>`;
+                d.bookmarked ? bookmarkBtn.classList.add('bookmarked') : bookmarkBtn.classList.remove('bookmarked');
+            } catch (err) {
+                console.error('Bookmark error:', err);
+            }
+        };
+        bookmarkBtn.onmouseover = () => bookmarkBtn.style.opacity = '0.8';
+        bookmarkBtn.onmouseout = () => bookmarkBtn.style.opacity = '1';
 
         // Comment button (SVG)
         const commentBtn = document.createElement('a');
@@ -1079,14 +1409,15 @@ window.addEventListener('resize', () => {
         commentBtn.style.background = 'none';
         commentBtn.style.border = 'none';
         commentBtn.style.cursor = 'pointer';
-        commentBtn.style.padding = '0';
+        commentBtn.style.padding = '6px 8px';
         commentBtn.style.fontSize = '0.9rem';
         commentBtn.style.color = 'var(--secondary-text)';
         commentBtn.style.textDecoration = 'none';
         commentBtn.style.display = 'flex';
         commentBtn.style.alignItems = 'center';
         commentBtn.style.gap = '6px';
-        commentBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="butt" stroke-linejoin="miter"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg><span>Comment</span>`;
+        commentBtn.style.whiteSpace = 'nowrap';
+        commentBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24" style="flex-shrink:0;"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg><span>${p.comments_count || 0}</span>`;
         commentBtn.onmouseover = () => commentBtn.style.color = 'var(--primary)';
         commentBtn.onmouseout = () => commentBtn.style.color = 'var(--secondary-text)';
 
@@ -1101,6 +1432,10 @@ window.addEventListener('resize', () => {
             aimg.style.height = '32px';
             aimg.style.borderRadius = '50%';
             aimg.style.objectFit = 'cover';
+            aimg.className = 'creator-pfp user-profile-trigger';
+            aimg.dataset.userId = p.author_id;
+            aimg.dataset.username = p.author_username || '';
+            aimg.style.cursor = 'pointer';
             authorAvatarDiv.appendChild(aimg);
         } else {
             const afb = document.createElement('div');
@@ -1114,6 +1449,10 @@ window.addEventListener('resize', () => {
             afb.style.justifyContent = 'center';
             afb.style.fontWeight = 'bold';
             afb.textContent = p.author_username ? p.author_username.slice(0,1).toUpperCase() : 'U';
+            afb.className = 'creator-pfp user-profile-trigger';
+            afb.dataset.userId = p.author_id;
+            afb.dataset.username = p.author_username || '';
+            afb.style.cursor = 'pointer';
             authorAvatarDiv.appendChild(afb);
         }
 
@@ -1131,6 +1470,18 @@ window.addEventListener('resize', () => {
         });
 
         feedEl.appendChild(card);
+        // Ensure the media wrapper is a true square by setting its height (and width if needed)
+        // We cap the side to a fraction of the viewport height so the box stays fully visible.
+        (function ensureSquare(el){
+            try {
+                // prefer 90vw display but cap to viewport height so the square fits
+                const vwSide = Math.floor(window.innerWidth * 0.9);
+                const vhCap = Math.floor(window.innerHeight * 0.8);
+                const desired = Math.min(vwSide, vhCap, el.getBoundingClientRect().width);
+                el.style.width = desired + 'px';
+                el.style.height = desired + 'px';
+            } catch(e) { /* ignore */ }
+        })(mediaWrap);
     }
 
     async function loadMore() {
@@ -1162,11 +1513,179 @@ window.addEventListener('resize', () => {
     // initial load
     loadMore();
 
+    // Enforce squares on resize with debounce
+    let resizeTimer = null;
+    function enforceAllSquares() {
+        document.querySelectorAll('.post-media').forEach(el => {
+            const vwSide = Math.floor(window.innerWidth * 0.9);
+            const vhCap = Math.floor(window.innerHeight * 0.8);
+            const desired = Math.min(vwSide, vhCap, el.getBoundingClientRect().width);
+            el.style.width = desired + 'px';
+            el.style.height = desired + 'px';
+        });
+    }
+    window.addEventListener('resize', () => {
+        if (resizeTimer) clearTimeout(resizeTimer);
+        resizeTimer = setTimeout(() => { enforceAllSquares(); }, 120);
+    });
+    // run once after initial load
+    window.requestAnimationFrame(() => enforceAllSquares());
+
     // infinite scroll (window)
     window.addEventListener('scroll', () => {
         if (loading || endReached) return;
         const nearBottom = (window.innerHeight + window.scrollY) >= (document.body.offsetHeight - 600);
         if (nearBottom) loadMore();
+    });
+
+    // =====================================================
+    // NOTIFICATIONS: Bell icon + dropdown
+    // =====================================================
+    const notificationBell = document.getElementById('notificationBell');
+    const notificationDropdown = document.getElementById('notificationDropdown');
+    const notificationBadge = document.getElementById('notificationBadge');
+    const notificationList = document.getElementById('notificationList');
+
+    async function loadNotifications() {
+        try {
+            const res = await fetch('/accounts/api/notifications/?limit=5');
+            const data = await res.json();
+            const notifications = data.notifications || [];
+            const unreadCount = data.unread_count || 0;
+
+            // Update badge
+            if (unreadCount > 0) {
+                notificationBadge.style.display = 'flex';
+                notificationBadge.textContent = unreadCount > 9 ? '9+' : unreadCount;
+            } else {
+                notificationBadge.style.display = 'none';
+            }
+
+            // Render notifications
+            notificationList.innerHTML = '';
+            if (notifications.length === 0) {
+                notificationList.innerHTML = '<div style="padding: 20px; text-align: center; color: #999; font-size: 0.9rem;">No notifications</div>';
+            } else {
+                notifications.forEach(notif => {
+                    const item = document.createElement('div');
+                    item.style.cssText = 'padding: 12px; border-bottom: 1px solid #f0f0f0; cursor: pointer; transition: background 0.18s;';
+                    item.onmouseover = () => item.style.background = '#f9fafb';
+                    item.onmouseout = () => item.style.background = 'transparent';
+                    // store related user id on the element for message-type notifications
+                    if (notif.type === 'message' && notif.related_user_id) {
+                        item.dataset.relatedUserId = notif.related_user_id;
+                    }
+                    item.onclick = () => showNotificationModal(notif.id, notif.title, notif.message, notif.created_at, notif.is_read, notif.type, notif.related_user_id);
+                    item.innerHTML = `
+                        <div style="font-weight: 600; font-size: 0.95rem; color: #111;">${notif.title}</div>
+                        <div style="font-size: 0.85rem; color: #666; margin-top: 4px;">${notif.message}</div>
+                        <div style="font-size: 0.75rem; color: #999; margin-top: 6px;">
+                            ${new Date(notif.created_at).toLocaleDateString()}
+                            ${!notif.is_read ? '<span style="display: inline-block; width: 6px; height: 6px; background: #3b82f6; border-radius: 50%; margin-left: 8px;"></span>' : ''}
+                        </div>
+                    `;
+                    notificationList.appendChild(item);
+                });
+            }
+        } catch (err) {
+            console.error('Failed to load notifications', err);
+            notificationList.innerHTML = '<div style="padding: 20px; text-align: center; color: #e11d48;">Failed to load</div>';
+        }
+    }
+
+    // Toggle dropdown
+    notificationBell.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (notificationDropdown.style.display === 'none') {
+            loadNotifications();
+            notificationDropdown.style.display = 'block';
+        } else {
+            notificationDropdown.style.display = 'none';
+        }
+    });
+
+    // Close dropdown when clicking outside
+    document.addEventListener('click', (e) => {
+        if (!notificationBell.contains(e.target)) {
+            notificationDropdown.style.display = 'none';
+        }
+    });
+
+    // Load notifications on page load
+    loadNotifications();
+    // Refresh every 30 seconds
+    setInterval(loadNotifications, 30000);
+
+    // =====================================================
+    // Notification Modal
+    // =====================================================
+    const notificationModal = document.createElement('div');
+    notificationModal.id = 'notificationModal';
+    notificationModal.style.cssText = 'display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:5000;justify-content:center;align-items:center;';
+        notificationModal.innerHTML = `
+            <div style="background:var(--card-bg);border-radius:12px;padding:28px;max-width:500px;width:90%;box-shadow:0 10px 40px rgba(0,0,0,0.2);">
+                <div style="display:flex;justify-content:space-between;align-items:start;margin-bottom:16px;">
+                    <h2 id="modalTitle" style="margin:0;font-size:1.2rem;"></h2>
+                    <button style="background:none;border:none;font-size:1.5rem;cursor:pointer;color:#999;" onclick="document.getElementById('notificationModal').style.display='none';">×</button>
+                </div>
+                <p id="modalMessage" style="margin:0 0 20px 0;color:#666;line-height:1.6;"></p>
+                <div style="font-size:0.85rem;color:#999;margin-bottom:16px;">Created: <span id="modalTime"></span></div>
+                <div style="display:flex;gap:8px;flex-direction:column;">
+                    <button id="openMessageBtn" style="width:100%;padding:10px;background:var(--card-bg);color:#111;border:1px solid #ddd;border-radius:8px;cursor:pointer;font-weight:600;display:none;" onclick="openMessageFromNotif();">Open message</button>
+                    <button id="markReadBtn" style="width:100%;padding:10px;background:#1f9cee;color:white;border:none;border-radius:8px;cursor:pointer;font-weight:600;" onclick="markNotificationRead();">Mark as Read</button>
+                </div>
+            </div>
+        `;
+    document.body.appendChild(notificationModal);
+
+        window.showNotificationModal = async (notifId, title, message, createdAt, isRead, type, relatedUserId) => {
+            document.getElementById('modalTitle').textContent = title;
+            document.getElementById('modalMessage').textContent = message;
+            document.getElementById('modalTime').textContent = new Date(createdAt).toLocaleString();
+            notificationModal.dataset.notifId = notifId;
+            notificationModal.dataset.isRead = isRead;
+            notificationModal.dataset.type = type || '';
+            notificationModal.dataset.relatedUserId = relatedUserId || '';
+            // show open message button only for message-type notifications
+            const openBtn = document.getElementById('openMessageBtn');
+            if (type === 'message' && relatedUserId) {
+                openBtn.style.display = 'block';
+            } else {
+                openBtn.style.display = 'none';
+            }
+            document.getElementById('markReadBtn').style.display = isRead ? 'none' : 'block';
+            notificationModal.style.display = 'flex';
+        };
+
+    window.markNotificationRead = async () => {
+      const notifId = notificationModal.dataset.notifId;
+      if (!notifId) return;
+      try {
+        await fetch(`/accounts/api/notifications/${notifId}/mark-read/`, {method: 'POST', headers: {'X-CSRFToken': getCSRF()}});
+        document.getElementById('markReadBtn').style.display = 'none';
+        loadNotifications();
+      } catch (err) {
+        console.error('Failed to mark as read', err);
+      }
+    };
+
+        window.openMessageFromNotif = async () => {
+            const relatedUserId = notificationModal.dataset.relatedUserId;
+            if (!relatedUserId) return;
+            const notifId = notificationModal.dataset.notifId;
+            try {
+                if (notifId && notificationModal.dataset.isRead === 'false') {
+                    await fetch(`/accounts/api/notifications/${notifId}/mark-read/`, {method: 'POST', headers: {'X-CSRFToken': getCSRF()}});
+                }
+            } catch (err) {
+                console.error('Failed to mark notification before opening message', err);
+            }
+            // navigate to chat page with that user
+            window.location.href = `/accounts/chat/${relatedUserId}/`;
+        };
+    // Close modal on outside click
+    notificationModal.addEventListener('click', (e) => {
+      if (e.target === notificationModal) notificationModal.style.display = 'none';
     });
 
     // bubble filter click
@@ -1190,6 +1709,60 @@ window.addEventListener('resize', () => {
 
 })();
 </script>
+
+<script>
+// Creator insights fetcher
+(() => {
+    function escapeHtml(s){ return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":"&#39;"})[c]); }
+    const container = document.getElementById('creator-insights');
+    const section = document.getElementById('creator-insights-section');
+    const refreshBtn = document.getElementById('refreshInsights');
+    if(!container || !section) return;
+
+    async function loadInsights(){
+        container.textContent = 'Loading insights…';
+        try{
+            const res = await fetch('/chatbot/api/insights/');
+            if(res.status === 403){ section.style.display = 'none'; return; }
+            if(!res.ok) throw new Error('No insights');
+            const data = await res.json();
+            if(!data || !data.insights || data.insights.length === 0){
+                container.textContent = 'No insights available yet.';
+                section.style.display = 'none';
+                return;
+            }
+            const ol = document.createElement('ol');
+            ol.style.paddingLeft = '18px';
+            data.insights.forEach((ins, idx) => {
+                const li = document.createElement('li');
+                li.style.marginBottom = '10px';
+                li.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;"><div style="flex:1">${escapeHtml(ins)}</div><div style="flex-shrink:0"><button class='ins-discuss' data-text='${escapeHtml(ins)}' style='padding:6px 8px;border-radius:8px;border:1px solid var(--border-color);background:transparent;color:var(--primary);cursor:pointer;'>Discuss</button></div></div>`;
+                ol.appendChild(li);
+            });
+            container.innerHTML = '';
+            container.appendChild(ol);
+            section.style.display = 'block';
+
+            // wire discuss buttons
+            container.querySelectorAll('.ins-discuss').forEach(b => b.addEventListener('click', (e) => {
+                const text = b.getAttribute('data-text');
+                try{ localStorage.setItem('creator_insight_start', text); }catch(err){}
+                window.location.href = '/chatbot/';
+            }));
+
+        }catch(err){
+            container.textContent = 'Insights are temporarily unavailable.';
+            console.warn('Failed to load insights', err);
+        }
+    }
+
+    refreshBtn && refreshBtn.addEventListener('click', loadInsights);
+    // initial load (defer slightly so page interactive)
+    setTimeout(loadInsights, 700);
+})();
+</script>
+
+{% block extra_js %}{% endblock %}
 
 </body>
 </html>

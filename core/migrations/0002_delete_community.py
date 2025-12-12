@@ -6,12 +6,12 @@ from django.db import migrations
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('accounts', '0008_alter_subscription_community'),
-        ('core', '0001_initial'),
+        ("accounts", "0008_alter_subscription_community"),
+        ("core", "0001_initial"),
     ]
 
     operations = [
         migrations.DeleteModel(
-            name='Community',
+            name="Community",
         ),
     ]

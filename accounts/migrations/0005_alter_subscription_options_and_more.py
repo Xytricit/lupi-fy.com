@@ -9,40 +9,70 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('accounts', '0004_subscription'),
-        ('core', '0001_initial'),
+        ("accounts", "0004_subscription"),
+        ("core", "0001_initial"),
     ]
 
     operations = [
         migrations.AlterModelOptions(
-            name='subscription',
-            options={'ordering': ['-created_at']},
+            name="subscription",
+            options={"ordering": ["-created_at"]},
         ),
         migrations.AlterUniqueTogether(
-            name='subscription',
+            name="subscription",
             unique_together=set(),
         ),
         migrations.AddField(
-            model_name='customuser',
-            name='phone_number',
-            field=models.CharField(blank=True, max_length=15, null=True, validators=[django.core.validators.RegexValidator(message="Phone number must be entered in the format: '+999999999'. Up to 15 digits allowed.", regex='^\\+?\\d{9,15}$')]),
+            model_name="customuser",
+            name="phone_number",
+            field=models.CharField(
+                blank=True,
+                max_length=15,
+                null=True,
+                validators=[
+                    django.core.validators.RegexValidator(
+                        message="Phone number must be entered in the format: '+999999999'. Up to 15 digits allowed.",
+                        regex="^\\+?\\d{9,15}$",
+                    )
+                ],
+            ),
         ),
         migrations.AddField(
-            model_name='subscription',
-            name='author',
-            field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.CASCADE, related_name='author_subscribers', to=settings.AUTH_USER_MODEL),
+            model_name="subscription",
+            name="author",
+            field=models.ForeignKey(
+                blank=True,
+                null=True,
+                on_delete=django.db.models.deletion.CASCADE,
+                related_name="author_subscribers",
+                to=settings.AUTH_USER_MODEL,
+            ),
         ),
         migrations.AlterField(
-            model_name='subscription',
-            name='community',
-            field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.CASCADE, related_name='subscribers', to='core.community'),
+            model_name="subscription",
+            name="community",
+            field=models.ForeignKey(
+                blank=True,
+                null=True,
+                on_delete=django.db.models.deletion.CASCADE,
+                related_name="subscribers",
+                to="core.community",
+            ),
         ),
         migrations.AddConstraint(
-            model_name='subscription',
-            constraint=models.UniqueConstraint(condition=models.Q(('community__isnull', False)), fields=('user', 'community'), name='unique_user_community'),
+            model_name="subscription",
+            constraint=models.UniqueConstraint(
+                condition=models.Q(("community__isnull", False)),
+                fields=("user", "community"),
+                name="unique_user_community",
+            ),
         ),
         migrations.AddConstraint(
-            model_name='subscription',
-            constraint=models.UniqueConstraint(condition=models.Q(('author__isnull', False)), fields=('user', 'author'), name='unique_user_author'),
+            model_name="subscription",
+            constraint=models.UniqueConstraint(
+                condition=models.Q(("author__isnull", False)),
+                fields=("user", "author"),
+                name="unique_user_author",
+            ),
         ),
     ]

@@ -3,138 +3,636 @@
 {% block title %}Blogs - Lupify{% endblock %}
 
 {% block content %}
-<div class="feed">
+<div class="posts-center">
+<section class="feed">
     <!-- Top card / info -->
-    <div class="post-card">
-        <h4>Blogs</h4>
-        <p>View posts here.</p>
+    <div class="post-card post-card-intro">
+        <h3 style="margin:0;">Blog Posts</h3>
+        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+            <button id="blogForYouToggle" type="button" class="filter-bubble" data-sort="for_you">For You</button>
+            <button class="filter-bubble" type="button" data-sort="latest">Latest</button>
+            <button class="filter-bubble" type="button" data-sort="most_liked">Most liked</button>
+        </div>
+        <div id="blogForYouSection" style="margin-top:12px; display:none;">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+                <h4 style="margin:0;font-size:1rem;color:var(--text-dark);">Recommended for you</h4>
+            </div>
+            <div id="blogPageForYouContainer" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px;"></div>
+        </div>
     </div>
 
     <!-- Loop through posts -->
     {% for post in posts %}
-        <div class="post-card">
-            <h5>{{ post.title }}</h5>
-            <p>
-    <a href="{% url 'post_detail' post.id %}" class="post-link">
-        {{ post.content|truncatewords:30 }}…
-    </a>
-</p>
-            <p><strong>Author:</strong> <span style="display: flex; align-items: center; gap: 6px;">{{ post.author.username }}{% if post.author.is_verified %}<svg style="width: 14px; height: 14px; color: #1f9cee;" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" title="Verified"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg>{% endif %}</span></p>
-            {% if post.category %}
-                <p><strong>Category:</strong> {{ post.category.name }}</p>
-            {% endif %}
-            {% if post.tags.all %}
-                <p><strong>Tags:</strong> 
+        <article class="post-card full-bleed">
+            {% with post.images.all.0 as img_top %}
+            <div class="post-card-wrapper">
+            <div class="post-content">
+                <!-- Author line: avatar + name (links to profile popup) -->
+                <div class="author-line">
+                    <div class="author-link user-profile-trigger" data-user-id="{{ post.author.id }}" data-username="{{ post.author.username }}" data-allow-public-socials="{{ post.author.allow_public_socials|yesno:'true,false' }}">
+                        {% if post.author.avatar %}
+                            <img src="{{ post.author.avatar.url }}" alt="{{ post.author.username }}" class="author-avatar user-profile-trigger" data-user-id="{{ post.author.id }}" data-username="{{ post.author.username }}" data-allow-public-socials="{{ post.author.allow_public_socials|yesno:'true,false' }}">
+                        {% else %}
+                            <div class="author-avatar placeholder user-profile-trigger" data-user-id="{{ post.author.id }}" data-username="{{ post.author.username }}" data-allow-public-socials="{{ post.author.allow_public_socials|yesno:'true,false' }}">
+                                {{ post.author.username|slice:":1"|upper }}
+                            </div>
+                        {% endif %}
+                        <span class="author-name">{{ post.author.username }}</span>
+                    </div>
+                </div>
+
+                <!-- Title -->
+                <h3 class="post-title"><a href="{% url 'post_detail' post.id %}">{{ post.title }}</a></h3>
+
+                <!-- Engagement row: controls left, square image right -->
+                <div class="engage-row">
+                    <div class="engage-left">
+                        <div class="engage-controls">
+                            <button class="like-btn {% if request.user in post.likes.all %}liked{% endif %}" aria-pressed="{% if request.user in post.likes.all %}true{% else %}false{% endif %}" data-post-id="{{ post.id }}">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-thumbs-up-icon lucide-thumbs-up"><path d="M15 5.88 14 10h5.83a2 2 0 0 1 1.92 2.56l-2.33 8A2 2 0 0 1 17.5 22H4a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2h2.76a2 2 0 0 0 1.79-1.11L12 2a3.13 3.13 0 0 1 3 3.88Z"/><path d="M7 10v12"/></svg>
+                                <span class="count">{{ post.likes.count }}</span>
+                            </button>
+                            <button class="dislike-btn {% if request.user in post.dislikes.all %}disliked{% endif %}" aria-pressed="{% if request.user in post.dislikes.all %}true{% else %}false{% endif %}" data-post-id="{{ post.id }}">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-thumbs-down-icon lucide-thumbs-down"><path d="M9 18.12 10 14H4.17a2 2 0 0 1-1.92-2.56l2.33-8A2 2 0 0 1 6.5 2H20a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-2.76a2 2 0 0 0-1.79 1.11L12 22a3.13 3.13 0 0 1-3-3.88Z"/><path d="M17 14V2"/></svg>
+                                <span class="count">{{ post.dislikes.count }}</span>
+                            </button>
+                            <button class="comment-btn" data-post-id="{{ post.id }}">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                                <span class="count">{{ post.comments.count }}</span>
+                            </button>
+                            <button class="bookmark-btn" data-post-id="{{ post.id }}" aria-pressed="{% if request.user in post.bookmarks.all %}true{% else %}false{% endif %}">
+                                {% if request.user in post.bookmarks.all %}
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-bookmark-check-icon lucide-bookmark-check"><path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2Z"/><path d="m9 10 2 2 4-4"/></svg>
+                                {% else %}
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-bookmark-icon lucide-bookmark"><path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z"/></svg>
+                                {% endif %}
+                            </button>
+                            <div class="options-menu-wrapper">
+                                <button class="options-menu-trigger" aria-expanded="false">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-ellipsis-icon lucide-ellipsis"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg>
+                                </button>
+                                <div class="options-menu" aria-hidden="true">
+                                    <button class="menu-item report-btn" data-post-id="{{ post.id }}" style="color: #e11d48;">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-triangle-alert-icon lucide-triangle-alert" style="margin-right: 8px;"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>
+                                        Report
+                                    </button>
+                                    <button class="menu-item chat-menu-btn" data-author-id="{{ post.author.id }}" style="color: #059669;">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:8px;"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+                                        Chat
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        {% if post.category %}<span class="category-badge">{{ post.category.name }}</span>{% endif %}
+                    </div>
+
+                    
+                </div>
+
+                <!-- Excerpt and tags -->
+                <p class="post-excerpt">{{ post.content|truncatewords:40 }}</p>
+
+                {% if post.tags.all %}
+                <div class="tag-row">
                     {% for tag in post.tags.all %}
-                        {{ tag.name }}{% if not forloop.last %}, {% endif %}
+                        <span class="tag">{{ tag.name }}</span>
                     {% endfor %}
-                </p>
-            {% endif %}
-            <p><em>Created on {{ post.created|date:"M d, Y H:i" }}</em></p>
+                </div>
+                {% endif %}
 
-            <!-- Options menu inside the same post-card -->
-            <div class="post-footer">
-                <!-- Options Menu Trigger -->
-                <div class="options-menu-trigger">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
-                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
-                        class="lucide lucide-ellipsis-icon">
-                        <circle cx="12" cy="12" r="1" />
-                        <circle cx="19" cy="12" r="1" />
-                        <circle cx="5" cy="12" r="1" />
-                    </svg>
+                <div class="post-footer"><a class="read-more-btn" href="{% url 'post_detail' post.id %}">Read More →</a></div>
+            </div>
+            <div class="post-media" {% if img_top %}style="background-image: url('{{ img_top.image.url }}');"{% endif %}>
+                {% if img_top %}
+                    <img src="{{ img_top.image.url }}" alt="{{ post.title }} cover" loading="lazy">
+                {% else %}
+                    <div class="post-media-placeholder">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="60" height="60" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" opacity="0.5">
+                            <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                            <circle cx="8.5" cy="8.5" r="1.5"></circle>
+                            <polyline points="21 15 16 10 5 21"></polyline>
+                        </svg>
+                    </div>
+                {% endif %}
+            </div>
+            </div>
+            {% endwith %}
+        </article>
+    {% empty %}
+        <div style="text-align: center; padding: 40px 20px; color: var(--secondary-text);">
+            <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="opacity: 0.5; margin: 0 auto 16px; display: block;">
+                <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
+                <path d="M6.5 2H20a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H6.5a2.5 2.5 0 0 1 0-5H20"></path>
+            </svg>
+            <p style="font-size: 1rem;">No blog posts yet.</p>
+        </div>
+    {% endfor %}
+
+    <!-- Report Modal -->
+    <div id="reportModal" class="modal" aria-hidden="true">
+        <div class="modal-overlay"></div>
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Report Post</h2>
+                <button class="modal-close" aria-label="Close">&times;</button>
+            </div>
+            <form id="reportForm">
+                {% csrf_token %}
+                <input type="hidden" id="reportPostId" name="post_id">
+                
+                <div class="form-group">
+                    <label for="reportReason">What's the issue?</label>
+                    <select id="reportReason" name="reason" required>
+                        <option value="">-- Select a reason --</option>
+                        <option value="inappropriate">Inappropriate content</option>
+                        <option value="spam">Spam</option>
+                        <option value="harassment">Harassment or bullying</option>
+                        <option value="misinformation">Misinformation</option>
+                        <option value="copyright">Copyright violation</option>
+                        <option value="other">Other</option>
+                    </select>
                 </div>
 
-                <!-- Hidden menu -->
-                <div class="options-menu">
-                    <button class="bookmark-btn">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
-                            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
-                            class="lucide lucide-bookmark-icon">
-                            <path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z" />
-                        </svg>
-                        Bookmark
-                    </button>
-                    <button class="report-btn">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
-                            stroke="red" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
-                            class="lucide lucide-flag-icon">
-                            <path d="M4 22V2l16 4-4 4 4 4-16 4z" />
-                        </svg>
-                        Report
-                    </button>
+                <div class="form-group">
+                    <label for="reportDetails">Additional details (optional)</label>
+                    <textarea id="reportDetails" name="details" rows="4" placeholder="Provide more context about the issue..."></textarea>
                 </div>
+
+                <div class="form-actions">
+                    <button type="button" class="btn-cancel">Cancel</button>
+                    <button type="submit" class="btn-submit">Submit Report</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Success Modal -->
+    <div id="successModal" class="modal" aria-hidden="true">
+        <div class="modal-overlay"></div>
+        <div class="modal-content" style="max-width: 400px; text-align: center;">
+            <div class="modal-header" style="justify-content: center; border-bottom: none; padding-bottom: 0;">
+                <svg xmlns="http://www.w3.org/2000/svg" width="60" height="60" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom: 16px;"><polyline points="20 6 9 17 4 12"></polyline></svg>
+            </div>
+            <div style="padding: 20px;">
+                <h2 style="margin: 0 0 12px 0; font-size: 1.3rem; color: var(--text-dark);">Report Submitted</h2>
+                <p style="margin: 0 0 24px 0; color: var(--secondary-text); font-size: 0.95rem;">Thank you for helping us keep the community safe. Our team will review your report shortly.</p>
+                <button id="successModalClose" class="btn-submit" style="width: 100%; cursor: pointer;">Close</button>
             </div>
         </div>
-    {% empty %}
-        <p>No blog posts yet.</p>
-    {% endfor %}
+    </div>
+
+</section>
 </div>
 
 <style>
-.post-card {
-    position: relative;
-    padding: 15px;
-    border: 1px solid #ddd;
-    border-radius: 12px;
-    margin-bottom: 20px;
-    background: #fff;
+body { margin: 0; padding: 0; }
+.feed { width: 100%; max-width: 100%; margin: 0; padding: 0; }
+.posts-center { width: 100%; max-width: 100%; margin: 0; padding: 0; }
+
+.post-card { background: var(--card-bg, #fff); border-radius: 12px; margin: 0 0 18px 0; overflow: hidden; box-shadow: var(--card-shadow); transition: transform .16s ease, box-shadow .16s ease; padding: 0; display: flex; width: 100%; box-sizing: border-box; }
+.post-card.post-card-intro { margin: 0 0 18px 0; padding: 32px 24px; }
+.post-card:hover { transform: translateY(-4px); box-shadow: 0 12px 30px rgba(16,24,40,0.06); }
+.post-card-wrapper { display: flex; gap: 20px; width: 100%; align-items: stretch; padding: 20px 0; box-sizing: border-box; }
+.post-card .post-content { flex: 1; padding: 0 20px 0 20px; display:flex; flex-direction:column; gap:8px; }
+.post-card .post-media { width: 320px; height: 320px; flex-shrink: 0; border-radius: 10px 0 0 10px; overflow: hidden; aspect-ratio: 1/1; position: relative; background-color: #f3f4f6; background-size: cover; background-position: center; box-shadow: 0 8px 36px rgba(16,24,40,0.08); border: 1px solid rgba(0,0,0,0.04); display: flex; align-items: center; justify-content: center; }
+.post-card .post-media img { position: relative; z-index: 2; width: 100% !important; height: 100% !important; object-fit: cover !important; display: block; }
+.post-media-placeholder { display: flex; align-items: center; justify-content: center; width: 100%; height: 100%; color: #9ca3af; background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%); }
+.post-media-placeholder svg { stroke: #9ca3af; }
+
+/* Content */
+.post-title { margin: 0; font-size:1.35rem; line-height:1.3; font-weight:700; font-family: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial; color: var(--text-dark); }
+.post-title a { color: inherit; text-decoration: none; }
+.post-title a:hover { color: var(--primary); text-decoration: underline; }
+.post-excerpt { margin: 0; color: var(--secondary-text); font-size:1rem; line-height:1.6; }
+
+/* Engagement row: left controls, right thumbnail */
+.engage-row { display:flex; gap:16px; align-items:center; margin-top:8px; }
+.engage-left { flex:1; display:flex; flex-direction:column; gap:8px; justify-content:center; }
+.engage-controls { display:flex; gap:8px; align-items:center; }
+.engage-controls button { display:inline-flex; align-items:center; gap:8px; padding:8px 10px; border-radius:8px; border:1px solid rgba(0,0,0,0.04); background:transparent; cursor:pointer; }
+.engage-controls .count { font-weight:600; color:var(--text-dark); }
+.thumb-square { width:220px; height:220px; border-radius:8px; overflow:hidden; flex:0 0 220px; background:linear-gradient(90deg, rgba(0,0,0,0.03), rgba(0,0,0,0.02)); }
+.thumb-square img { width:100%; height:100%; object-fit:cover; display:block; }
+
+/* Meta row */
+.post-meta-row { display:flex; justify-content:space-between; align-items:center; gap:12px; margin-top:8px; flex-wrap:wrap; }
+.meta-left { display:flex; align-items:center; gap:12px; }
+.meta-right { display:flex; align-items:center; gap:10px; color:var(--secondary-text); }
+.meta-item { display:inline-flex; align-items:center; gap:6px; color:var(--secondary-text); font-size:0.95rem; }
+
+.author-link { display:flex; align-items:center; gap:8px; color:inherit; text-decoration:none; }
+.author-avatar { width:40px; height:40px; border-radius:50%; object-fit:cover; display:inline-flex; align-items:center; justify-content:center; border:1px solid rgba(0,0,0,0.06); font-weight:700; font-size:1rem; color:white; flex-shrink:0; }
+.author-avatar.placeholder { background: linear-gradient(90deg, rgba(0,0,0,0.04), rgba(0,0,0,0.02)); }
+.author-name { font-weight:600; color:var(--text-dark); font-size:0.95rem; }
+.verified-badge { margin-left:6px; color:#1f9cee; font-size:0.85rem; }
+.category-badge { background: rgba(31,156,238,0.08); color:var(--primary); padding:4px 8px; border-radius:8px; font-size:0.8rem; }
+
+/* Tags */
+.tag-row { margin-top:10px; display:flex; gap:8px; flex-wrap:wrap; }
+.tag { background: rgba(31,156,238,0.08); color:var(--primary); padding:6px 10px; border-radius:999px; font-size:0.85rem; }
+
+/* Like/dislike filled states */
+.like-btn.liked svg { stroke: var(--primary); fill: var(--primary); }
+.like-btn.liked { color: var(--primary); }
+.dislike-btn.disliked svg { stroke: #e11d48; fill: #e11d48; }
+.dislike-btn.disliked { color: #e11d48; }
+
+/* Footer & actions */
+.post-footer { display:flex; justify-content:flex-end; margin-top:auto; }
+.read-more-btn { color:var(--primary); font-weight:700; text-decoration:none; }
+.read-more-btn:hover { opacity:0.95; }
+
+.options { position:relative; }
+.options-menu-wrapper { position:relative; }
+.options-menu-trigger { cursor:pointer; padding:6px; border-radius:6px; display:flex; align-items:center; background:transparent; border:none; color:var(--text-dark); transition: background 0.2s; }
+.options-menu-trigger:hover { background: rgba(0,0,0,0.05); }
+.options-menu { display:none; position:absolute; right:-8px; top:32px; background:var(--card-bg); border:1px solid rgba(0,0,0,0.06); border-radius:8px; padding:6px; box-shadow:0 12px 30px rgba(16,24,40,0.08); z-index:1001; min-width:160px; }
+.options-menu[aria-hidden="false"] { display:block; }
+.menu-item { display:flex; align-items:center; padding:8px 10px; color:var(--text-dark); text-decoration:none; border-radius:6px; font-size:0.95rem; background:none; border:none; cursor:pointer; width:100%; }
+.menu-item:hover { background: rgba(0,0,0,0.03); }
+
+/* Modal Styles */
+.modal { position:fixed; top:0; left:0; width:100%; height:100%; display:none; z-index:1000; }
+.modal[aria-hidden="false"] { display:flex; }
+.modal-overlay { position:absolute; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); }
+.modal-content { position:relative; background:var(--card-bg); border-radius:12px; max-width:500px; width:90%; margin:auto; box-shadow:0 20px 60px rgba(0,0,0,0.3); z-index:1001; max-height:90vh; overflow-y:auto; }
+.modal-header { display:flex; justify-content:space-between; align-items:center; padding:20px; border-bottom:1px solid rgba(0,0,0,0.06); }
+.modal-header h2 { margin:0; font-size:1.3rem; color:var(--text-dark); }
+.modal-close { background:none; border:none; font-size:1.8rem; cursor:pointer; color:var(--secondary-text); padding:0; width:32px; height:32px; display:flex; align-items:center; justify-content:center; }
+.modal-close:hover { color:var(--text-dark); }
+
+#reportForm { padding:20px; }
+.form-group { margin-bottom:20px; }
+.form-group label { display:block; margin-bottom:8px; font-weight:600; color:var(--text-dark); }
+.form-group select, .form-group textarea { width:100%; padding:10px 12px; border:1px solid rgba(0,0,0,0.1); border-radius:8px; font-family:inherit; font-size:0.95rem; }
+.form-group textarea { resize:vertical; min-height:100px; }
+.form-group select:focus, .form-group textarea:focus { outline:none; border-color:var(--primary); box-shadow:0 0 0 3px rgba(31,156,238,0.1); }
+.form-actions { display:flex; gap:12px; justify-content:flex-end; }
+.btn-cancel, .btn-submit { padding:10px 18px; border-radius:8px; border:none; font-weight:600; cursor:pointer; font-size:0.95rem; }
+.btn-cancel { background:rgba(0,0,0,0.05); color:var(--text-dark); }
+.btn-cancel:hover { background:rgba(0,0,0,0.08); }
+.btn-submit { background:var(--primary); color:white; }
+.btn-submit:hover { opacity:0.9; }
+
+/* Typography tweaks */
+body { -webkit-font-smoothing:antialiased; -moz-osx-font-smoothing:grayscale; }
+
+/* Responsive / mobile-first */
+@media (max-width: 900px) {
+    .post-card { margin: 0 12px 18px 12px; width: calc(100% - 24px); }
+    .post-card.post-card-intro { margin: 12px 12px 0 12px; }
+    .post-card { flex-direction: column-reverse; }
+    .post-card-wrapper { flex-direction: column; padding: 20px; }
+    .post-card .post-content { padding: 0; }
+    .post-card .post-media { width: 100%; height: 280px; border-radius: 10px; }
+    .post-cover img { height:140px; }
+    .author-avatar { width:32px; height:32px; }
+    .post-title { font-size:1.15rem; }
+    .engage-row { flex-direction: column-reverse; align-items: stretch; }
+    .thumb-square { width:100%; height:160px; flex-basis: auto; border-radius:6px; }
+    .engage-controls { justify-content:flex-start; }
 }
 
-.post-footer {
-    position: relative;
-    display: flex;
-    justify-content: flex-end;
-    margin-top: 10px;
-}
-
-.options-menu-trigger {
-    cursor: pointer;
-}
-
-.options-menu {
-    display: none;
-    position: absolute;
-    bottom: 35px;
-    right: 0;
-    background: #fff;
-    border: 1px solid #ddd;
-    border-radius: 8px;
-    padding: 5px;
-    flex-direction: column;
-    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-    z-index: 10;
-}
-
-.options-menu button {
-    display: flex;
-    align-items: center;
-    gap: 5px;
-    padding: 5px 10px;
-    border: none;
-    background: none;
-    cursor: pointer;
-}
-
-.options-menu button:hover {
-    background: #f0f0f0;
-    border-radius: 5px;
+@media (min-width: 900px) {
+    .post-cover img { height:300px; }
+    .post-title { font-size:1.5rem; }
+    .thumb-square { width:220px; height:220px; flex:0 0 220px; }
 }
 </style>
 
 <script>
-document.querySelectorAll('.options-menu-trigger').forEach(trigger => {
-    trigger.addEventListener('click', (e) => {
-        e.stopPropagation(); // prevent closing immediately
-        const menu = trigger.nextElementSibling;
-        menu.style.display = menu.style.display === 'flex' ? 'none' : 'flex';
-        menu.style.flexDirection = 'column';
+document.addEventListener('DOMContentLoaded', () => {
+    const toggle = document.getElementById('blogForYouToggle');
+    const section = document.getElementById('blogForYouSection');
+    const container = document.getElementById('blogPageForYouContainer');
+
+    if (!toggle || !section || !container) {
+        console.warn('Blog For You elements not found');
+        return;
+    }
+
+    async function fetchBlogForYou() {
+        try {
+            const res = await fetch('/recommend/blog-recommendations/');
+            const data = await res.json();
+            container.innerHTML = '';
+            if (!data.results || data.results.length === 0) {
+                container.innerHTML = '<div style="padding:16px;color:var(--secondary-text);">No personalized articles yet. Try selecting more interests.</div>';
+                return;
+            }
+            // Render blog recommendations using a card layout consistent with community posts
+            data.results.forEach(rec => {
+                const card = document.createElement('div');
+                card.className = 'for-you-card';
+                card.style.cursor = 'pointer';
+                card.onclick = () => window.location.href = `/posts/${rec.id}/`;
+                // Center image box + title + excerpt (match community style)
+                card.innerHTML = `
+                    <div style="width:100%;height:140px;display:flex;align-items:center;justify-content:center;background:#f3f4f6;border-radius:8px;overflow:hidden;">
+                        ${rec.image ? `<img src="${rec.image}" alt="${rec.title}" style="max-width:100%;max-height:100%;object-fit:contain;"/>` : `<div style=\"width:60%;height:60%;background:linear-gradient(135deg,#eaeef9,#f7f5f0);border-radius:6px;\"></div>`}
+                    </div>
+                    <div style="margin-top:8px;font-weight:700;color:var(--text-dark);">${rec.title}</div>
+                    ${rec.excerpt ? `<div style="color:var(--secondary-text);font-size:0.95rem;margin-top:6px;">${rec.excerpt}</div>` : ''}
+                `;
+                container.appendChild(card);
+            });
+        } catch (err) {
+            console.error('Failed to load blog recommendations:', err);
+            container.innerHTML = '<div style="padding:16px;color:var(--secondary-text);">Failed to load recommendations.</div>';
+        }
+    }
+
+    toggle.addEventListener('click', async (e) => {
+        e.preventDefault();
+        // Activate For You: hide server-rendered posts and show recommendations
+        const isActive = toggle.classList.contains('active');
+        if (isActive) {
+            // deactivate For You and show the default list
+            toggle.classList.remove('active');
+            document.querySelectorAll('article.post-card.full-bleed').forEach(a => a.style.display = 'block');
+            section.style.display = 'none';
+            return;
+        }
+        // deactivate other filter buttons
+        document.querySelectorAll('.filter-bubble').forEach(b => b.classList.remove('active'));
+        toggle.classList.add('active');
+        // hide server-rendered articles
+        document.querySelectorAll('article.post-card.full-bleed').forEach(a => a.style.display = 'none');
+        section.style.display = 'block';
+        await fetchBlogForYou();
+    });
+
+    // Activate For You by default on page load
+    try {
+        toggle.classList.add('active');
+        document.querySelectorAll('article.post-card.full-bleed').forEach(a => a.style.display = 'none');
+        section.style.display = 'block';
+        fetchBlogForYou();
+    } catch (err) {
+        console.warn('Could not auto-activate For You on load:', err);
+    }
+
+    // recommendations auto-refreshes when the section is activated
+
+    // Setup filter bubble click handlers for Latest and Most liked buttons
+    const filterBubbles = document.querySelectorAll('.filter-bubble[data-sort]:not([id="blogForYouToggle"])');
+    filterBubbles.forEach(bubble => {
+        bubble.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            // Deactivate all bubbles and clear active state
+            document.querySelectorAll('.filter-bubble').forEach(b => b.classList.remove('active'));
+            bubble.classList.add('active');
+            // Hide For You section and show posts
+            section.style.display = 'none';
+            document.querySelectorAll('article.post-card.full-bleed').forEach(a => a.style.display = 'block');
+        });
+    });
+});
+</script>
+
+<script>
+// ---------------------- Get CSRF Token ----------------------
+function getCookie(name) {
+    const value = `; ${document.cookie}`;
+    const parts = value.split(`; ${name}=`);
+    if (parts.length === 2) return parts.pop().split(';').shift();
+}
+const csrftoken = getCookie('csrftoken');
+
+// ---------------------- Avatar Colors ----------------------
+document.querySelectorAll('.author-avatar.placeholder[data-user-id]').forEach(avatar => {
+    const userId = parseInt(avatar.getAttribute('data-user-id'), 10);
+    const hue = (userId * 137.5) % 360; // Golden angle for good color distribution
+    avatar.style.background = `hsl(${hue}, 70%, 60%)`;
+});
+
+// ---------------------- Options Menu Handler ----------------------
+function setupMenuHandlers() {
+    document.querySelectorAll('.options-menu-trigger').forEach(trigger => {
+        trigger.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            const wrapper = trigger.closest('.options-menu-wrapper');
+            const menu = wrapper.querySelector('.options-menu');
+            const isHidden = menu.getAttribute('aria-hidden') === 'true';
+            
+            // Close all other menus
+            document.querySelectorAll('.options-menu').forEach(m => {
+                if (m !== menu) {
+                    m.setAttribute('aria-hidden', 'true');
+                    m.closest('.options-menu-wrapper')?.querySelector('.options-menu-trigger')?.setAttribute('aria-expanded', 'false');
+                }
+            });
+            
+            // Toggle this menu
+            menu.setAttribute('aria-hidden', isHidden ? 'false' : 'true');
+            trigger.setAttribute('aria-expanded', isHidden ? 'true' : 'false');
+        });
+    });
+}
+
+document.addEventListener('click', e => {
+    // Only close menus if clicking outside any wrapper
+    const clickedWrapper = e.target.closest('.options-menu-wrapper');
+    if (!clickedWrapper) {
+        document.querySelectorAll('.options-menu').forEach(menu => {
+            menu.setAttribute('aria-hidden', 'true');
+            const trigger = menu.closest('.options-menu-wrapper')?.querySelector('.options-menu-trigger');
+            if (trigger) trigger.setAttribute('aria-expanded', 'false');
+        });
+    }
+});
+
+// Call setup after DOM is ready
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', setupMenuHandlers);
+} else {
+    setupMenuHandlers();
+}
+
+// ---------------------- Report Modal Handler ----------------------
+const reportModal = document.getElementById('reportModal');
+const reportForm = document.getElementById('reportForm');
+const reportPostId = document.getElementById('reportPostId');
+const modalOverlay = reportModal.querySelector('.modal-overlay');
+const modalClose = reportModal.querySelector('.modal-close');
+const btnCancel = reportModal.querySelector('.btn-cancel');
+
+// Open report modal
+document.querySelectorAll('.report-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const postId = btn.getAttribute('data-post-id');
+        reportPostId.value = postId;
+        reportModal.setAttribute('aria-hidden', 'false');
+        reportModal.style.display = 'flex';
+        document.body.style.overflow = 'hidden';
     });
 });
 
-// Close menu if clicking outside
-document.addEventListener('click', e => {
-    document.querySelectorAll('.options-menu').forEach(menu => menu.style.display = 'none');
+// Close report modal
+function closeReportModal() {
+    reportModal.setAttribute('aria-hidden', 'true');
+    reportModal.style.display = 'none';
+    document.body.style.overflow = 'auto';
+    reportForm.reset();
+}
+
+modalClose.addEventListener('click', closeReportModal);
+btnCancel.addEventListener('click', closeReportModal);
+modalOverlay.addEventListener('click', closeReportModal);
+
+// ---------------------- Success Modal Handler ----------------------
+const successModal = document.getElementById('successModal');
+const successModalClose = document.getElementById('successModalClose');
+const successOverlay = successModal.querySelector('.modal-overlay');
+
+function closeSuccessModal() {
+    successModal.setAttribute('aria-hidden', 'true');
+    successModal.style.display = 'none';
+    document.body.style.overflow = 'auto';
+}
+
+successModalClose.addEventListener('click', closeSuccessModal);
+successOverlay.addEventListener('click', closeSuccessModal);
+
+// Submit report form
+reportForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    
+    const postId = reportPostId.value;
+    const reason = document.getElementById('reportReason').value;
+    const details = document.getElementById('reportDetails').value;
+    
+    try {
+        const res = await fetch(`/posts/post/${postId}/report/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': csrftoken,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                reason: reason,
+                details: details
+            })
+        });
+        
+        if (!res.ok) throw new Error('Report failed');
+        const data = await res.json();
+        
+        if (data.success) {
+            closeReportModal();
+            successModal.setAttribute('aria-hidden', 'false');
+            successModal.style.display = 'flex';
+            document.body.style.overflow = 'hidden';
+        }
+    } catch (err) {
+        console.error(err);
+        alert('Failed to submit report. Please try again.');
+    }
+});
+
+// ---------------------- Reactions AJAX ----------------------
+async function postAction(url, btn) {
+    btn.disabled = true;
+    try {
+        const res = await fetch(url, { method: 'POST', headers: { 'X-CSRFToken': csrftoken } });
+        if (!res.ok) throw new Error('Request failed');
+        return await res.json();
+    } catch (err) {
+        console.error(err);
+        return null;
+    } finally {
+        btn.disabled = false;
+    }
+}
+
+// Like buttons
+document.querySelectorAll('.like-btn').forEach(btn => {
+    btn.addEventListener('click', async () => {
+        const postId = btn.dataset.postId;
+        const url = `/posts/post/${postId}/like/`;
+        const data = await postAction(url, btn);
+        if (!data) return;
+        // update counts and toggle state
+        const countSpan = btn.querySelector('.count');
+        if (countSpan) countSpan.textContent = data.likes_count ?? countSpan.textContent;
+        // if there's a corresponding dislike button, update its count
+        const dislikeBtn = btn.closest('.engage-controls')?.querySelector('.dislike-btn');
+        if (dislikeBtn && data.dislikes_count !== undefined) {
+            // try to find .count inside dislike
+            const dcount = dislikeBtn.querySelector('.count');
+            if (dcount) dcount.textContent = data.dislikes_count;
+        }
+        // toggle pressed state
+        btn.setAttribute('aria-pressed', data.liked ? 'true' : 'false');
+        if (data.liked) {
+            btn.classList.add('liked');
+            // remove disliked state if present
+            const dbtn = btn.closest('.engage-controls')?.querySelector('.dislike-btn');
+            if (dbtn) { dbtn.classList.remove('disliked'); dbtn.setAttribute('aria-pressed', 'false'); }
+        } else {
+            btn.classList.remove('liked');
+        }
+    });
+});
+
+// Dislike buttons
+document.querySelectorAll('.dislike-btn').forEach(btn => {
+    btn.addEventListener('click', async () => {
+        const postId = btn.dataset.postId;
+        const url = `/posts/post/${postId}/dislike/`;
+        const data = await postAction(url, btn);
+        if (!data) return;
+        const countSpan = btn.querySelector('.count');
+        if (countSpan) countSpan.textContent = data.dislikes_count ?? countSpan.textContent;
+        const likeBtn = btn.closest('.engage-controls')?.querySelector('.like-btn');
+        if (likeBtn && data.likes_count !== undefined) {
+            const lcount = likeBtn.querySelector('.count');
+            if (lcount) lcount.textContent = data.likes_count;
+        }
+        btn.setAttribute('aria-pressed', data.disliked ? 'true' : 'false');
+        if (data.disliked) {
+            btn.classList.add('disliked');
+            const lbtn = btn.closest('.engage-controls')?.querySelector('.like-btn');
+            if (lbtn) { lbtn.classList.remove('liked'); lbtn.setAttribute('aria-pressed', 'false'); }
+        } else {
+            btn.classList.remove('disliked');
+        }
+    });
+});
+
+// Comment button — navigate to post detail
+document.querySelectorAll('.comment-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+        const postId = btn.getAttribute('data-post-id');
+        window.location.href = `/posts/blog/${postId}/`;
+    });
+});
+
+// Bookmark buttons (in-line) — toggle SVG
+document.querySelectorAll('.bookmark-btn').forEach(btn => {
+    btn.addEventListener('click', async () => {
+        const postId = btn.dataset.postId;
+        const url = `/posts/post/${postId}/bookmark/`;
+        const data = await postAction(url, btn);
+        if (!data) return;
+        const unbookSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-bookmark-icon lucide-bookmark"><path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z"/></svg>`;
+        const bookSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-bookmark-check-icon lucide-bookmark-check"><path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2Z"/><path d="m9 10 2 2 4-4"/></svg>`;
+        if (data.bookmarked) {
+            btn.classList.add('bookmarked');
+            btn.setAttribute('aria-pressed', 'true');
+            btn.innerHTML = bookSvg;
+        } else {
+            btn.classList.remove('bookmarked');
+            btn.setAttribute('aria-pressed', 'false');
+            btn.innerHTML = unbookSvg;
+        }
+    });
 });
 </script>
+
+<!-- Assistant removed from blog list (uses central /chatbot/ page) -->
+
 {% endblock %}

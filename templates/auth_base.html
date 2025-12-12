@@ -2,27 +2,15 @@
 
 <!DOCTYPE html>
 <html lang="en">
+<script>
+// Auth pages should remain light-mode for consistent sign-in UX
+document.documentElement.setAttribute('data-theme','light');
+</script>
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}Lupify{% endblock %}</title>
-    <link rel="stylesheet" href="{% static 'style.css' %}">
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-            background: linear-gradient(135deg, #1f9cee 0%, #fec76f 100%);
-            min-height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 20px;
-        }
+        body { display: flex; align-items: center; justify-content: center; padding: 20px; }
 
         .auth-container {
             background: white;
@@ -241,6 +229,26 @@
         .auth-footer a:hover {
             text-decoration: underline;
         }
+
+                /* Theme script for auth pages (no user object available reliably) */
+        </style>
+        <script>
+            (function(){
+                try{
+                    // If running on login/register pages there may be no authenticated user.
+                    // Use system time to pick default when unauthenticated.
+                    let theme = 'light';
+                    try{ const t = localStorage.getItem('theme_override'); if(t) theme = t; }
+                    catch(e){}
+                    if(!localStorage.getItem('theme_override')){
+                        const hr = new Date().getHours();
+                        theme = (hr >= 7 && hr < 19) ? 'light' : 'dark';
+                    }
+                    document.documentElement.setAttribute('data-theme', theme);
+                }catch(e){/* ignore */}
+            })();
+        </script>
+        <style>
 
         .error-message {
             background: linear-gradient(135deg, #fef3f2 0%, #fdeaea 100%);

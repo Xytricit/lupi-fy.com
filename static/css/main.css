@@ -1,0 +1,23 @@
+/* main.css - minimal global baseline to prevent 404 and restore layout */
+:root{
+  --primary: #167ac6;
+  --primary-dark: #125f9a;
+  --accent: #fec76f;
+  --bg: #f8f9fa;
+  --card-bg: #ffffff;
+  --text-dark: #111827;
+  --secondary-text: #6b7280;
+  --icon-default: #6b7280;
+  --card-shadow: 0 6px 18px rgba(0,0,0,0.05);
+}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0;padding:0;background:var(--bg);color:var(--text-dark);font-family:'Segoe UI',system-ui,Arial,sans-serif}
+a{color:var(--primary);text-decoration:none}
+img{max-width:100%;height:auto;display:block}
+.container{max-width:1200px;margin:0 auto;padding:0 16px}
+/* small utilities used across templates */
+.hidden{display:none!important}
+.flex{display:flex}
+.grid{display:grid}
+
+/* Allow additional project css to override these defaults */

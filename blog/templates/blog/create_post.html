@@ -10,7 +10,7 @@
     width: 90%;
     max-width: 900px;
     margin: 50px auto;
-    background: #fff;
+    background: var(--card-bg);
     padding: 35px;
     border-radius: 12px;
     box-shadow: 0 10px 30px rgba(0,0,0,0.08);
@@ -204,6 +204,17 @@
     }
 }
 </style>
+
+        <script>
+        // Initialize theme early to ensure site-wide dark mode applies
+        (function(){
+            const serverPref = "{{ request.user.theme_preference|default:'' }}";
+            let pref = serverPref || null;
+            try { const local = localStorage.getItem('theme_pref'); if(!pref && local) pref = local; }catch(e){}
+            if(!pref) pref = 'light';
+            document.documentElement.setAttribute('data-theme', pref);
+        })();
+        </script>
 </head>
 <body>
 

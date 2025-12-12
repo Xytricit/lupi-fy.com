@@ -34,6 +34,106 @@ function handleResponseJSON(res) {
 // Debug: confirm the central script is loaded
 try { console.debug('[static/script.js] loaded'); } catch(_) {}
 
+// --------------------------
+// WebSocket for DM notifications
+// --------------------------
+let dmSocket = null;
+const currentUserMeta = document.querySelector('meta[name="current-user-id"]');
+if (currentUserMeta) {
+  const currentUserId = currentUserMeta.getAttribute('content');
+  const wsScheme = (location.protocol === 'https:') ? 'wss:' : 'ws:';
+  try {
+    dmSocket = new WebSocket(`${wsScheme}//${location.host}/ws/dm/${currentUserId}/`);
+    dmSocket.addEventListener('open', () => console.debug('DM socket open'));
+    dmSocket.addEventListener('close', () => console.debug('DM socket closed'));
+    dmSocket.addEventListener('message', (ev) => {
+      try {
+        const data = JSON.parse(ev.data);
+        if (data.type === 'dm.message' && data.message) {
+          const msg = data.message;
+          // show small toast notification
+          try {
+            const toast = document.createElement('div');
+            toast.className = 'dm-toast';
+            toast.style.cssText = 'position:fixed;right:16px;bottom:16px;padding:12px 16px;background:#0ea5a4;color:#fff;border-radius:10px;z-index:20000;box-shadow:0 8px 30px rgba(0,0,0,0.12);';
+            toast.textContent = `${msg.sender}: ${msg.content.slice(0,120)}`;
+            document.body.appendChild(toast);
+            setTimeout(() => toast.remove(), 4000);
+          } catch (_) {}
+
+          // append to open popup if it matches
+          if (activeProfilePopup) {
+            const thread = activeProfilePopup.querySelector('.chat-thread');
+            if (thread) {
+              const bubble = document.createElement('div');
+              bubble.style.cssText = 'padding:8px 10px;border-radius:10px;margin-bottom:6px;background:#eef2ff;color:#041624;max-width:80%;';
+              bubble.textContent = `${msg.sender}: ${msg.content}`;
+              thread.appendChild(bubble);
+              thread.scrollTop = thread.scrollHeight;
+            }
+          }
+        }
+        // handle user block/unblock events
+        if (data.type === 'user.block' && data.payload) {
+          const p = data.payload;
+          try {
+            const myId = currentUserId;
+            const byId = String(p.by_user_id);
+            const targetId = String(p.target_user_id);
+            const action = p.action; // 'blocked' or 'unblocked'
+
+            // If current user is involved, update UI
+            if (myId === byId || myId === targetId) {
+              // If block affects the currently open chat, disable composer and hide messages from blocked user
+              const chatMain = document.getElementById('chat-main');
+              if (chatMain) {
+                const otherId = document.querySelector('.conversation-item.active') ? document.querySelector('.conversation-item.active').dataset.userId : null;
+                // also check URL selected user id on chat page
+                const sel = window.location.pathname.match(/\/accounts\/chat\/(\d+)\//) || window.location.pathname.match(/\/accounts\/chat\/(\d+)$/);
+                const selectedUserId = sel ? sel[1] : null;
+                const affectedUser = (myId === byId) ? targetId : byId;
+                if (selectedUserId && (selectedUserId === affectedUser || selectedUserId === byId || selectedUserId === targetId)) {
+                  // remove messages from blocked user
+                  document.querySelectorAll('#message-thread div').forEach(d => {
+                    try {
+                      if (d.textContent && d.textContent.includes(` ${affectedUser}: `)) d.remove();
+                    } catch(_) {}
+                  });
+                  // disable composer if the other user blocked you or you blocked them
+                  const input = document.getElementById('message-input');
+                  const form = document.getElementById('message-form');
+                  if (input && form) {
+                    if (action === 'blocked') {
+                      input.disabled = true;
+                      form.querySelector('button[type=submit]').disabled = true;
+                      // show banner
+                      let banner = document.getElementById('blockBanner');
+                      if (!banner) {
+                        banner = document.createElement('div');
+                        banner.id = 'blockBanner';
+                        banner.style.cssText = 'padding:10px;background:#fff3f2;color:#7f1d1d;border:1px solid #fecaca;border-radius:8px;margin-bottom:8px;';
+                        banner.textContent = 'This conversation is blocked. Messaging is disabled.';
+                        const container = document.getElementById('chat-main');
+                        if (container) container.insertBefore(banner, container.firstChild);
+                      }
+                    } else if (action === 'unblocked') {
+                      input.disabled = false;
+                      form.querySelector('button[type=submit]').disabled = false;
+                      const banner = document.getElementById('blockBanner'); if (banner) banner.remove();
+                    }
+                  }
+                }
+              }
+            }
+          } catch (e) { console.error('Failed to handle block event', e); }
+        }
+      } catch (err) { console.error('WS msg parse', err); }
+    });
+  } catch (err) {
+    console.warn('DM WebSocket creation failed', err);
+  }
+}
+
 document.addEventListener('click', (e) => {
   // Toggle three-dot menus: add/remove 'open' class on container
   const moreBtn = e.target.closest('.more-btn');
@@ -193,6 +293,16 @@ document.addEventListener('click', (e) => {
     return;
   }
 
+  // Chat from options menu: navigate to chat page
+  const chatMenuBtn = e.target.closest('.chat-menu-btn');
+  if (chatMenuBtn) {
+    const authorId = chatMenuBtn.dataset.authorId;
+    if (authorId) {
+      window.location.href = `/accounts/chat/${authorId}/`;
+    }
+    return;
+  }
+
   // Replies toggle: expand/collapse replies list when 'Replies (N)' clicked
   const repliesToggle = e.target.closest('.replies-toggle');
   if (repliesToggle) {
@@ -277,7 +387,7 @@ document.addEventListener('click', async (e) => {
     popup.className = 'profile-popup';
     popup.style.cssText = `
       position: fixed;
-      background: white;
+      background: var(--card-bg);
       border: 1px solid #ddd;
       border-radius: 12px;
       padding: 16px;
@@ -287,40 +397,80 @@ document.addEventListener('click', async (e) => {
       font-family: 'Inter', sans-serif;
     `;
 
-    if (data.is_private) {
-      popup.innerHTML = `
-        <div style="text-align: center; color: #666;">
-          <p style="margin: 0; font-weight: 600;">${username}</p>
-          <p style="margin: 8px 0 0; font-size: 0.9rem; color: #999;">Account is private</p>
-        </div>
-      `;
-    } else {
-      popup.innerHTML = `
-        <div style="display: flex; flex-direction: column; gap: 12px;">
-          <div style="display: flex; align-items: center; gap: 12px;">
-            ${data.avatar ? `<img src="${data.avatar}" alt="${username}" style="width: 48px; height: 48px; border-radius: 50%; object-fit: cover;">` : `<div style="width: 48px; height: 48px; border-radius: 50%; background: #e0e0e0;"></div>`}
-            <div>
-              <strong style="display: block;">${username}</strong>
-              <span style="font-size: 0.85rem; color: #666;">${data.followers_count} followers</span>
-            </div>
-          </div>
-          ${data.bio ? `<p style="margin: 0; font-size: 0.9rem; color: #555;">${data.bio}</p>` : ''}
-          <button onclick="window.location.href='/accounts/user/${userId}/public-profile/'" class="view-account-btn" style="
-            display: block;
-            width: 100%;
-            padding: 10px 16px;
-            background: #1f9cee;
-            color: white;
-            border: none;
-            border-radius: 8px;
-            font-weight: 600;
-            font-size: 0.9rem;
-            cursor: pointer;
-            transition: 0.2s;
-          ">View Profile</button>
-        </div>
-      `;
+    // Always render a full structured popup so Social/Achievements/Chat sections are present
+    const socials = data.socials || {};
+    const achievements = data.achievements || [];
+
+    function socialLine(key, label) {
+      const val = socials[key];
+      if (val) return `<div style="font-size:0.9rem; color:#333;">${label}: <a href="${val}" target="_blank" style="color:#1f9cee;">${val}</a></div>`;
+      if (data.allow_public_socials === false) return `<div style="font-size:0.9rem; color:#999;">${label}: Hidden</div>`;
+      return `<div style="font-size:0.9rem; color:#999;">${label}: —</div>`;
     }
+
+    popup.innerHTML = `
+      <div style="display:flex;flex-direction:column;gap:12px;">
+        ${data.is_private && !data.is_own_profile ? `<div style="padding:8px;border-radius:8px;background:#fff7ed;border:1px solid #ffedd5;color:#92400e;font-weight:600;">This user has set their profile to private — some sections are hidden.</div>` : ''}
+        <div style="display:flex;align-items:center;gap:12px;">
+          ${data.avatar ? `<img src="${data.avatar}" alt="${username}" style="width:48px;height:48px;border-radius:50%;object-fit:cover;">` : `<div style="width:48px;height:48px;border-radius:50%;background:#e0e0e0;"></div>`}
+          <div>
+            <strong style="display:block;">${username}</strong>
+            <span style="font-size:0.85rem;color:#666;">${data.followers_count || 0} followers</span>
+          </div>
+        </div>
+
+        ${data.bio ? `<p style="margin:0;font-size:0.9rem;color:#555;">${data.bio}</p>` : `<p style="margin:0;font-size:0.9rem;color:#999;">No bio provided</p>`}
+
+        <div class="profile-actions" style="display:flex;gap:8px;">
+          <button class="view-account-btn" data-userid="${userId}" style="flex:1;padding:10px;background:#1f9cee;color:#fff;border:none;border-radius:8px;cursor:pointer;font-weight:600;">View Profile</button>
+          ${data.allow_dms === false && !data.is_own_profile ?
+            `<button class="chat-account-btn" data-userid="${userId}" disabled style="flex:1;padding:10px;background:#94a3b8;color:#fff;border:none;border-radius:8px;cursor:not-allowed;font-weight:600;">Chat (disabled)</button>` :
+            `<button class="chat-account-btn" data-userid="${userId}" style="flex:1;padding:10px;background:#2dd4bf;color:#fff;border:none;border-radius:8px;cursor:pointer;font-weight:600;">Chat</button>`
+          }
+        </div>
+
+        <div class="profile-section socials" style="border-top:1px solid #f0f0f0;padding-top:8px;">
+          <strong style="font-size:0.9rem;display:block;margin-bottom:6px;color:#333;">Social</strong>
+          ${socialLine('youtube','YouTube')}
+          ${socialLine('instagram','Instagram')}
+          ${socialLine('tiktok','TikTok')}
+          ${socialLine('twitch','Twitch')}
+          ${socialLine('github','GitHub')}
+        </div>
+
+        <div class="profile-section achievements" style="border-top:1px solid #f0f0f0;padding-top:8px;">
+          <strong style="font-size:0.9rem;display:block;margin-bottom:6px;color:#333;">Achievements</strong>
+          ${achievements.length ? achievements.map(a => `<div style="font-size:0.9rem;color:#333;">${a}</div>`).join('') : '<div style="font-size:0.9rem;color:#999;">No achievements</div>'}
+        </div>
+
+        <div class="profile-section chat" style="border-top:1px solid #f0f0f0;padding-top:8px;">
+          <strong style="font-size:0.9rem;display:block;margin-bottom:6px;color:#333;">Chat</strong>
+          <div style="font-size:0.9rem;color:#666;">Start a private conversation with ${username}.</div>
+        </div>
+      </div>
+    `;
+
+    // wire up View Profile button
+    popup.querySelectorAll('.view-account-btn').forEach(btn => {
+      btn.addEventListener('click', (ev) => {
+        const id = btn.dataset.userid || userId;
+        // If the profile belongs to the current user, take them to their account dashboard
+        if (data && data.is_own_profile) {
+          window.location.href = '/account/';
+          return;
+        }
+        // Otherwise go to the public/read-only profile page
+        window.location.href = `/accounts/user/${id}/public-profile/`;
+      });
+    });
+
+    // wire up Chat button: navigate to full chat page
+    popup.querySelectorAll('.chat-account-btn').forEach(btn => {
+      btn.addEventListener('click', (ev) => {
+        const id = btn.dataset.userid || userId;
+        window.location.href = `/accounts/chat/${id}/`;
+      });
+    });
 
     // Position below the pfp, keeping it on-screen
     const rect = userPfp.getBoundingClientRect();
@@ -332,15 +482,55 @@ document.addEventListener('click', async (e) => {
     if (left + 320 > window.innerWidth - 8) left = window.innerWidth - 320 - 8;
 
     // Ensure popup stays within viewport vertically
-    if (top + 200 > window.innerHeight) {
-      top = rect.top - 200 - 8;
+    // Reserve space for popup; when it has chat thread + composer it can be ~500px tall
+    const estimatedPopupHeight = 500;
+    const viewportBottom = window.innerHeight - 20; // 20px margin from bottom
+    if (top + estimatedPopupHeight > viewportBottom) {
+      // Try positioning above
+      const topAbove = rect.top - estimatedPopupHeight - 8;
+      if (topAbove >= 20) {
+        top = topAbove;
+      } else {
+        // Not enough space above either; position below but add max-height and overflow
+        top = rect.bottom + 8;
+      }
     }
 
     popup.style.left = `${left}px`;
     popup.style.top = `${top}px`;
+    
+    // Add max-height and overflow scrolling to ensure popup doesn't overflow viewport
+    popup.style.maxHeight = `${Math.max(300, window.innerHeight - top - 20)}px`;
+    popup.style.overflowY = 'auto';
+    popup.style.overflowX = 'hidden';
 
     document.body.appendChild(popup);
     activeProfilePopup = popup;
+
+    // Defensive: ensure Chat button exists even if popup HTML rendering missed it
+    try {
+      const actions = popup.querySelector('.profile-actions');
+      if (actions && !actions.querySelector('.chat-account-btn')) {
+        const chatBtn = document.createElement('button');
+        chatBtn.className = 'chat-account-btn';
+        chatBtn.dataset.userid = userId;
+        if (data.allow_dms === false && !data.is_own_profile) {
+          chatBtn.disabled = true;
+          chatBtn.textContent = 'Chat (disabled)';
+          chatBtn.style.cssText = 'flex:1;padding:10px;background:#94a3b8;color:#fff;border:none;border-radius:8px;cursor:not-allowed;font-weight:600;';
+        } else {
+          chatBtn.textContent = 'Chat';
+          chatBtn.style.cssText = 'flex:1;padding:10px;background:#2dd4bf;color:#fff;border:none;border-radius:8px;cursor:pointer;font-weight:600;';
+        }
+        actions.appendChild(chatBtn);
+        // attach same handler
+        chatBtn.addEventListener('click', async (ev) => {
+          // forward to existing handler by triggering click on any existing one
+          const existing = popup.querySelector('.chat-account-btn');
+          if (existing && existing !== chatBtn) existing.click();
+        });
+      }
+    } catch (err) { console.warn('profile popup: chat button ensure failed', err); }
 
     // Auto-close after 5 seconds
     setTimeout(() => {
@@ -362,8 +552,12 @@ document.addEventListener('click', async (e) => {
   const followBtn = e.target.closest('.follow-btn');
   if (!followBtn) return;
 
-  const authorId = followBtn.dataset.authorId;
-  if (!authorId) return;
+  // Allow multiple attribute names used across templates: data-author-id, data-user-id, data-userid
+  const authorId = followBtn.dataset.authorId || followBtn.dataset.userId || followBtn.dataset.userid || followBtn.getAttribute('data-author-id') || followBtn.getAttribute('data-user-id');
+  if (!authorId) {
+    console.warn('[static/script.js] follow-btn clicked but no author/user id found on element', followBtn);
+    return;
+  }
 
   try {
     const res = await fetch(`/posts/users/${authorId}/follow/`, {

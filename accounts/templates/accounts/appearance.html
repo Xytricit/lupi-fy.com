@@ -1,0 +1,106 @@
+{% extends 'dashboardhome.html' %}
+{% load static %}
+
+{% block content %}
+  <div style="max-width:920px;margin:28px auto;padding:20px;background:var(--card-bg);color:var(--text-dark);border-radius:12px;box-shadow:0 8px 32px rgba(0,0,0,0.08)">
+    <h2 style="margin-bottom:12px">Appearance</h2>
+    <p style="color:var(--secondary-text);margin-bottom:16px">Choose your preferred theme and customize how Lupify looks. Preview changes live below.</p>
+    <form method="post" id="appearanceForm">
+      {% csrf_token %}
+      <div style="display:flex;gap:24px;flex-wrap:wrap;">
+        <div style="flex:1;min-width:260px">
+          <h4 style="margin:6px 0">Theme</h4>
+          <div style="display:flex;flex-direction:column;gap:8px;">
+            <label style="color:var(--text-dark)"><input type="radio" name="theme" value="light" {% if request.user.theme_preference == 'light' %}checked{% endif %}> Light</label>
+            <label style="color:var(--text-dark)"><input type="radio" name="theme" value="dark" {% if request.user.theme_preference == 'dark' %}checked{% endif %}> Dark</label>
+            <label style="color:var(--text-dark)"><input type="radio" name="theme" value="system" {% if request.user.theme_preference == 'system' %}checked{% endif %}> System</label>
+          </div>
+
+          <h4 style="margin:14px 0 6px">Accent Color</h4>
+          <input type="hidden" name="accent_color" id="accentColorInput" value="{{ request.user.accent_color|default:'#1f9cee' }}">
+          <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+            <button type="button" class="accent-choice" data-color="#1f9cee" style="background:#1f9cee;width:36px;height:36px;border-radius:8px;border:2px solid transparent;cursor:pointer"></button>
+            <button type="button" class="accent-choice" data-color="#7c3aed" style="background:#7c3aed;width:36px;height:36px;border-radius:8px;border:2px solid transparent;cursor:pointer"></button>
+            <button type="button" class="accent-choice" data-color="#10b981" style="background:#10b981;width:36px;height:36px;border-radius:8px;border:2px solid transparent;cursor:pointer"></button>
+            <button type="button" class="accent-choice" data-color="#ec4899" style="background:#ec4899;width:36px;height:36px;border-radius:8px;border:2px solid transparent;cursor:pointer"></button>
+          </div>
+
+          <h4 style="margin:14px 0 6px">Font Size</h4>
+          <select name="font_size" id="fontSizeSelect" style="padding:8px;border-radius:8px;border:1px solid var(--border-color)">
+            <option value="14">Normal</option>
+            <option value="16">Large</option>
+            <option value="18">Extra Large</option>
+          </select>
+        </div>
+
+        <div style="flex:1;min-width:320px">
+          <h4 style="margin:6px 0">Preview</h4>
+          <div id="appearancePreview" style="padding:14px;border-radius:8px;border:1px solid var(--border-color);background:var(--card-bg)">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+              <div style="font-weight:700;font-size:1.1rem;color:var(--text-dark)">Lupify</div>
+              <div style="background:var(--primary);color:#fff;padding:6px 10px;border-radius:8px;font-weight:600">Create</div>
+            </div>
+            <div style="background:var(--muted-bg, #0f172a);padding:12px;border-radius:8px;color:var(--secondary-text)">
+              <div style="font-weight:700;color:var(--text-dark)">Sample Post Title</div>
+              <div style="margin-top:6px;color:var(--secondary-text)">This is a preview of how posts and cards will look in the selected theme.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div style="margin-top:18px;display:flex;gap:12px;align-items:center">
+        <button class="btn-primary" type="submit">Save</button>
+        <a href="{% url 'account_dashboard' %}" style="color:var(--primary);">Cancel</a>
+      </div>
+    </form>
+    <script>
+      (function(){
+        const form = document.getElementById('appearanceForm');
+        const accentButtons = document.querySelectorAll('.accent-choice');
+        const fontSelect = document.getElementById('fontSizeSelect');
+        const themeRadios = document.querySelectorAll('input[name="theme"]');
+        const root = document.documentElement;
+        const accentInput = document.getElementById('accentColorInput');
+        const userFontSize = parseInt('{{ request.user.font_size|default:14 }}',10) || null;
+
+        function initAccent(){
+          const cur = (accentInput && accentInput.value) ? accentInput.value.trim() : (getComputedStyle(root).getPropertyValue('--primary').trim() || '#1f9cee');
+          accentButtons.forEach(b=>{
+            if(b.dataset.color.toLowerCase() === cur.toLowerCase()) b.style.borderColor = '#fff'; else b.style.borderColor = 'transparent';
+          });
+          // ensure root primary matches stored accent
+          if(cur) root.style.setProperty('--primary', cur);
+        }
+
+        accentButtons.forEach(btn => {
+          btn.addEventListener('click', ()=>{
+            const c = btn.dataset.color;
+            root.style.setProperty('--primary', c);
+            if(accentInput) accentInput.value = c;
+            accentButtons.forEach(b=> b.style.borderColor = 'transparent');
+            btn.style.borderColor = '#fff';
+          });
+        });
+
+        // initialize font selector from stored user preference or document font-size
+        function initFontSelect(){
+          const fs = userFontSize || parseInt(getComputedStyle(document.documentElement).fontSize,10) || 14;
+          document.documentElement.style.fontSize = fs + 'px';
+          for(const opt of fontSelect.options){ if(parseInt(opt.value,10)===fs){ opt.selected = true; break; } }
+        }
+        fontSelect.addEventListener('change', ()=>{ document.documentElement.style.fontSize = fontSelect.value + 'px'; });
+
+        // Live preview theme switching
+        themeRadios.forEach(r => r.addEventListener('change', ()=>{
+          const v = document.querySelector('input[name="theme"]:checked').value;
+          if(v === 'dark') document.documentElement.setAttribute('data-theme','dark');
+          else if(v === 'light') document.documentElement.setAttribute('data-theme','light');
+          else document.documentElement.removeAttribute('data-theme');
+        }));
+
+        // init
+        initAccent(); initFontSelect();
+      })();
+    </script>
+  </div>
+{% endblock %}

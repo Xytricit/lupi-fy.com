@@ -6,94 +6,19 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Letter Set Game - Lupify</title>
-    <link rel="stylesheet" href="{% static 'css/main.css' %}">
-    <style>
-        :root {
-            --primary: #1f9cee;
-            --primary-dark: #167ac6;
-            --accent: #fec76f;
-            --bg: #f8f9fa;
-            --card-bg: #ffffff;
-            --text-dark: #111827;
-            --secondary-text: #6b7280;
-            --success: #10b981;
-            --danger: #ef4444;
-        }
+    <link rel="stylesheet" href="{% static 'style.css' %}">
+    <link rel="stylesheet" href="{% static 'css/letter_set_game-inline.css' %}">
 
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: 'Segoe UI', sans-serif;
-            background: var(--bg);
-            color: var(--text-dark);
-        }
-
-        .game-container {
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 20px;
-        }
-
-        .back-button {
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            background: var(--primary);
-            color: white;
-            text-decoration: none;
-            padding: 12px 24px;
-            border-radius: 8px;
-            margin-bottom: 20px;
-            font-weight: 600;
-            transition: background 0.3s;
-        }
-
-        .back-button:hover {
-            background: var(--primary-dark);
-        }
-
-        .game-layout {
-            display: grid;
-            grid-template-columns: 1fr 2fr 1fr;
-            gap: 20px;
-            margin-bottom: 30px;
-        }
-
-        .letter-panel {
-            background: white;
-            border-radius: 12px;
-            padding: 20px;
-            box-shadow: 0 6px 18px rgba(0,0,0,0.05);
-        }
-
-        .panel-title {
-            font-weight: 700;
-            margin-bottom: 15px;
-            color: var(--primary);
-            font-size: 1.1rem;
-        }
-
-        .letters-display {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 10px;
-            margin-bottom: 20px;
-        }
-
-        .letter-box {
-            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
-            color: white;
-            padding: 15px;
-            border-radius: 8px;
-            text-align: center;
-            font-weight: 700;
-            font-size: 1.5rem;
-            box-shadow: 0 4px 12px rgba(31, 156, 238, 0.3);
-        }
+        <script>
+        // Initialize theme early to ensure site-wide dark mode applies
+        (function(){
+            const serverPref = "{{ request.user.theme_preference|default:'' }}";
+            let pref = serverPref || null;
+            try { const local = localStorage.getItem('theme_pref'); if(!pref && local) pref = local; }catch(e){}
+            if(!pref) pref = 'light';
+            document.documentElement.setAttribute('data-theme', pref);
+        })();
+        </script>
 
         .score-display {
             background: #fef3c7;
@@ -116,7 +41,7 @@
         }
 
         .main-panel {
-            background: white;
+            background: var(--card-bg);
             border-radius: 12px;
             padding: 30px;
             box-shadow: 0 6px 18px rgba(0,0,0,0.05);
@@ -239,7 +164,7 @@
         }
 
         .chat-panel {
-            background: white;
+            background: var(--card-bg);
             border-radius: 12px;
             display: flex;
             flex-direction: column;

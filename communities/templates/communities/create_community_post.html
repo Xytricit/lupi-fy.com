@@ -3,7 +3,14 @@
 {% block title %}Create Post{% endblock %}
 
 {% block content %}
-<div class="create-wrapper" style="position:relative; max-width:600px; margin:20px auto; padding:20px; background:#fff; border-radius:10px; box-shadow:0 2px 8px rgba(0,0,0,0.1);">
+<style>
+#imageEditorModal[style*="display: flex"] {
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+}
+</style>
+<div class="create-wrapper" style="position:relative; max-width:600px; margin:20px auto; padding:20px; background:var(--card-bg); border-radius:10px; box-shadow:0 2px 8px rgba(0,0,0,0.1);">
     <h2 style="text-align:center; margin-bottom:20px;">Create a Post</h2>
     <form method="post" enctype="multipart/form-data" style="display:flex; flex-direction:column; gap:15px;">
         {% csrf_token %}
@@ -16,8 +23,8 @@
                    value="{% if selected_community %}{{ selected_community.name }}{% endif %}">
             <input type="hidden" id="id_community_select" name="community" required
                    value="{% if selected_community %}{{ selected_community.id }}{% endif %}">
-            <div id="community_suggestions" 
-                 style="border:1px solid #ccc; max-height:200px; overflow-y:auto; display:none; position:absolute; background:white; width:100%; z-index:10; border-radius:5px;">
+              <div id="community_suggestions" 
+                  style="border:1px solid #ccc; max-height:200px; overflow-y:auto; display:none; position:absolute; background:var(--card-bg); width:100%; z-index:10; border-radius:5px;">
             </div>
         </div>
 
@@ -31,23 +38,62 @@
         <div>
             {{ form.content.label_tag }}<br>
             {{ form.content }}
+            <style>
+                #id_content { resize: none; min-height: 120px; }
+            </style>
         </div>
 
         <!-- Post Image -->
         <div>
             {{ form.image.label_tag }}<br>
             {{ form.image }}
-            <small style="color: var(--muted); display: block; margin-top: 5px;">Max size: 5MB. You can crop/resize before uploading.</small>
+            <small style="color: var(--muted); display: block; margin-top: 5px;">Max size: 5MB. Use the editor to position and scale your image — final result will be square.</small>
             {% if form.image.errors %}
                 <div style="color: #c53030; margin-top: 5px;">{{ form.image.errors }}</div>
             {% endif %}
-            <img id="imagePreview" src="#" alt="Image Preview" style="display:none; max-width:100%; margin-top:10px; border-radius:5px;"/>
-            <canvas id="cropCanvas" style="display:none; max-width:100%; margin-top:10px; border-radius:5px;"></canvas>
-            <div id="cropControls" style="display:none; margin-top:10px; gap:10px; display:none;">
-                <label>Crop the image (drag to select area):</label>
-                <div style="display:flex; gap:10px; margin-top:10px;">
-                    <button type="button" id="resetCrop" class="btn" style="padding:8px 16px; background:#6b7280; color:white; border:none; border-radius:5px; cursor:pointer;">Reset</button>
-                    <button type="button" id="applyCrop" class="btn" style="padding:8px 16px; background:#1f9cee; color:white; border:none; border-radius:5px; cursor:pointer;">Apply Crop</button>
+
+            <!-- Image editor modal triggered on file select -->
+                <div id="imageEditorModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); align-items:center; justify-content:center; z-index:10000;">
+                <div style="background:var(--card-bg); width:95%; height:95vh; max-width:900px; border-radius:10px; padding:12px; box-shadow:0 12px 36px rgba(0,0,0,0.35); display:flex; flex-direction:column; gap:8px;">
+                    <div style="display:flex; gap:8px; align-items:center; justify-content:space-between; flex-shrink:0;">
+                        <strong style="font-size:0.9rem;">Middle grid shows final square</strong>
+                        <div style="display:flex; gap:8px; align-items:center;">
+                            <label style="font-size:0.8rem; color:#666; white-space:nowrap;">Zoom:</label>
+                            <input id="imageZoom" type="range" min="0.5" max="2" step="0.01" value="1" style="width:120px;">
+                            <label style="font-size:0.8rem; color:#666; white-space:nowrap; margin-left:8px; display:flex; align-items:center; gap:6px;"> 
+                                <input id="enhanceResolution" type="checkbox" style="width:16px;height:16px;"> Enhance
+                            </label>
+                        </div>
+                    </div>
+
+                    <div id="editorArea" style="position:relative; width:100%; flex:1; min-height:250px; background:linear-gradient(180deg, #fafafa, #f3f4f6); border-radius:12px; overflow:hidden; touch-action:none; border:1px solid rgba(0,0,0,0.06); box-shadow:0 10px 30px rgba(0,0,0,0.06);">
+                        <img id="editorImage" src="" alt="Editor Image" style="position:absolute; left:50%; top:50%; transform:translate(-50%,-50%) scale(1); will-change:transform; cursor:grab; user-select:none; max-width:none; max-height:none;">
+                        <!-- Subtle grid lines to indicate final crop (center grid is the crop area) -->
+                        <div style="position:absolute; inset:0; pointer-events:none; background-image: linear-gradient(rgba(255,255,255,0.6) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.6) 1px, transparent 1px); background-size:33.33% 33.33%; mix-blend-mode:overlay; z-index:10;"></div>
+                        <!-- Shade everything outside the center cell using four panels -->
+                        <div style="position:absolute; left:0; top:0; right:0; height:33.33%; background:rgba(0,0,0,0.45); z-index:12; pointer-events:none;"></div>
+                        <div style="position:absolute; left:0; top:33.33%; width:33.33%; bottom:33.33%; background:rgba(0,0,0,0.45); z-index:12; pointer-events:none;"></div>
+                        <div style="position:absolute; right:0; top:33.33%; width:33.33%; bottom:33.33%; background:rgba(0,0,0,0.45); z-index:12; pointer-events:none;"></div>
+                        <div style="position:absolute; left:0; right:0; bottom:0; height:33.33%; background:rgba(0,0,0,0.45); z-index:12; pointer-events:none;"></div>
+                        <!-- Gentle highlight around the center crop cell -->
+                        <div style="position:absolute; width:33.33%; height:33.33%; left:33.33%; top:33.33%; pointer-events:none; border-radius:8px; box-shadow:0 6px 20px rgba(0,0,0,0.08) inset; z-index:13; border:2px solid rgba(255,255,255,0.06);"></div>
+                    </div>
+
+                    <div style="display:flex; gap:8px; justify-content:flex-end; flex-shrink:0;">
+                        <button type="button" id="editorCancel" class="btn" style="padding:6px 12px; background:#e5e7eb; border-radius:6px; border:none; cursor:pointer; font-size:0.9rem;">Cancel</button>
+                        <button type="button" id="editorOk" class="btn" style="padding:6px 12px; background:#1f9cee; color:#fff; border-radius:6px; border:none; cursor:pointer; font-size:0.9rem;">OK</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- final preview overlay displayed on top of page after applying edit -->
+                    <div id="imagePreviewOverlay" style="display:none; position:relative; margin-top:12px;">
+                <div style="position:relative; width:100%; margin:0 auto; border-radius:10px; overflow:hidden; box-shadow:0 8px 24px rgba(0,0,0,0.12);">
+                    <!-- Make preview match dashboard box: 90vw max-width, square -->
+                    <div style="width:90vw; max-width:980px; aspect-ratio:1/1; background:#f3f4f6; position:relative; margin:0 auto;">
+                        <img id="finalPreview" src="" alt="Final Preview" style="width:100% !important; height:100% !important; object-fit:cover !important; display:block; position:absolute; inset:0;">
+                        <div id="finalPreviewShade" style="position:absolute; inset:0; background:linear-gradient(90deg, rgba(255,255,255,0.0) 0%, rgba(0,0,0,0.06) 50%, rgba(255,255,255,0.0) 100%); pointer-events:none;"></div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -117,133 +163,180 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     });
 
-    // Image preview and validation
+    // Image editor & preview handling
     const imageInput = document.getElementById("id_image");
-    const preview = document.getElementById("imagePreview");
-    const cropCanvas = document.getElementById("cropCanvas");
-    const cropControls = document.getElementById("cropControls");
-    const resetCrop = document.getElementById("resetCrop");
-    const applyCrop = document.getElementById("applyCrop");
-    const MAX_SIZE = 5 * 1024 * 1024; // 5MB
-    let originalImage = null;
+    const editorModal = document.getElementById('imageEditorModal');
+    const editorImage = document.getElementById('editorImage');
+    const editorArea = document.getElementById('editorArea');
+    const zoomInput = document.getElementById('imageZoom');
+    const editorCancel = document.getElementById('editorCancel');
+    const editorOk = document.getElementById('editorOk');
+    const previewOverlay = document.getElementById('imagePreviewOverlay');
+    const finalPreview = document.getElementById('finalPreview');
+    const MAX_SIZE = 8 * 1024 * 1024;
+
+    let imgNaturalW = 0, imgNaturalH = 0;
+    let drag = { active: false, startX: 0, startY: 0, offsetX: 0, offsetY: 0 };
+    let currentScale = 1;
     let originalFileName = '';
+
+    function openEditorWithDataURL(dataURL, filename) {
+        originalFileName = filename || 'image.jpg';
+        editorImage.onload = () => {
+            imgNaturalW = editorImage.naturalWidth;
+            imgNaturalH = editorImage.naturalHeight;
+            currentScale = 1;
+            zoomInput.value = 1;
+            drag.offsetX = 0; drag.offsetY = 0;
+            editorImage.style.transform = `translate(-50%,-50%) scale(${currentScale})`;
+            editorModal.style.display = 'flex';
+        };
+        editorImage.onerror = () => {
+            console.error('Failed to load image in editor');
+            alert('Failed to load image. Please try another file.');
+            editorModal.style.display = 'none';
+        };
+        editorImage.src = dataURL;
+    }
+
+    editorArea.addEventListener('pointerdown', (ev) => {
+        if (ev.target !== editorImage && ev.target !== editorArea) return;
+        ev.preventDefault();
+        drag.active = true;
+        drag.startX = ev.clientX;
+        drag.startY = ev.clientY;
+        editorImage.style.cursor = 'grabbing';
+        editorArea.setPointerCapture(ev.pointerId);
+    });
+    editorArea.addEventListener('pointermove', (ev) => {
+        if (!drag.active) return;
+        ev.preventDefault();
+        const dx = ev.clientX - drag.startX;
+        const dy = ev.clientY - drag.startY;
+        drag.startX = ev.clientX;
+        drag.startY = ev.clientY;
+        drag.offsetX += dx;
+        drag.offsetY += dy;
+        updateImageTransform();
+    });
+    editorArea.addEventListener('pointerup', (ev) => {
+        if (drag.active) {
+            drag.active = false;
+            editorImage.style.cursor = 'grab';
+            try { editorArea.releasePointerCapture(ev.pointerId); } catch(e){}
+        }
+    });
+    editorArea.addEventListener('pointercancel', (ev) => {
+        drag.active = false;
+        editorImage.style.cursor = 'grab';
+        try { editorArea.releasePointerCapture(ev.pointerId); } catch(e){}
+    });
+
+    function updateImageTransform() {
+        editorImage.style.transform = `translate(calc(-50% + ${drag.offsetX}px), calc(-50% + ${drag.offsetY}px)) scale(${currentScale})`;
+    }
+
+    zoomInput.addEventListener('input', (e) => {
+        currentScale = parseFloat(e.target.value);
+        updateImageTransform();
+    });
+
+    editorCancel.addEventListener('click', () => {
+        editorModal.style.display = 'none';
+    });
 
     if (imageInput) {
         imageInput.addEventListener('change', (e) => {
             const file = e.target.files[0];
-            if (!file) {
-                preview.style.display = 'none';
-                cropCanvas.style.display = 'none';
-                cropControls.style.display = 'none';
-                preview.src = "#";
-                return;
-            }
-
-            // Check file size
+            if (!file) return;
             if (file.size > MAX_SIZE) {
-                alert(`Image size must be less than 5MB. Current size: ${(file.size / 1024 / 1024).toFixed(2)}MB\n\nPlease crop or compress your image.`);
-                imageInput.value = '';
-                preview.style.display = 'none';
-                cropCanvas.style.display = 'none';
-                cropControls.style.display = 'none';
-                return;
+                if (!confirm('Image is large and will be compressed/resized automatically. Continue?')) {
+                    imageInput.value = '';
+                    return;
+                }
             }
 
-            originalFileName = file.name;
             const reader = new FileReader();
-            reader.onload = (event) => {
-                const img = new Image();
-                img.onload = () => {
-                    originalImage = img;
-                    preview.src = event.target.result;
-                    preview.style.display = 'block';
-                    cropCanvas.style.display = 'block';
-                    cropControls.style.display = 'flex';
-                    setupCropCanvas();
-                };
-                img.src = event.target.result;
+            reader.onload = (ev) => {
+                openEditorWithDataURL(ev.target.result, file.name);
             };
             reader.readAsDataURL(file);
         });
     }
 
-    function setupCropCanvas() {
-        if (!originalImage) return;
-        
-        const ctx = cropCanvas.getContext('2d');
-        const maxWidth = 400;
-        const scale = maxWidth / originalImage.width;
-        
-        cropCanvas.width = originalImage.width * scale;
-        cropCanvas.height = originalImage.height * scale;
-        ctx.drawImage(originalImage, 0, 0, cropCanvas.width, cropCanvas.height);
-    }
+    editorOk.addEventListener('click', () => {
+        try {
+            const areaRect = editorArea.getBoundingClientRect();
+            // Use higher output size when enhance is checked
+            const enhance = document.getElementById('enhanceResolution') && document.getElementById('enhanceResolution').checked;
+            // Match dashboard display: preferred side is 90vw capped to a sensible pixel max (980px).
+            const displaySide = Math.min(Math.floor(window.innerWidth * 0.9), 980);
+            // Produce higher resolution when enhance is checked (2x), but cap at 2000px.
+            const OUTPUT_SIZE = Math.min(enhance ? displaySide * 2 : displaySide, 2000);
+            const canvas = document.createElement('canvas');
+            canvas.width = OUTPUT_SIZE;
+            canvas.height = OUTPUT_SIZE;
+            const ctx = canvas.getContext('2d');
+            // improve scaling quality
+            ctx.fillStyle = '#fff';
+            ctx.fillRect(0,0,OUTPUT_SIZE,OUTPUT_SIZE);
+            ctx.imageSmoothingEnabled = true;
+            try { ctx.imageSmoothingQuality = 'high'; } catch(e) {}
 
-    if (resetCrop) {
-        resetCrop.addEventListener('click', (e) => {
-            e.preventDefault();
-            setupCropCanvas();
-        });
-    }
+            const centerX = imgNaturalW / 2;
+            const centerY = imgNaturalH / 2;
+            const centerOffsetXNat = drag.offsetX / currentScale;
+            const centerOffsetYNat = drag.offsetY / currentScale;
 
-    if (applyCrop) {
-        applyCrop.addEventListener('click', (e) => {
-            e.preventDefault();
-            if (!originalImage) return;
-            
-            const canvasWidth = cropCanvas.width;
-            const canvasHeight = cropCanvas.height;
-            
-            // Get the current canvas image data and reduce size by 20%
-            const newWidth = canvasWidth * 0.8;
-            const newHeight = canvasHeight * 0.8;
-            const startX = (canvasWidth - newWidth) / 2;
-            const startY = (canvasHeight - newHeight) / 2;
-            
-            // Create temporary canvas for cropping
-            const tempCanvas = document.createElement('canvas');
-            tempCanvas.width = newWidth;
-            tempCanvas.height = newHeight;
-            const tempCtx = tempCanvas.getContext('2d');
-            
-            // Draw cropped portion
-            tempCtx.drawImage(
-                cropCanvas,
-                startX,
-                startY,
-                newWidth,
-                newHeight,
-                0,
-                0,
-                newWidth,
-                newHeight
-            );
-            
-            // Update the visible canvas to show cropped version
-            cropCanvas.width = newWidth;
-            cropCanvas.height = newHeight;
-            const ctx = cropCanvas.getContext('2d');
-            ctx.drawImage(tempCanvas, 0, 0);
-            
-            // Convert to blob and update file input
-            tempCanvas.toBlob((blob) => {
-                const dataTransfer = new DataTransfer();
-                const croppedFile = new File([blob], originalFileName, { type: 'image/jpeg' });
-                dataTransfer.items.add(croppedFile);
-                imageInput.files = dataTransfer.files;
-                
-                // Update preview with cropped image
+            // The visible crop box in the editor is the center 1/3 x 1/3 area.
+            const areaRect = editorArea.getBoundingClientRect();
+            const cropDisplaySize = Math.min(areaRect.width, areaRect.height) * (1/3);
+            // Convert displayed crop size to natural image pixels taking currentScale into account
+            const cropSizeNat = cropDisplaySize / currentScale;
+
+            const cropCenterX = centerX - centerOffsetXNat;
+            const cropCenterY = centerY - centerOffsetYNat;
+
+            const sx = Math.round(cropCenterX - (cropSizeNat/2));
+            const sy = Math.round(cropCenterY - (cropSizeNat/2));
+            const sSize = Math.round(cropSizeNat);
+
+            const clampedSx = Math.max(0, Math.min(imgNaturalW - 1, sx));
+            const clampedSy = Math.max(0, Math.min(imgNaturalH - 1, sy));
+            const clampedSize = Math.max(1, Math.min(imgNaturalW - clampedSx, Math.min(imgNaturalH - clampedSy, sSize)));
+
+            ctx.drawImage(editorImage, clampedSx, clampedSy, clampedSize, clampedSize, 0, 0, OUTPUT_SIZE, OUTPUT_SIZE);
+
+            // If the crop used the full source smaller dimension (perfect fit), hide the preview shade.
+            const sourceMin = Math.min(imgNaturalW, imgNaturalH);
+            const perfectFit = (clampedSize >= sourceMin - 1);
+
+            const jpegQuality = enhance ? 0.92 : 0.8;
+            canvas.toBlob((blob) => {
+                const dt = new DataTransfer();
+                const name = originalFileName.replace(/\.[^.]+$/, '') + '.jpg';
+                const newFile = new File([blob], name, { type: 'image/jpeg' });
+                dt.items.add(newFile);
+                imageInput.files = dt.files;
+
                 const reader = new FileReader();
-                reader.onload = (event) => {
-                    preview.src = event.target.result;
-                    cropControls.style.display = 'none';
-                    cropCanvas.style.display = 'none';
-                    alert('Image cropped successfully! Ready to post.');
+                reader.onload = (ev) => {
+                    finalPreview.src = ev.target.result;
+                    previewOverlay.style.display = 'block';
+                    try {
+                        const shade = document.getElementById('finalPreviewShade');
+                        if (shade) shade.style.display = perfectFit ? 'none' : 'block';
+                    } catch(e){}
                 };
                 reader.readAsDataURL(blob);
-            }, 'image/jpeg', 0.85);
-        });
-    }
+
+                editorModal.style.display = 'none';
+            }, 'image/jpeg', jpegQuality);
+        } catch (err) {
+            console.error('Editor apply error', err);
+            alert('Failed to apply image edit. See console for details.');
+        }
+    });
 });
 </script>
 {% endblock %}

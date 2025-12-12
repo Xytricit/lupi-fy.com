@@ -9,29 +9,43 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('accounts', '0002_customuser_color_alter_customuser_bio'),
+        ("accounts", "0002_customuser_color_alter_customuser_bio"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='customuser',
-            name='suspended_until',
+            model_name="customuser",
+            name="suspended_until",
             field=models.DateTimeField(blank=True, null=True),
         ),
         migrations.AddField(
-            model_name='customuser',
-            name='warning_count',
+            model_name="customuser",
+            name="warning_count",
             field=models.IntegerField(default=0),
         ),
         migrations.CreateModel(
-            name='ModerationReport',
+            name="ModerationReport",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('post_content', models.TextField()),
-                ('banned_words_found', models.TextField()),
-                ('timestamp', models.DateTimeField(default=django.utils.timezone.now)),
-                ('resolved', models.BooleanField(default=False)),
-                ('user', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to=settings.AUTH_USER_MODEL)),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("post_content", models.TextField()),
+                ("banned_words_found", models.TextField()),
+                ("timestamp", models.DateTimeField(default=django.utils.timezone.now)),
+                ("resolved", models.BooleanField(default=False)),
+                (
+                    "user",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        to=settings.AUTH_USER_MODEL,
+                    ),
+                ),
             ],
         ),
     ]

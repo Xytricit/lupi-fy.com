@@ -1,39 +1,149 @@
 # views.py
-from django.shortcuts import render, redirect, get_object_or_404
-from django.contrib.auth.decorators import login_required
-from django.contrib.admin.views.decorators import staff_member_required
-from django.contrib import messages
-from django.utils import timezone
+import json
+import math
 from datetime import timedelta
+from django.contrib.auth import get_user_model
 
-from .models import Post, PostImage, Comment, ModerationReport
-from .forms import PostForm, CommentForm
+from django.contrib import messages
+from django.contrib.admin.views.decorators import staff_member_required
+from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse
+from django.shortcuts import get_object_or_404, redirect, render
+from django.utils import timezone
+
+from .forms import CommentForm, PostForm
+from .models import Comment, ModerationReport, Post, PostImage
+
 # -------------------- Banned words --------------------
 banned_words = [
-    "arse","ass","asshole","bastard","bitch","bollocks","bugger","bullshit","cunt","cock","crap","damn",
-    "dick","dickhead","dyke","fag","faggot","fuck","fucker","fucking","goddamn","goddammit","homo",
-    "jerk","kike","kraut","motherfucker","nigga","nigger","prick","pussy","shit","shithead","slut",
-    "twat","wanker","whore","chink","spic","gook","raghead","camel jockey","sand nigger","coon",
-    "wetback","cracker","fagg","dago","hebe","jap","nip","paki","slant","beaner","honky",
-    "redneck","tranny","tard","idiot","moron","imbecile","retard","loser","scumbag","bimbo","skank",
-    "cockhead","piss","shitface","bollock","tosser","wank","twit","dumbass","dumbfuck","fuckface",
-    "shitbag","cockmunch","jackass","cum","jizz","blowjob","dildo","tit","tits","boobs","clit","vagina",
-    "penis","ejaculate","cumshot","cumslut","anal","anus","fisting","orgasm","masturbate","sex","slutty",
-    "whorish","nude","naked","porn","pornography","pornstar","hooker","escort","pimp","stripper","prostitute"
+    "arse",
+    "ass",
+    "asshole",
+    "bastard",
+    "bitch",
+    "bollocks",
+    "bugger",
+    "bullshit",
+    "cunt",
+    "cock",
+    "crap",
+    "damn",
+    "dick",
+    "dickhead",
+    "dyke",
+    "fag",
+    "faggot",
+    "fuck",
+    "fucker",
+    "fucking",
+    "goddamn",
+    "goddammit",
+    "homo",
+    "jerk",
+    "kike",
+    "kraut",
+    "motherfucker",
+    "nigga",
+    "nigger",
+    "prick",
+    "pussy",
+    "shit",
+    "shithead",
+    "slut",
+    "twat",
+    "wanker",
+    "whore",
+    "chink",
+    "spic",
+    "gook",
+    "raghead",
+    "camel jockey",
+    "sand nigger",
+    "coon",
+    "wetback",
+    "cracker",
+    "fagg",
+    "dago",
+    "hebe",
+    "jap",
+    "nip",
+    "paki",
+    "slant",
+    "beaner",
+    "honky",
+    "redneck",
+    "tranny",
+    "tard",
+    "idiot",
+    "moron",
+    "imbecile",
+    "retard",
+    "loser",
+    "scumbag",
+    "bimbo",
+    "skank",
+    "cockhead",
+    "piss",
+    "shitface",
+    "bollock",
+    "tosser",
+    "wank",
+    "twit",
+    "dumbass",
+    "dumbfuck",
+    "fuckface",
+    "shitbag",
+    "cockmunch",
+    "jackass",
+    "cum",
+    "jizz",
+    "blowjob",
+    "dildo",
+    "tit",
+    "tits",
+    "boobs",
+    "clit",
+    "vagina",
+    "penis",
+    "ejaculate",
+    "cumshot",
+    "cumslut",
+    "anal",
+    "anus",
+    "fisting",
+    "orgasm",
+    "masturbate",
+    "sex",
+    "slutty",
+    "whorish",
+    "nude",
+    "naked",
+    "porn",
+    "pornography",
+    "pornstar",
+    "hooker",
+    "escort",
+    "pimp",
+    "stripper",
+    "prostitute",
 ]
 
 # -------------------- VIEWS --------------------
 
+
 def posts_list_view(request):
-    posts = Post.objects.all().order_by('-created')
+    posts = Post.objects.all().order_by("-created")
     return render(request, "blog/blog_list.html", {"posts": posts})
+
 
 @login_required
 def create_post_view(request):
 
     # suspension check
-    if getattr(request.user, "suspended_until", None) and timezone.now() < request.user.suspended_until:
+    if (
+        getattr(request.user, "suspended_until", None)
+        and timezone.now() < request.user.suspended_until
+    ):
         messages.error(request, "You are suspended and cannot post right now.")
         return redirect("blogs")
 
@@ -60,17 +170,27 @@ def create_post_view(request):
                 banned_words_found=", ".join(banned_found),
             )
 
-            messages.error(request, f"Your post contains banned words: {', '.join(banned_found)}.")
+            messages.error(
+                request, f"Your post contains banned words: {', '.join(banned_found)}."
+            )
             return redirect("create_post")
 
         # post saving
         if form.is_valid():
+            images = request.FILES.getlist("images")
+            if not images:
+                messages.error(request, "Please add at least one image to your post.")
+                return render(
+                    request,
+                    "blog/create_post.html",
+                    {"form": form, "banned_words": banned_words},
+                )
+
             post = form.save(commit=False)
             post.author = request.user
             post.save()
             form.save_m2m()
 
-            images = request.FILES.getlist('images')
             for img in images:
                 post_image = PostImage.objects.create(image=img)
                 post.images.add(post_image)
@@ -83,31 +203,50 @@ def create_post_view(request):
     else:
         form = PostForm()
 
-    return render(request, "blog/create_post.html", {"form": form, "banned_words": banned_words})
+    return render(
+        request, "blog/create_post.html", {"form": form, "banned_words": banned_words}
+    )
 
 
 # -------------------- STAFF MODERATION --------------------
 
+
 @staff_member_required
 def moderation_dashboard(request):
-    reports = ModerationReport.objects.filter(resolved=False).order_by('-timestamp')
+    reports = ModerationReport.objects.filter(resolved=False).order_by("-timestamp")
     return render(request, "blog/moderation_dashboard.html", {"reports": reports})
+
 
 @staff_member_required
 def resolve_report(request, report_id):
     report = get_object_or_404(ModerationReport, id=report_id)
     report.resolved = True
     report.save()
-    return redirect('moderation_dashboard')
+    return redirect("moderation_dashboard")
 
 
 # -------------------- POST DETAIL + COMMENTS --------------------
+
 
 @login_required
 def post_detail_view(request, pk):
     post = get_object_or_404(Post, id=pk)
     # top-level comments (no parent) for display; replies available via comment.replies
-    comments = Comment.objects.filter(post=post, parent__isnull=True).order_by('-created_at')
+    comments = Comment.objects.filter(post=post, parent__isnull=True).order_by(
+        "-created_at"
+    )
+
+    # Increment view count atomically when the detail page is accessed (GET)
+    try:
+        if request.method == "GET":
+            from django.db.models import F
+
+            Post.objects.filter(pk=post.pk).update(views=F("views") + 1)
+            # refresh the local instance so templates see the updated value
+            post.refresh_from_db(fields=["views"])
+    except Exception:
+        # Don't block page render on view-counter failure
+        pass
 
     if request.method == "POST":
         form = CommentForm(request.POST)
@@ -118,34 +257,41 @@ def post_detail_view(request, pk):
             new_comment.save()
 
             if request.is_ajax():  # <-- AJAX request
-                return JsonResponse({
-                    "id": new_comment.id,
-                    "user": new_comment.user.username,
-                    "text": new_comment.text,
-                    "created_at": new_comment.created_at.strftime("%Y-%m-%d %H:%M"),
-                })
+                return JsonResponse(
+                    {
+                        "id": new_comment.id,
+                        "user": new_comment.user.username,
+                        "text": new_comment.text,
+                        "created_at": new_comment.created_at.strftime("%Y-%m-%d %H:%M"),
+                    }
+                )
 
             return redirect("post_detail", pk=post.id)
     else:
         form = CommentForm()
 
-    return render(request, "blog/post_detail.html", {
-        "post": post,
-        "form": form,
-        "comments": comments,
-    })
+    # estimate reading time (200 wpm)
+    content_text = post.content or ""
+    word_count = len(content_text.split())
+    minutes = max(1, math.ceil(word_count / 200))
 
+    return render(
+        request,
+        "blog/post_detail.html",
+        {
+            "post": post,
+            "form": form,
+            "comments": comments,
+            "reading_minutes": minutes,
+            "word_count": word_count,
+        },
+    )
 
-
-from django.http import JsonResponse
-from django.contrib.auth.decorators import login_required
-from django.shortcuts import get_object_or_404
-from .models import Post
 
 @login_required
 def toggle_like(request, post_id):
-    if request.method != 'POST':
-        return JsonResponse({'error': 'POST request required.'}, status=400)
+    if request.method != "POST":
+        return JsonResponse({"error": "POST request required."}, status=400)
 
     post = get_object_or_404(Post, id=post_id)
     user = request.user
@@ -158,17 +304,19 @@ def toggle_like(request, post_id):
         post.dislikes.remove(user)  # Remove dislike if present
         liked = True
 
-    return JsonResponse({
-        'liked': liked,
-        'likes_count': post.likes.count(),
-        'dislikes_count': post.dislikes.count()
-    })
+    return JsonResponse(
+        {
+            "liked": liked,
+            "likes_count": post.likes.count(),
+            "dislikes_count": post.dislikes.count(),
+        }
+    )
 
 
 @login_required
 def toggle_dislike(request, post_id):
-    if request.method != 'POST':
-        return JsonResponse({'error': 'POST request required.'}, status=400)
+    if request.method != "POST":
+        return JsonResponse({"error": "POST request required."}, status=400)
 
     post = get_object_or_404(Post, id=post_id)
     user = request.user
@@ -181,17 +329,19 @@ def toggle_dislike(request, post_id):
         post.likes.remove(user)  # Remove like if present
         disliked = True
 
-    return JsonResponse({
-        'disliked': disliked,
-        'dislikes_count': post.dislikes.count(),
-        'likes_count': post.likes.count()
-    })
+    return JsonResponse(
+        {
+            "disliked": disliked,
+            "dislikes_count": post.dislikes.count(),
+            "likes_count": post.likes.count(),
+        }
+    )
 
 
 @login_required
 def toggle_bookmark(request, post_id):
-    if request.method != 'POST':
-        return JsonResponse({'error': 'POST request required.'}, status=400)
+    if request.method != "POST":
+        return JsonResponse({"error": "POST request required."}, status=400)
 
     post = get_object_or_404(Post, id=post_id)
     user = request.user
@@ -203,18 +353,13 @@ def toggle_bookmark(request, post_id):
         post.bookmarks.add(user)
         bookmarked = True
 
-    return JsonResponse({
-        'bookmarked': bookmarked
-    })
-from django.shortcuts import get_object_or_404
-from django.http import JsonResponse
-from django.contrib.auth.decorators import login_required
-from .models import Comment
+    return JsonResponse({"bookmarked": bookmarked})
+
 
 @login_required
 def like_comment(request, comment_id):
-    if request.method != 'POST':
-        return JsonResponse({'error': 'POST request required.'}, status=400)
+    if request.method != "POST":
+        return JsonResponse({"error": "POST request required."}, status=400)
 
     comment = get_object_or_404(Comment, id=comment_id)
     user = request.user
@@ -227,17 +372,19 @@ def like_comment(request, comment_id):
         comment.dislikes.remove(user)  # optional: remove dislike if previously disliked
         liked = True
 
-    return JsonResponse({
-        'liked': liked,
-        'likes_count': comment.likes.count(),
-        'dislikes_count': comment.dislikes.count()
-    })
+    return JsonResponse(
+        {
+            "liked": liked,
+            "likes_count": comment.likes.count(),
+            "dislikes_count": comment.dislikes.count(),
+        }
+    )
 
 
 @login_required
 def dislike_comment(request, comment_id):
-    if request.method != 'POST':
-        return JsonResponse({'error': 'POST request required.'}, status=400)
+    if request.method != "POST":
+        return JsonResponse({"error": "POST request required."}, status=400)
 
     comment = get_object_or_404(Comment, id=comment_id)
     user = request.user
@@ -250,32 +397,36 @@ def dislike_comment(request, comment_id):
         comment.likes.remove(user)  # optional: remove like if previously liked
         disliked = True
 
-    return JsonResponse({
-        'disliked': disliked,
-        'dislikes_count': comment.dislikes.count(),
-        'likes_count': comment.likes.count()
-    })
-from django.contrib.auth import get_user_model
+    return JsonResponse(
+        {
+            "disliked": disliked,
+            "dislikes_count": comment.dislikes.count(),
+            "likes_count": comment.likes.count(),
+        }
+    )
+
+
 User = get_user_model()
+
 
 @login_required
 def follow_user(request, author_id):
-    if request.method != 'POST':
-        return JsonResponse({'error': 'POST request required.'}, status=400)
+    if request.method != "POST":
+        return JsonResponse({"error": "POST request required."}, status=400)
 
     author = get_object_or_404(User, id=author_id)
     user = request.user
 
     if user == author:
-        return JsonResponse({'error': "You can't follow yourself."}, status=400)
+        return JsonResponse({"error": "You can't follow yourself."}, status=400)
 
     if user in author.followers.all():
         author.followers.remove(user)
-        status = 'Follow'
+        status = "Follow"
     else:
         author.followers.add(user)
-        status = 'Following'
-    return JsonResponse({'status': status, 'followers_count': author.followers.count()})
+        status = "Following"
+    return JsonResponse({"status": status, "followers_count": author.followers.count()})
 
 
 def post_comment(request, post_id):
@@ -302,30 +453,60 @@ def post_comment(request, post_id):
     else:
         parent = None
 
-    comment = Comment.objects.create(post=post, user=request.user, text=text, parent=parent)
+    comment = Comment.objects.create(
+        post=post, user=request.user, text=text, parent=parent
+    )
 
-    return JsonResponse({
-        "id": comment.id,
-        "user": comment.user.username,
-        "text": comment.text,
-        "created_at": comment.created_at.strftime("%b %d, %Y %H:%M")
-    })
+    return JsonResponse(
+        {
+            "id": comment.id,
+            "user": comment.user.username,
+            "text": comment.text,
+            "created_at": comment.created_at.strftime("%b %d, %Y %H:%M"),
+        }
+    )
 
 
 def report_post(request, post_id):
-    if request.method != 'POST':
-        return JsonResponse({'error': 'POST request required.'}, status=400)
+    if request.method != "POST":
+        return JsonResponse({"error": "POST request required."}, status=400)
 
     if not request.user.is_authenticated:
-        return JsonResponse({'error': 'Authentication required.'}, status=401)
+        return JsonResponse({"error": "Authentication required."}, status=401)
 
     post = get_object_or_404(Post, id=post_id)
-    # create a moderation report for staff to review
+
+    # Parse JSON body
+    try:
+        data = json.loads(request.body)
+        reason = data.get("reason", "")
+        details = data.get("details", "")
+    except json.JSONDecodeError:
+        return JsonResponse({"error": "Invalid JSON"}, status=400)
+
+    # Create moderation report with reason and details
+    report_message = f"Reason: {reason}\n\nDetails: {details}"
     ModerationReport.objects.create(
         user=request.user,
+        post=post,
         post_content=post.content,
-        banned_words_found='',
+        banned_words_found=report_message,
     )
 
-    return JsonResponse({'status': 'reported'})
+    return JsonResponse({"success": True, "message": "Report submitted successfully"})
 
+
+@login_required
+def delete_post(request, post_id):
+    if request.method != "POST":
+        return JsonResponse({"error": "POST request required."}, status=400)
+
+    post = get_object_or_404(Post, id=post_id)
+    user = request.user
+    # only author or staff can delete
+    if post.author != user and not getattr(user, "is_staff", False):
+        return JsonResponse({"error": "Permission denied."}, status=403)
+
+    title = post.title
+    post.delete()
+    return JsonResponse({"success": True, "message": f"Deleted post '{title}'"})

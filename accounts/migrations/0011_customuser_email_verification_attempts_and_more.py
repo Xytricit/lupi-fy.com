@@ -6,28 +6,28 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('accounts', '0010_add_allow_public_socials'),
+        ("accounts", "0010_add_allow_public_socials"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='customuser',
-            name='email_verification_attempts',
+            model_name="customuser",
+            name="email_verification_attempts",
             field=models.IntegerField(default=0),
         ),
         migrations.AddField(
-            model_name='customuser',
-            name='email_verification_code',
+            model_name="customuser",
+            name="email_verification_code",
             field=models.CharField(blank=True, max_length=6, null=True),
         ),
         migrations.AddField(
-            model_name='customuser',
-            name='email_verification_expires_at',
+            model_name="customuser",
+            name="email_verification_expires_at",
             field=models.DateTimeField(blank=True, null=True),
         ),
         migrations.AddField(
-            model_name='customuser',
-            name='is_email_verified',
+            model_name="customuser",
+            name="is_email_verified",
             field=models.BooleanField(default=False),
         ),
     ]

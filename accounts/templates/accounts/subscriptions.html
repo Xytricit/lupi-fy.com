@@ -7,10 +7,17 @@
 
     <!-- Header -->
     <div class="feed-header">
-        <h2>Your Subscriptions</h2>
+        <div style="display: flex; align-items: center; gap: 12px;">
+            <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
+                <path d="M6.5 2H20a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H6.5a2.5 2.5 0 0 1 0-5H20"></path>
+            </svg>
+            <h2>Your Subscriptions & Bookmarks</h2>
+        </div>
         <div class="subscription-tabs">
             <button class="tab-btn active" data-target="community-posts">Community Posts</button>
-            <button class="tab-btn" data-target="blog-posts">Blogs</button>
+            <button class="tab-btn" data-target="blog-posts">Blog Articles</button>
+            <button class="tab-btn" data-target="bookmarks" style="display: flex; align-items: center; gap: 6px;"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2"><path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path></svg>Bookmarks</button>
         </div>
     </div>
 
@@ -20,17 +27,17 @@
         <div class="subscription-card" data-type="{% if sub.community %}community{% elif sub.author %}author{% endif %}">
             {% if sub.community %}
                 <h4>{{ sub.community.name }}</h4>
-                <p>{{ sub.community.members.count }} members</p>
+                <p class="card-meta">{{ sub.community.members.count }} <span>members</span></p>
+                {% if sub.community.community_image %}<img src="{{ sub.community.community_image.url }}" alt="{{ sub.community.name }}" class="subscription-thumb">{% endif %}
                 {% if request.user in sub.community.members.all %}
-                    <!-- User is a member: show Leave button which toggles join/leave -->
                     <a class="unsubscribe-btn" href="{% url 'toggle_join_community' sub.community.id %}">Leave</a>
                 {% else %}
-                    <!-- Not a member: show Unsubscribe which only removes subscription -->
                     <a class="unsubscribe-btn" href="{% url 'toggle_subscription' sub.community.id %}">Unsubscribe</a>
                 {% endif %}
             {% elif sub.author %}
                 <h4>{{ sub.author.username }}</h4>
-                <p>Author</p>
+                <p class="card-meta">Author {% if sub.author.is_verified %}<span class="verified-badge">✓</span>{% endif %}</p>
+                {% if sub.author.avatar %}<img src="{{ sub.author.avatar.url }}" alt="{{ sub.author.username }}" class="subscription-thumb">{% endif %}
                 <a class="unsubscribe-btn" href="{% url 'toggle_subscription_author' sub.author.id %}">Unsubscribe</a>
             {% endif %}
         </div>
@@ -39,38 +46,119 @@
 
     <!-- Tab Content -->
     <div class="tab-content">
+        <!-- Community Posts Tab -->
         <div id="community-posts" class="tab-panel active">
             {% if community_posts %}
                 {% for post in community_posts %}
-                <div class="post-card">
-                    <h4>{{ post.title }}</h4>
+                <div class="post-card-subscription">
+                    <div class="post-card-header">
+                        <h4><a href="{% url 'community_post_detail' post.id %}">{{ post.title }}</a></h4>
+                        <div class="post-meta-compact">
+                            <span>{{ post.community.name }}</span>
+                            <span style="display: flex; align-items: center; gap: 4px;"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>{{ post.comments.count }}</span>
+                            <span style="display: flex; align-items: center; gap: 4px;"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>{{ post.likes.count }}</span>
+                        </div>
+                    </div>
                     <p>{{ post.content|truncatewords:25 }}</p>
-                    <a href="{% url 'community_post_detail' post.id %}">Read More</a>
+                    <a href="{% url 'community_post_detail' post.id %}" class="read-more-btn">View Post →</a>
                 </div>
                 {% endfor %}
             {% else %}
-                <p class="no-subs">No posts from your subscribed communities.</p>
+                <div class="empty-state">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="opacity: 0.5; margin: 0 auto 16px; display: block;">
+                        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+                    </svg>
+                    <p>No posts from your subscribed communities yet.</p>
+                </div>
             {% endif %}
         </div>
 
+        <!-- Blog Posts Tab -->
         <div id="blog-posts" class="tab-panel">
             {% if author_posts %}
                 {% for blog in author_posts %}
-                <div class="post-card">
-                    <h4>{{ blog.title }}</h4>
-                    <p>By {{ blog.author.username }}</p>
+                <div class="post-card-subscription">
+                    <div class="post-card-header">
+                        <h4><a href="{% url 'post_detail' blog.id %}">{{ blog.title }}</a></h4>
+                        <div class="post-meta-compact">
+                            <span style="display: flex; align-items: center; gap: 4px;"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>{{ blog.author.username }}</span>
+                            <span style="display: flex; align-items: center; gap: 4px;"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>{{ blog.comments.count }}</span>
+                            <span style="display: flex; align-items: center; gap: 4px;"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>{{ blog.likes.count }}</span>
+                        </div>
+                    </div>
                     <p>{{ blog.content|truncatewords:25 }}</p>
-                    <a href="{% url 'post_detail' blog.id %}">Read More</a>
+                    <a href="{% url 'post_detail' blog.id %}" class="read-more-btn">Read Article →</a>
                 </div>
                 {% endfor %}
             {% else %}
-                <p class="no-subs">No blogs from your subscribed authors.</p>
+                <div class="empty-state">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="opacity: 0.5; margin: 0 auto 16px; display: block;">
+                        <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
+                        <path d="M6.5 2H20a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H6.5a2.5 2.5 0 0 1 0-5H20"></path>
+                    </svg>
+                    <p>No blogs from your subscribed authors yet.</p>
+                </div>
+            {% endif %}
+        </div>
+
+        <!-- Bookmarks Tab -->
+        <div id="bookmarks" class="tab-panel">
+            {% if user.bookmarked_community_posts.all %}
+                <div class="bookmarks-section">
+                    <h5 style="margin-bottom: 16px; color: var(--text-dark);">Community Posts</h5>
+                    {% for post in user.bookmarked_community_posts.all %}
+                    <div class="post-card-subscription">
+                        <div class="post-card-header">
+                            <h4><a href="{% url 'community_post_detail' post.id %}">{{ post.title }}</a></h4>
+                            <div class="post-meta-compact">
+                                <span>{{ post.community.name }}</span>
+                                <span style="display: flex; align-items: center; gap: 4px;"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>{{ post.comments.count }}</span>
+                                <span style="display: flex; align-items: center; gap: 4px;"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>{{ post.likes.count }}</span>
+                            </div>
+                        </div>
+                        <p>{{ post.content|truncatewords:25 }}</p>
+                        <a href="{% url 'community_post_detail' post.id %}" class="read-more-btn">View Post →</a>
+                    </div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+
+            {% if user.bookmarked_posts.all %}
+                <div class="bookmarks-section">
+                    <h5 style="margin-bottom: 16px; color: var(--text-dark);">Blog Articles</h5>
+                    {% for blog in user.bookmarked_posts.all %}
+                    <div class="post-card-subscription">
+                        <div class="post-card-header">
+                            <h4><a href="{% url 'post_detail' blog.id %}">{{ blog.title }}</a></h4>
+                            <div class="post-meta-compact">
+                                <span style="display: flex; align-items: center; gap: 4px;"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>{{ blog.author.username }}</span>
+                                <span style="display: flex; align-items: center; gap: 4px;"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>{{ blog.comments.count }}</span>
+                                <span style="display: flex; align-items: center; gap: 4px;"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>{{ blog.likes.count }}</span>
+                            </div>
+                        </div>
+                        <p>{{ blog.content|truncatewords:25 }}</p>
+                        <a href="{% url 'post_detail' blog.id %}" class="read-more-btn">Read Article →</a>
+                    </div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+
+            {% if not user.bookmarked_community_posts.all and not user.bookmarked_posts.all %}
+                <div class="empty-state">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="opacity: 0.5; margin: 0 auto 16px; display: block;">
+                        <path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path>
+                    </svg>
+                    <p>You haven't bookmarked anything yet. Start bookmarking posts to save them here!</p>
+                </div>
             {% endif %}
         </div>
     </div>
 
     {% else %}
-    <p class="no-subs">You haven't subscribed to any communities or authors yet.</p>
+    <div class="empty-state" style="padding: 60px 20px; text-align: center;">
+        <p style="font-size: 1.1rem;">You haven't subscribed to any communities or authors yet.</p>
+        <p style="color: var(--secondary-text); margin-top: 8px;">Explore communities and follow authors to see their content here.</p>
+    </div>
     {% endif %}
 </div>
 
@@ -82,6 +170,13 @@
     margin-top: 0.5rem;
     margin-bottom: 1rem;
 }
+
+.feed-wrapper { padding: 20px; }
+
+.feed-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; }
+.feed-header h2 { margin:0; font-size:1.5rem; }
+
+.subscription-tabs { align-items:center; }
 
 .tab-btn {
     padding: 0.6rem 1.2rem;
@@ -122,6 +217,14 @@
     min-width: 250px;
 }
 
+.subscription-card:hover { transform: translateY(-4px); box-shadow: 0 12px 30px rgba(2,6,23,0.08); }
+
+.subscription-thumb { width:64px; height:64px; object-fit:cover; border-radius:8px; margin-top:8px; }
+
+.subscription-card h4 { margin:0 0 6px 0; }
+
+.subscription-list { align-items: flex-start; }
+
 .unsubscribe-btn {
     padding: 0.5rem 1rem;
     background: var(--primary);
@@ -138,6 +241,7 @@
     margin-bottom: 1rem;
     border-radius: 12px;
 }
+.post-card-subscription { background: var(--card-bg); box-shadow: var(--card-shadow); padding: 1rem; border-radius: 12px; margin-bottom: 12px; }
 .post-card h4 { margin-bottom: 0.5rem; }
 .post-card p { color: var(--secondary-text); margin-bottom: 0.5rem; }
 .post-card a { color: var(--primary); font-weight: 600; text-decoration: none; }
@@ -149,9 +253,9 @@
     margin-top: 1rem;
 }
 </style>
+</style>
 
 <script>
-// Tab switcher
 const tabs = document.querySelectorAll('.tab-btn');
 const panels = document.querySelectorAll('.tab-panel');
 
@@ -166,7 +270,7 @@ tabs.forEach(tab => {
         });
     });
 });
-// Also filter the subscription cards list to only show matching subscription types
+
 function filterSubscriptionCards(target) {
     const cards = document.querySelectorAll('.subscription-card');
     cards.forEach(card => {
@@ -175,16 +279,16 @@ function filterSubscriptionCards(target) {
             card.style.display = type === 'community' ? '' : 'none';
         } else if (target === 'blog-posts') {
             card.style.display = type === 'author' ? '' : 'none';
+        } else if (target === 'bookmarks') {
+            card.style.display = 'none';
         }
     });
 }
 
-// Hook into existing tab click handlers to also filter cards
 tabs.forEach(tab => tab.addEventListener('click', () => {
     filterSubscriptionCards(tab.dataset.target);
 }));
 
-// Run initial filter based on current active tab
 const initialTab = document.querySelector('.tab-btn.active');
 if (initialTab) filterSubscriptionCards(initialTab.dataset.target);
 </script>

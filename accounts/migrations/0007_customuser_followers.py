@@ -7,13 +7,18 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('accounts', '0006_customuser_public_profile_customuser_social_github_and_more'),
+        (
+            "accounts",
+            "0006_customuser_public_profile_customuser_social_github_and_more",
+        ),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='customuser',
-            name='followers',
-            field=models.ManyToManyField(blank=True, related_name='following', to=settings.AUTH_USER_MODEL),
+            model_name="customuser",
+            name="followers",
+            field=models.ManyToManyField(
+                blank=True, related_name="following", to=settings.AUTH_USER_MODEL
+            ),
         ),
     ]

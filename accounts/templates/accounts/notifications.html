@@ -1,0 +1,42 @@
+{% extends "dashboardhome.html" %}
+{% load static %}
+
+{% block title %}Notifications - Lupify{% endblock %}
+
+{% block content %}
+<div style="max-width: 800px; margin: 0 auto; padding: 20px;">
+  <div style="background: white; border-radius: 12px; padding: 24px; box-shadow: 0 4px 12px rgba(0,0,0,0.05);">
+    <h1 style="margin-top: 0;">Notifications</h1>
+    
+    {% if notifications %}
+      <div style="display: flex; flex-direction: column; gap: 12px;">
+        {% for notif in notifications %}
+          <div class="notif-item" data-notif-id="{{ notif.id }}" {% if notif.related_user %}data-related-user-id="{{ notif.related_user.id }}"{% endif %} style="padding: 16px; border-radius: 8px; border-left: 4px solid 
+            {% if notif.notification_type == 'admin_warning' %}#e11d48{% elif notif.notification_type == 'post_deleted' %}#f97316{% elif notif.notification_type == 'message' %}#0ea5e9{% else %}#6b7280{% endif %};
+            background: #f9fafb; cursor: pointer; transition: background 0.18s;" onmouseover="this.style.background='#f3f4f6'" onmouseout="this.style.background='#f9fafb'">
+            <div style="display: flex; justify-content: space-between; align-items: start; gap: 12px;">
+              <div style="flex: 1;">
+                <strong style="display: block; font-size: 1rem; color: #111;">{{ notif.title }}</strong>
+                <p style="margin: 6px 0 0 0; color: #666; font-size: 0.95rem;">{{ notif.message }}</p>
+                <div style="margin-top: 8px; font-size: 0.85rem; color: #999;">
+                  {{ notif.created_at|date:'M d, Y H:i' }}
+                  {% if not notif.is_read %}
+                    <span style="display: inline-block; width: 8px; height: 8px; background: #3b82f6; border-radius: 50%; margin-left: 8px;"></span>
+                  {% endif %}
+                </div>
+              </div>
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+    {% else %}
+      <div style="text-align: center; padding: 40px 20px; color: #999;">
+        <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="opacity: 0.5; margin: 0 auto 16px; display: block;">
+          <path d="M10.268 21a2 2 0 0 0 3.464 0"/><path d="M3.262 15.326A1 1 0 0 0 4 17h16a1 1 0 0 0 .74-1.673C19.41 13.956 18 12.499 18 8A6 6 0 0 0 6 8c0 4.499-1.411 5.956-2.738 7.326"/>
+        </svg>
+        <p style="margin: 0;">No notifications yet</p>
+      </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

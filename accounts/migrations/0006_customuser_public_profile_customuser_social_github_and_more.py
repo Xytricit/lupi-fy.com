@@ -6,38 +6,38 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('accounts', '0005_alter_subscription_options_and_more'),
+        ("accounts", "0005_alter_subscription_options_and_more"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='customuser',
-            name='public_profile',
+            model_name="customuser",
+            name="public_profile",
             field=models.BooleanField(default=True),
         ),
         migrations.AddField(
-            model_name='customuser',
-            name='social_github',
+            model_name="customuser",
+            name="social_github",
             field=models.URLField(blank=True, max_length=255, null=True),
         ),
         migrations.AddField(
-            model_name='customuser',
-            name='social_instagram',
+            model_name="customuser",
+            name="social_instagram",
             field=models.URLField(blank=True, max_length=255, null=True),
         ),
         migrations.AddField(
-            model_name='customuser',
-            name='social_tiktok',
+            model_name="customuser",
+            name="social_tiktok",
             field=models.URLField(blank=True, max_length=255, null=True),
         ),
         migrations.AddField(
-            model_name='customuser',
-            name='social_twitch',
+            model_name="customuser",
+            name="social_twitch",
             field=models.URLField(blank=True, max_length=255, null=True),
         ),
         migrations.AddField(
-            model_name='customuser',
-            name='social_youtube',
+            model_name="customuser",
+            name="social_youtube",
             field=models.URLField(blank=True, max_length=255, null=True),
         ),
     ]

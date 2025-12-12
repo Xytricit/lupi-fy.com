@@ -7,14 +7,20 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('accounts', '0007_customuser_followers'),
-        ('communities', '0002_alter_community_options_communitypost'),
+        ("accounts", "0007_customuser_followers"),
+        ("communities", "0002_alter_community_options_communitypost"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='subscription',
-            name='community',
-            field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.CASCADE, related_name='subscribers', to='communities.community'),
+            model_name="subscription",
+            name="community",
+            field=models.ForeignKey(
+                blank=True,
+                null=True,
+                on_delete=django.db.models.deletion.CASCADE,
+                related_name="subscribers",
+                to="communities.community",
+            ),
         ),
     ]
