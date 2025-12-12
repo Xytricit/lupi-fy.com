@@ -38,11 +38,13 @@
             </div>
         </div>
 
-        <div class="insights-section">
-            <h4>Quick Insights</h4>
-            <div class="insight-text" id="insightText">
-                Loading insights...
+        <!-- Creator Insights Section -->
+        <div class="insights-section" id="creator-insights-section" style="display:none;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+                <h4 style="margin:0;">Creator Insights</h4>
+                <button id="refreshInsights" class="btn-secondary" style="padding:4px 8px;border-radius:6px;border:1px solid var(--border-color);background:transparent;color:var(--primary);cursor:pointer;font-size:0.85rem;">Refresh</button>
             </div>
+            <div id="creator-insights" style="padding:10px;border-radius:8px;background:var(--card-bg);border:1px solid var(--border-color);min-height:60px;color:var(--text-dark);font-size:0.9rem;">Loading insights…</div>
         </div>
 
         <button class="clear-chat-btn" id="clearChatBtn">Clear Chat</button>
@@ -109,4 +111,58 @@
 
 {% block extra_js %}
 <script src="{% static 'js/chatbot.js' %}"></script>
+<script>
+// Creator insights fetcher for chatbot page
+(() => {
+    function escapeHtml(s){ return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":"&#39;"})[c]); }
+    const container = document.getElementById('creator-insights');
+    const section = document.getElementById('creator-insights-section');
+    const refreshBtn = document.getElementById('refreshInsights');
+    if(!container || !section) return;
+
+    async function loadInsights(){
+        container.textContent = 'Loading insights…';
+        try{
+            const res = await fetch('/chatbot/api/insights/');
+            if(res.status === 403){ section.style.display = 'none'; return; }
+            if(!res.ok) throw new Error('No insights');
+            const data = await res.json();
+            if(!data || !data.insights || data.insights.length === 0){
+                container.textContent = 'No insights available yet.';
+                section.style.display = 'none';
+                return;
+            }
+            const ol = document.createElement('ol');
+            ol.style.paddingLeft = '18px';
+            ol.style.margin = '0';
+            data.insights.forEach((ins, idx) => {
+                const li = document.createElement('li');
+                li.style.marginBottom = '8px';
+                li.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;"><div style="flex:1">${escapeHtml(ins)}</div><div style="flex-shrink:0"><button class='ins-discuss' data-text='${escapeHtml(ins)}' style='padding:4px 6px;border-radius:6px;border:1px solid var(--border-color);background:transparent;color:var(--primary);cursor:pointer;font-size:0.8rem;'>Discuss</button></div></div>`;
+                ol.appendChild(li);
+            });
+            container.innerHTML = '';
+            container.appendChild(ol);
+            section.style.display = 'block';
+
+            // wire discuss buttons
+            container.querySelectorAll('.ins-discuss').forEach(b => b.addEventListener('click', (e) => {
+                const text = b.getAttribute('data-text');
+                try{ localStorage.setItem('creator_insight_start', text); }catch(err){}
+                // Auto-send the insight to chat
+                const msgInput = document.getElementById('messageInput');
+                if(msgInput) msgInput.value = 'Discuss: ' + text;
+            }));
+
+        }catch(err){
+            container.textContent = 'Insights are temporarily unavailable.';
+            console.warn('Failed to load insights', err);
+        }
+    }
+
+    refreshBtn && refreshBtn.addEventListener('click', loadInsights);
+    // initial load (defer slightly so page interactive)
+    setTimeout(loadInsights, 300);
+})();
+</script>
 {% endblock %}

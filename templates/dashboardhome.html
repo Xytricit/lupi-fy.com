@@ -187,17 +187,7 @@
             </div>
         </section>
 
-        <!-- Creator Insights (creators only) -->
-        <section id="creator-insights-section" class="full-width" style="margin-bottom:20px; display:none;">
-            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
-                <h2 style="margin:0;font-size:1.25rem;color:var(--text-dark);">Creator Insights</h2>
-                <div style="display:flex;gap:8px;align-items:center;">
-                    <button id="refreshInsights" class="btn-secondary" style="padding:6px 10px;border-radius:8px;border:1px solid var(--border-color);background:transparent;color:var(--primary);cursor:pointer;">Refresh</button>
-                    <small style="color:var(--secondary-text);">Powered by your analytics and local AI</small>
-                </div>
-            </div>
-            <div id="creator-insights" style="padding:12px;border-radius:12px;background:var(--card-bg);border:1px solid var(--border-color);min-height:64px;color:var(--text-dark);">Loading insights…</div>
-        </section>
+
 
         <!-- For You Section (Recommendations) -->
         <section class="full-width for-you-section" id="forYouSection" style="display:none;">
@@ -1707,58 +1697,6 @@ window.addEventListener('resize', () => {
         loadMore();
     }));
 
-})();
-</script>
-
-<script>
-// Creator insights fetcher
-(() => {
-    function escapeHtml(s){ return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":"&#39;"})[c]); }
-    const container = document.getElementById('creator-insights');
-    const section = document.getElementById('creator-insights-section');
-    const refreshBtn = document.getElementById('refreshInsights');
-    if(!container || !section) return;
-
-    async function loadInsights(){
-        container.textContent = 'Loading insights…';
-        try{
-            const res = await fetch('/chatbot/api/insights/');
-            if(res.status === 403){ section.style.display = 'none'; return; }
-            if(!res.ok) throw new Error('No insights');
-            const data = await res.json();
-            if(!data || !data.insights || data.insights.length === 0){
-                container.textContent = 'No insights available yet.';
-                section.style.display = 'none';
-                return;
-            }
-            const ol = document.createElement('ol');
-            ol.style.paddingLeft = '18px';
-            data.insights.forEach((ins, idx) => {
-                const li = document.createElement('li');
-                li.style.marginBottom = '10px';
-                li.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;"><div style="flex:1">${escapeHtml(ins)}</div><div style="flex-shrink:0"><button class='ins-discuss' data-text='${escapeHtml(ins)}' style='padding:6px 8px;border-radius:8px;border:1px solid var(--border-color);background:transparent;color:var(--primary);cursor:pointer;'>Discuss</button></div></div>`;
-                ol.appendChild(li);
-            });
-            container.innerHTML = '';
-            container.appendChild(ol);
-            section.style.display = 'block';
-
-            // wire discuss buttons
-            container.querySelectorAll('.ins-discuss').forEach(b => b.addEventListener('click', (e) => {
-                const text = b.getAttribute('data-text');
-                try{ localStorage.setItem('creator_insight_start', text); }catch(err){}
-                window.location.href = '/chatbot/';
-            }));
-
-        }catch(err){
-            container.textContent = 'Insights are temporarily unavailable.';
-            console.warn('Failed to load insights', err);
-        }
-    }
-
-    refreshBtn && refreshBtn.addEventListener('click', loadInsights);
-    // initial load (defer slightly so page interactive)
-    setTimeout(loadInsights, 700);
 })();
 </script>
 

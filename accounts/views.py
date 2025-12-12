@@ -824,34 +824,36 @@ def creator_dashboard_view(request):
 
     labels_24 = []
     counts_by_hour = {}
+    
+    # Build 24-hour buckets with consistent timezone handling
     for i in range(24):
         h = (now - timedelta(hours=(23 - i))).replace(minute=0, second=0, microsecond=0)
         labels_24.append(h.strftime("%H:00"))
+        # Store by hour start key (use isoformat for consistent matching)
         counts_by_hour[h.isoformat()] = {"view": 0, "like": 0}
 
+    # Populate counts from database aggregation
     for row in agg_h:
         try:
-            h_iso = row["hour"].isoformat()
+            h_dt = row["hour"]
+            # Normalize hour to start of hour for consistent matching
+            h_normalized = h_dt.replace(minute=0, second=0, microsecond=0)
+            h_iso = h_normalized.isoformat()
         except Exception:
             continue
         a = row["action"].lower()
         counts_by_hour.setdefault(h_iso, {"view": 0, "like": 0})
         counts_by_hour[h_iso][a] = row["count"]
 
+    # Build views/likes arrays in chronological order
     views_24 = []
     likes_24 = []
-    # Map counts_by_hour keys to the hour slots we created (match by hour iso prefix)
-    list(counts_by_hour.keys())
     for i in range(24):
         h = (now - timedelta(hours=(23 - i))).replace(minute=0, second=0, microsecond=0)
-        # find matching iso key
-        found = counts_by_hour.get(h.isoformat(), None)
-        if found:
-            views_24.append(found["view"])
-            likes_24.append(found["like"])
-        else:
-            views_24.append(0)
-            likes_24.append(0)
+        h_iso = h.isoformat()
+        found = counts_by_hour.get(h_iso, {"view": 0, "like": 0})
+        views_24.append(found["view"])
+        likes_24.append(found["like"])
 
     # Fallback: if daily/hourly timeseries are empty but totals exist, place totals on last bucket
     if sum(views_30) == 0 and total_views > 0:
