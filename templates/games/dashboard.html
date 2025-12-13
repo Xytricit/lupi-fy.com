@@ -1,0 +1,501 @@
+{% load static %}
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Game Editor Dashboard</title>
+  <link rel="stylesheet" href="{% static 'css/dashboard.css' %}">
+  <style>
+    :root{--bg:#0f1720;--card:#0b1220;--muted:#9aa4b2;--accent:#1f9cee;--text:#e6eef6;--border:rgba(31,156,238,0.1)}
+    [data-theme='light']{--bg:#f6f8fb;--card:#fff;--text:#222;--muted:#666;--border:rgba(31,156,238,0.15)}
+    *{margin:0;padding:0;box-sizing:border-box}
+    body{background:var(--bg);color:var(--text);font-family:'Inter','Segoe UI','Helvetica Neue',Arial,sans-serif;line-height:1.5}
+    .container{max-width:1200px;margin:0 auto;padding:0 24px}
+    .topbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:32px;padding-top:24px;position:relative;z-index:1}
+    .back-btn{background:transparent;border:none;color:var(--accent);cursor:pointer;font-size:28px;padding:8px;border-radius:8px;transition:all .2s;display:flex;align-items:center}
+    .back-btn:hover{background:rgba(31,156,238,0.08);transform:translateX(-2px)}
+    .topbar-title{flex:1;display:flex;align-items:center;gap:16px}
+    .topbar-title h1{margin:0;font-size:28px;font-weight:700}
+    .topbar-actions{display:flex;gap:10px;align-items:center}
+    .btn{background:var(--accent);color:#fff;padding:10px 16px;border-radius:8px;border:none;cursor:pointer;font-weight:600;transition:all .2s;font-size:14px}
+    .btn:hover{transform:translateY(-2px);box-shadow:0 4px 12px rgba(31,156,238,0.3)}
+    .btn:active{transform:translateY(0)}
+    .btn-secondary{background:var(--muted);color:var(--bg)}
+    .btn-secondary:hover{background:var(--text)}
+    .help-btn{background:rgba(31,156,238,0.1);color:var(--accent);width:32px;height:32px;border-radius:50%;border:none;cursor:pointer;font-weight:700;transition:all .2s;display:flex;align-items:center;justify-content:center}
+    .help-btn:hover{background:rgba(31,156,238,0.2)}
+    .layout{display:grid;grid-template-columns:1fr 360px;gap:20px;margin-bottom:40px;position:relative;z-index:1}
+    .panel{background:var(--card);border-radius:12px;padding:20px;box-shadow:0 4px 16px rgba(0,0,0,0.3);border:1px solid var(--border);transition:all .2s}
+    .panel:hover{box-shadow:0 6px 24px rgba(0,0,0,0.4)}
+    .panel h3{margin:0 0 16px;font-size:18px;font-weight:700;color:var(--text)}
+    .list{display:flex;flex-direction:column;gap:12px;max-height:580px;overflow-y:auto;padding-right:8px;position:relative;z-index:1}
+    .list::-webkit-scrollbar{width:6px}
+    .list::-webkit-scrollbar-track{background:transparent}
+    .list::-webkit-scrollbar-thumb{background:rgba(31,156,238,0.3);border-radius:3px}
+    .list::-webkit-scrollbar-thumb:hover{background:rgba(31,156,238,0.5)}
+    .game-row{display:flex;gap:12px;align-items:center;padding:12px;border-radius:10px;border:1px solid transparent;transition:all .2s;background:rgba(255,255,255,0.01);position:relative;z-index:1}
+    .game-row:hover{transform:translateY(-3px);box-shadow:0 8px 20px rgba(31,156,238,0.15);border-color:var(--accent);background:rgba(31,156,238,0.05)}
+    .thumb{width:80px;height:54px;background:#08101a;border-radius:8px;flex:0 0 80px;display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:12px;overflow:hidden;border:1px solid var(--border)}
+    .thumb img{width:100%;height:100%;object-fit:cover}
+    .meta{flex:1;display:flex;flex-direction:column;gap:4px}
+    .title{font-weight:700;font-size:15px;color:var(--text)}
+    .metrics{display:flex;gap:12px;color:var(--muted);font-size:12px;flex-wrap:wrap}
+    .stats-btn{cursor:pointer;padding:6px 12px;border-radius:6px;color:var(--accent);background:rgba(31,156,238,0.08);border:1px solid rgba(31,156,238,0.2);transition:all .2s;font-size:12px;white-space:nowrap}
+    .stats-btn:hover{background:rgba(31,156,238,0.15);border-color:var(--accent)}
+    .stats-dropdown{position:absolute;right:0;top:100%;margin-top:8px;background:var(--card);border-radius:8px;padding:16px;width:320px;box-shadow:0 12px 32px rgba(0,0,0,0.6);border:1px solid var(--border);z-index:1001;display:none}
+    .stats-dropdown-header{font-weight:700;margin-bottom:12px;color:var(--text)}
+    .stats-item{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid rgba(255,255,255,0.05)}
+    .stats-item:last-child{border-bottom:none}
+    .stats-item-label{color:var(--muted);font-size:12px}
+    .stats-item-value{color:var(--accent);font-weight:700;font-size:14px}
+    .stats-chart{margin-top:12px;height:80px}
+    .menu{position:relative}
+    .ellipsis{cursor:pointer;padding:6px;border-radius:6px;color:var(--muted);transition:all .2s;font-size:18px;position:relative;z-index:100}
+    .ellipsis:hover{background:rgba(31,156,238,0.1);color:var(--accent)}
+    .menu-list{position:absolute;right:0;top:28px;background:var(--card);border-radius:8px;padding:8px;display:none;box-shadow:0 8px 24px rgba(0,0,0,0.5);border:1px solid var(--border);z-index:1001}
+    .menu-list a{display:block;padding:8px 14px;color:var(--text);text-decoration:none;font-size:13px;border-radius:6px;transition:all .2s;white-space:nowrap}
+    .menu-list a:hover{background:rgba(31,156,238,0.1);color:var(--accent)}
+    /* Analytics */
+    .stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px}
+    .stat{background:rgba(31,156,238,0.05);padding:14px;border-radius:10px;text-align:center;border:1px solid var(--border);transition:all .2s}
+    .stat:hover{background:rgba(31,156,238,0.08);border-color:var(--accent)}
+    .stat > div{font-size:20px;font-weight:700;color:var(--accent);margin-bottom:4px}
+    .stat small{color:var(--muted);font-size:12px}
+    #overviewChart{margin-top:10px}
+    /* Modals */
+    .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.6);display:none;align-items:center;justify-content:center;z-index:2000;backdrop-filter:blur(2px)}
+    .modal-overlay.show{display:flex}
+    .modal-content{background:var(--card);border-radius:12px;padding:24px;max-width:560px;width:90%;max-height:85vh;overflow-y:auto;border:1px solid var(--border);box-shadow:0 20px 60px rgba(0,0,0,0.8)}
+    .modal-header{font-size:20px;font-weight:700;margin-bottom:16px;color:var(--text)}
+    .modal-footer{display:flex;gap:12px;justify-content:flex-end;margin-top:20px}
+    .form-group{margin-bottom:16px;display:flex;flex-direction:column}
+    .form-group label{font-weight:600;margin-bottom:8px;color:var(--text);font-size:14px}
+    .form-group input{padding:10px;border-radius:8px;border:1px solid var(--border);background:rgba(255,255,255,0.05);color:var(--text);font-size:14px}
+    .form-group input:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px rgba(31,156,238,0.1)}
+    .form-group input[type="file"]{padding:6px}
+    .help-content{display:none;margin-bottom:40px}
+    .help-content h2{font-size:24px;font-weight:700;margin-bottom:16px;color:var(--text)}
+    .help-content h3{font-size:18px;font-weight:700;margin-top:20px;margin-bottom:12px;color:var(--accent)}
+    .help-content p{margin-bottom:12px;line-height:1.6;color:var(--text)}
+    .help-content ul{margin-left:20px;margin-bottom:12px;color:var(--text)}
+    .help-content li{margin-bottom:8px}
+    .help-content code{background:rgba(31,156,238,0.1);padding:2px 6px;border-radius:4px;font-family:'Monaco','Courier',monospace;color:var(--accent)}
+    /* Responsive */
+    @media(max-width:980px){.layout{grid-template-columns:1fr}.stats-grid{grid-template-columns:repeat(2,1fr)}.stats-dropdown{width:280px}}
+    @media(max-width:640px){.container{padding:0 16px}.topbar{flex-direction:column;gap:12px;align-items:flex-start}.topbar-actions{width:100%;justify-content:space-between}.stats-grid{grid-template-columns:1fr}.stats-dropdown{width:100%;max-width:calc(100vw - 32px)}.modal-content{width:95%;padding:16px}}
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body data-theme="dark">
+  <div class="container">
+    <div class="topbar">
+      <div class="topbar-title">
+        <button class="back-btn" id="backBtn" title="Return to dashboard home">←</button>
+        <h1>Game Editor</h1>
+      </div>
+      <div class="topbar-actions">
+        <button class="help-btn" id="helpBtn" title="Show help">?</button>
+        <button id="newGameBtn" class="btn">New Game</button>
+      </div>
+    </div>
+
+    <div id="mainContent" class="layout">
+      <div>
+        <div class="panel" style="margin-bottom:12px">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+            <h3 style="margin:0">Published Games</h3>
+            <small id="publishedCount" style="color:var(--muted)"></small>
+          </div>
+          <div id="publishedList" class="list"></div>
+        </div>
+
+        <div class="panel">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+            <h3 style="margin:0">Drafts / Unpublished</h3>
+            <small id="draftCount" style="color:var(--muted)"></small>
+          </div>
+          <div id="draftList" class="list"></div>
+        </div>
+      </div>
+
+      <aside>
+        <div class="panel">
+          <h3 style="margin-top:0">Analytics / Performance Overview</h3>
+          <div class="stats-grid">
+            <div class="stat"><div id="statPlays">0</div><small>Total Plays</small></div>
+            <div class="stat"><div id="statLikes">0</div><small>Total Likes</small></div>
+            <div class="stat"><div id="statShares">0</div><small>Total Shares</small></div>
+            <div class="stat"><div id="statRevenue">0</div><small>Revenue</small></div>
+          </div>
+          <canvas id="overviewChart" height="220"></canvas>
+        </div>
+
+        <div class="panel">
+          <h3>Quick Actions</h3>
+          <div style="display:flex;flex-direction:column;gap:8px">
+            <button id="qaNewGame" class="btn">New Game</button>
+            <button id="qaOpenLast" class="btn btn-secondary">Open Last Edited</button>
+          </div>
+        </div>
+      </aside>
+    </div>
+
+    <!-- Help Page -->
+    <div id="helpContent" class="help-content">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:24px">
+        <h2>Help & Guide</h2>
+        <button class="btn" id="closeHelpBtn" style="padding:6px 12px;font-size:12px">Close Help</button>
+      </div>
+      
+      <h3>Getting Started</h3>
+      <p>Welcome to LupiForge! This dashboard is your hub for creating, managing, and tracking your games.</p>
+      
+      <h3>Published Games</h3>
+      <p>Games marked as <strong>Published</strong> are live and visible to other players. Click the <code>Stats</code> button to view detailed analytics including plays, likes, and shares.</p>
+      
+      <h3>Drafts</h3>
+      <p>Games in the <strong>Drafts</strong> section are private and only visible to you. Click the ellipsis menu (<code>⋯</code>) to edit, delete, share, or adjust settings.</p>
+      
+      <h3>Creating a New Game</h3>
+      <ul>
+        <li>Click the <strong>New Game</strong> button in the top right or quick actions panel</li>
+        <li>Choose a title for your game</li>
+        <li>Upload a thumbnail image (required for published games)</li>
+        <li>You'll be taken to the game editor to design your game logic</li>
+      </ul>
+      
+      <h3>Analytics</h3>
+      <p>The right sidebar shows aggregated analytics for all your published games:</p>
+      <ul>
+        <li><strong>Total Plays:</strong> Combined play count across all published games</li>
+        <li><strong>Total Likes:</strong> Total likes received</li>
+        <li><strong>Total Shares:</strong> Total share count</li>
+        <li><strong>Revenue:</strong> Estimated earnings (if applicable)</li>
+      </ul>
+      
+      <h3>Game Editor</h3>
+      <p>Once you open a game in the editor, you can:</p>
+      <ul>
+        <li>Add blocks to create game logic</li>
+        <li>Test your game in the preview panel</li>
+        <li>Save your changes (auto-saves every 30 seconds)</li>
+        <li>Publish when ready</li>
+      </ul>
+      
+      <h3>Sharing Games</h3>
+      <p>In the draft menu, click <strong>Share</strong> to generate a unique shareable link. Your game will be viewable to anyone with the link.</p>
+      
+      <h3>Tips & Best Practices</h3>
+      <ul>
+        <li>Always upload a thumbnail before publishing</li>
+        <li>Test your game thoroughly before publishing</li>
+        <li>Keep game titles clear and descriptive</li>
+        <li>Monitor analytics to understand player engagement</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- Modal: New Game -->
+  <div id="newGameModal" class="modal-overlay">
+    <div class="modal-content">
+      <div class="modal-header">Create New Game</div>
+      <div class="form-group">
+        <label for="gameTitle">Game Title</label>
+        <input type="text" id="gameTitle" placeholder="Enter game name">
+      </div>
+      <div class="form-group">
+        <label for="gameThumbnail">Thumbnail (Required)</label>
+        <input type="file" id="gameThumbnail" accept="image/*">
+        <small style="color:var(--muted);margin-top:4px">Recommended: 400x300px, JPG or PNG</small>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" id="cancelNewGame">Cancel</button>
+        <button class="btn" id="confirmNewGame">Create</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Confirm Delete -->
+  <div id="confirmDeleteModal" class="modal-overlay">
+    <div class="modal-content" style="max-width:400px">
+      <div class="modal-header">Delete Game?</div>
+      <p id="deleteConfirmMsg" style="color:var(--muted);margin-bottom:20px">This action cannot be undone.</p>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" id="cancelDelete">Cancel</button>
+        <button class="btn" id="confirmDelete" style="background:#d32f2f">Delete</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Share Link -->
+  <div id="shareModal" class="modal-overlay">
+    <div class="modal-content" style="max-width:480px">
+      <div class="modal-header">Share Game</div>
+      <p style="color:var(--muted);margin-bottom:12px">Copy this link to share your game with others:</p>
+      <div style="background:rgba(31,156,238,0.05);padding:12px;border-radius:8px;border:1px solid var(--border);margin-bottom:16px">
+        <input type="text" id="shareLink" readonly style="background:transparent;border:none;width:100%;color:var(--text)">
+      </div>
+      <div class="modal-footer">
+        <button class="btn" id="copyShareLink">Copy Link</button>
+        <button class="btn btn-secondary" id="closeShareModal">Done</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Utilities
+    function csrf() { return (document.cookie.match(/csrftoken=([^;]+)/)||[])[1] || ''; }
+    function el(tag,cls){const d=document.createElement(tag);if(cls)d.className=cls;return d}
+    function showModal(id){document.getElementById(id).classList.add('show')}
+    function hideModal(id){document.getElementById(id).classList.remove('show')}
+
+    // Fetch user's games and render lists and analytics
+    async function loadGames(){
+      try{
+        const res = await fetch('/games/api/user/games/',{credentials:'same-origin'});
+        if(!res.ok) throw new Error('Failed to fetch games');
+        const data = await res.json();
+        const games = data.games || [];
+        // Separate published and drafts
+        const published = games.filter(g => g.visibility==='public' || g.visibility==='pending');
+        const drafts = games.filter(g => g.visibility==='draft' || g.visibility==='private');
+
+        document.getElementById('publishedCount').textContent = published.length + ' games';
+        document.getElementById('draftCount').textContent = drafts.length + ' drafts';
+
+        const pubList = document.getElementById('publishedList'); pubList.innerHTML='';
+        const drfList = document.getElementById('draftList'); drfList.innerHTML='';
+
+        let totalPlays=0,totalLikes=0,totalShares=0,totalRevenue=0;
+        const overviewLabels=[]; const overviewData=[];
+
+        for(const g of published){
+          totalPlays += g.metrics.plays||0; totalLikes += g.metrics.likes||0; totalShares += g.metrics.shares||0;
+          const row = renderGameRow(g, true);
+          pubList.appendChild(row);
+          overviewLabels.push(g.title.slice(0,12)); overviewData.push(g.metrics.plays||0);
+        }
+        for(const g of drafts){
+          const row = renderGameRow(g, false);
+          drfList.appendChild(row);
+        }
+
+        document.getElementById('statPlays').textContent = totalPlays;
+        document.getElementById('statLikes').textContent = totalLikes;
+        document.getElementById('statShares').textContent = totalShares;
+        document.getElementById('statRevenue').textContent = totalRevenue ? '$'+totalRevenue.toFixed(2) : '—';
+
+        renderOverviewChart(overviewLabels, overviewData);
+
+      }catch(err){
+        console.error(err);
+        showError('Could not load games');
+      }
+    }
+
+    function renderGameRow(g, isPublished){
+      const rowWrap = el('div'); rowWrap.style.position='relative';
+      const row = el('div','game-row');
+      const thumb = el('div','thumb');
+      if(g.thumbnail){ const img = document.createElement('img'); img.src=g.thumbnail; img.style.width='100%'; img.style.height='100%'; img.style.objectFit='cover'; thumb.innerHTML=''; thumb.appendChild(img);} 
+      const meta = el('div','meta');
+      const t = el('div','title'); t.textContent = g.title || 'Untitled';
+      const m = el('div','metrics'); m.innerHTML = `Plays: ${g.metrics.plays||0} · Likes: ${g.metrics.likes||0} · Shares: ${g.metrics.shares||0}`;
+      meta.appendChild(t); meta.appendChild(m);
+      
+      // Stats button for published games
+      if(isPublished){
+        const statsBtn = el('button','stats-btn'); statsBtn.textContent='Stats'; statsBtn.type='button';
+        const dropdown = el('div','stats-dropdown');
+        dropdown.innerHTML = `
+          <div class="stats-dropdown-header">${g.title}</div>
+          <div class="stats-item"><span class="stats-item-label">Total Plays</span><span class="stats-item-value">${g.metrics.plays||0}</span></div>
+          <div class="stats-item"><span class="stats-item-label">Total Likes</span><span class="stats-item-value">${g.metrics.likes||0}</span></div>
+          <div class="stats-item"><span class="stats-item-label">Total Shares</span><span class="stats-item-value">${g.metrics.shares||0}</span></div>
+          <div class="stats-item"><span class="stats-item-label">Avg Session</span><span class="stats-item-value">${(g.metrics.avg_session||0).toFixed(1)}m</span></div>
+          <canvas class="stats-chart" id="chart-${g.id}"></canvas>
+        `;
+        statsBtn.addEventListener('click', (e)=>{
+          e.stopPropagation();
+          dropdown.style.display = dropdown.style.display==='block' ? 'none' : 'block';
+          if(dropdown.style.display==='block'){
+            setTimeout(()=>{renderMiniChart('chart-'+g.id, (g.time_series||[]).map(s=>s.date), (g.time_series||[]).map(s=>s.plays))}, 0);
+          }
+        });
+        row.appendChild(statsBtn);
+        rowWrap.appendChild(dropdown);
+      }
+
+      // Menu (ellipsis)
+      const menu = el('div','menu'); const ell = el('div','ellipsis'); ell.textContent='⋯'; menu.appendChild(ell);
+      const mlist = el('div','menu-list');
+      const edit = el('a'); edit.href='#'; edit.textContent='Edit'; edit.addEventListener('click', e=>{e.preventDefault(); openEditor(g.id)});
+      const del = el('a'); del.href='#'; del.textContent='Delete'; del.addEventListener('click', e=>{e.preventDefault(); confirmDelete(g.id, g.title, rowWrap)});
+      const share = el('a'); share.href='#'; share.textContent='Share'; share.addEventListener('click', e=>{e.preventDefault(); confirmShare(g.id)});
+      const settings = el('a'); settings.href='#'; settings.textContent='Settings'; settings.addEventListener('click', e=>{e.preventDefault(); openSettings(g)});
+      mlist.appendChild(edit); mlist.appendChild(del); mlist.appendChild(share); mlist.appendChild(settings);
+      menu.appendChild(mlist);
+      ell.addEventListener('click', (e)=>{ e.stopPropagation(); mlist.style.display = mlist.style.display==='block'?'none':'block'; });
+
+      row.appendChild(thumb); row.appendChild(meta); row.appendChild(menu);
+      rowWrap.appendChild(row);
+      return rowWrap;
+    }
+
+    function renderMiniChart(canvasId, labels, data){
+      const canvas = document.getElementById(canvasId);
+      if(!canvas) return;
+      if(window.__miniCharts) window.__miniCharts[canvasId]?.destroy?.();
+      window.__miniCharts = window.__miniCharts || {};
+      window.__miniCharts[canvasId] = new Chart(canvas.getContext('2d'),{type:'line',data:{labels, datasets:[{data, borderColor:'#1f9cee',backgroundColor:'rgba(31,156,238,0.1)',tension:0.3, fill:true}]}, options:{responsive:true,maintainAspectRatio:false,animation:{duration:0},plugins:{legend:{display:false}},scales:{x:{display:false},y:{display:false}}}});
+    }
+
+    function openEditor(gameId){
+      window.location.href = '/games/editor-guest/?game_id=' + encodeURIComponent(gameId);
+    }
+
+    function confirmDelete(gameId, title, elem){
+      window.__deleteGameId = gameId;
+      window.__deleteGameElem = elem;
+      document.getElementById('deleteConfirmMsg').textContent = `Are you sure you want to delete "${title}"? This cannot be undone.`;
+      showModal('confirmDeleteModal');
+    }
+
+    async function deleteGame(){
+      const gameId = window.__deleteGameId;
+      const elem = window.__deleteGameElem;
+      try{
+        const res = await fetch('/games/api/delete/',{method:'POST',credentials:'same-origin',headers:{'X-CSRFToken':csrf(),'Content-Type':'application/json'},body:JSON.stringify({game_id:gameId})});
+        if(!res.ok) throw new Error('Delete failed');
+        elem.remove();
+        hideModal('confirmDeleteModal');
+        loadGames();
+      }catch(e){
+        console.error(e);
+        showError('Could not delete game');
+      }
+    }
+
+    function confirmShare(gameId){
+      window.__shareGameId = gameId;
+      shareGame();
+    }
+
+    async function shareGame(){
+      const gameId = window.__shareGameId;
+      try{
+        const res = await fetch('/games/api/share/',{method:'POST',credentials:'same-origin',headers:{'X-CSRFToken':csrf(),'Content-Type':'application/json'},body:JSON.stringify({game_id:gameId})});
+        if(!res.ok) throw new Error('Share failed');
+        const j = await res.json();
+        document.getElementById('shareLink').value = j.share_url;
+        showModal('shareModal');
+      }catch(e){
+        console.error(e);
+        showError('Could not generate share link');
+      }
+    }
+
+    function openSettings(g){
+      // For now, just show a simple settings preview
+      showModal('confirmDeleteModal');
+    }
+
+    function renderOverviewChart(labels,data){
+      const ctx = document.getElementById('overviewChart').getContext('2d');
+      if(window.__overviewChart) window.__overviewChart.destroy();
+      window.__overviewChart = new Chart(ctx,{type:'bar',data:{labels, datasets:[{label:'Plays',data, backgroundColor:'rgba(31,156,238,0.6)'}]}, options:{responsive:true,plugins:{legend:{display:false}},scales:{y:{beginAtZero:true}}}});
+    }
+
+    function showError(msg){
+      // Simple error notification - can be enhanced with toast
+      console.error(msg);
+    }
+
+    // Back button
+    document.getElementById('backBtn').addEventListener('click', ()=>{ window.location.href='/games/dashboard/home/'; });
+    
+    // Help button
+    document.getElementById('helpBtn').addEventListener('click', ()=>{
+      document.getElementById('mainContent').style.display='none';
+      document.getElementById('helpContent').style.display='block';
+    });
+    document.getElementById('closeHelpBtn').addEventListener('click', ()=>{
+      document.getElementById('mainContent').style.display='grid';
+      document.getElementById('helpContent').style.display='none';
+    });
+
+    // New Game Modal
+    document.getElementById('newGameBtn').addEventListener('click', ()=>{ showModal('newGameModal'); });
+    document.getElementById('qaNewGame').addEventListener('click', ()=>{ showModal('newGameModal'); });
+    document.getElementById('cancelNewGame').addEventListener('click', ()=>{ hideModal('newGameModal'); });
+    document.getElementById('confirmNewGame').addEventListener('click', async ()=>{
+      const title = document.getElementById('gameTitle').value.trim();
+      const thumbnail = document.getElementById('gameThumbnail').files[0];
+      if(!title) return alert('Please enter a game title');
+      if(!thumbnail) return alert('Please upload a thumbnail image');
+      
+      const formData = new FormData();
+      formData.append('title', title);
+      formData.append('thumbnail', thumbnail);
+      formData.append('visibility', 'draft');
+      
+      try{
+        const res = await fetch('/games/api/create/',{method:'POST',credentials:'same-origin',headers:{'X-CSRFToken':csrf()},body:formData});
+        if(!res.ok) throw new Error('Create failed');
+        const data = await res.json();
+        hideModal('newGameModal');
+        openEditor(data.id);
+      }catch(e){
+        console.error(e);
+        showError('Could not create game');
+      }
+    });
+
+    // Delete Modal
+    document.getElementById('cancelDelete').addEventListener('click', ()=>{ hideModal('confirmDeleteModal'); });
+    document.getElementById('confirmDelete').addEventListener('click', deleteGame);
+
+    // Share Modal
+    document.getElementById('copyShareLink').addEventListener('click', ()=>{
+      document.getElementById('shareLink').select();
+      document.execCommand('copy');
+      alert('Link copied to clipboard!');
+    });
+    document.getElementById('closeShareModal').addEventListener('click', ()=>{ hideModal('shareModal'); });
+
+    // Open Last Edited
+    document.getElementById('qaOpenLast').addEventListener('click', async ()=>{
+      try{
+        const res = await fetch('/games/api/user/games/',{credentials:'same-origin'});
+        const d = await res.json();
+        const g = (d.games||[])[0];
+        if(g) openEditor(g.id);
+        else showError('No games yet');
+      }catch(e){
+        showError('Failed to open last');
+      }
+    });
+
+    // Close modals on outside click
+    document.querySelectorAll('.modal-overlay').forEach(modal => {
+      modal.addEventListener('click', (e)=>{
+        if(e.target === modal) hideModal(modal.id);
+      });
+    });
+
+    // Close dropdowns on outside click
+    document.addEventListener('click', ()=>{
+      document.querySelectorAll('.stats-dropdown, .menu-list').forEach(d => d.style.display='none');
+    });
+
+    // Initialize
+    (function init(){
+      const hr = new Date().getHours();
+      document.body.setAttribute('data-theme', (hr>=7 && hr<19)?'light':'dark');
+      loadGames();
+      setInterval(loadGames, 45000);
+    })();
+  </script>
+</body>
+</html>

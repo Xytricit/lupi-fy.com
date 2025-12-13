@@ -63,7 +63,7 @@ communities = []
 for i in range(3):
     c, _ = Community.objects.get_or_create(
         name=f"Test Community {i}",
-        defaults={'description': f"Community {i} desc"}
+        defaults={'description': f"Community {i} desc", 'creator': users[0]}
     )
     communities.append(c)
 print(f"  ✓ Created {len(communities)} communities")
@@ -96,7 +96,7 @@ for user in users:
             user=user,
             content_type=ContentType.objects.get_for_model(Post),
             object_id=post.id,
-            defaults={'action': 'view', 'timestamp': timezone.now() - timedelta(hours=1)}
+            defaults={'action': 'view', 'created_at': timezone.now() - timedelta(hours=1)}
         )
         interaction_count += 1
 
@@ -107,7 +107,7 @@ for user in users:
             user=user,
             content_type=ContentType.objects.get_for_model(CommunityPost),
             object_id=cp.id,
-            defaults={'action': 'view', 'timestamp': timezone.now() - timedelta(hours=2)}
+            defaults={'action': 'view', 'created_at': timezone.now() - timedelta(hours=2)}
         )
         interaction_count += 1
 
@@ -152,7 +152,9 @@ if model:
         recs = recommend_for_user(user.id, model=model, topn=10)
         print(f"  ✓ {user.username}: {len(recs)} recommendations")
         if recs:
-            print(f"    Top 3: {[f'{k.split(\":\")[1]} (score={s:.3f})' for k, s in recs[:3]]}")
+            # Simplified output to avoid nested f-string parsing issues
+            top3 = recs[:3]
+            print("    Top 3:", top3)
 else:
     print("  ⚠ Model not available")
 

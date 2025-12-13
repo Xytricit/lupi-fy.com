@@ -510,3 +510,78 @@ def delete_post(request, post_id):
     title = post.title
     post.delete()
     return JsonResponse({"success": True, "message": f"Deleted post '{title}'"})
+
+# -------------------- BLOG API --------------------
+
+def blog_posts_api(request):
+    """API endpoint for fetching blog posts with sorting."""
+    # Get query parameters
+    sort = request.GET.get('sort', 'latest')
+    offset = int(request.GET.get('offset', 0))
+    limit = int(request.GET.get('limit', 12))
+    
+    # Build queryset based on sort parameter
+    if sort == 'latest':
+        posts_qs = Post.objects.all().order_by('-created')
+    elif sort == 'most_liked':
+        from django.db.models import Count
+        posts_qs = Post.objects.annotate(like_count=Count('likes')).order_by('-like_count', '-created')
+    elif sort == 'most_viewed':
+        posts_qs = Post.objects.all().order_by('-views', '-created')
+    elif sort == 'trending':
+        # Trending: posts with high engagement recently
+        from django.db.models import Count, Q
+        from django.utils import timezone
+        from datetime import timedelta
+        week_ago = timezone.now() - timedelta(days=7)
+        posts_qs = Post.objects.filter(
+            Q(likes__isnull=False) | Q(comments__isnull=False)
+        ).annotate(
+            engagement=Count('likes') + Count('comments')
+        ).filter(created__gte=week_ago).order_by('-engagement', '-created')
+    elif sort == 'bookmarks':
+        # User's bookmarked posts
+        posts_qs = request.user.bookmarked_posts.all().order_by('-created')
+    else:
+        posts_qs = Post.objects.all().order_by('-created')
+    
+    # Get total count before pagination
+    total = posts_qs.count()
+    
+    # Apply pagination
+    posts = posts_qs[offset:offset + limit]
+    
+    # Serialize posts
+    posts_data = []
+    for post in posts:
+        # Get first image
+        img = None
+        if hasattr(post, 'images') and post.images.exists():
+            first_img = post.images.first()
+            if first_img and hasattr(first_img, 'image'):
+                img = first_img.image.url
+        
+        posts_data.append({
+            'id': post.id,
+            'title': post.title,
+            'content': post.content[:200] if post.content else '',
+            'image': img,
+            'author_id': post.author.id,
+            'author_username': post.author.username,
+            'author_avatar': post.author.avatar.url if post.author.avatar else None,
+            'created': post.created.isoformat(),
+            'likes_count': post.likes.count(),
+            'dislikes_count': post.dislikes.count(),
+            'comments_count': post.comments.count(),
+            'user_liked': request.user in post.likes.all(),
+            'user_disliked': request.user in post.dislikes.all(),
+            'user_bookmarked': request.user in post.bookmarks.all(),
+        })
+    
+    return JsonResponse({
+        'posts': posts_data,
+        'total': total,
+        'offset': offset,
+        'limit': limit,
+        'count': len(posts_data)
+    })

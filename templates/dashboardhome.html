@@ -87,6 +87,7 @@
             <div class="avatar-menu">
                 <a href="{% url 'account_dashboard' %}">Accounts</a>
                 <a href="{% url 'creator_dashboard' %}">Creators</a>
+                <a href="/games/dashboard/">Game Editor</a>
                 <a href="{% url 'appearance' %}">Appearance</a>
                 <p id="logout">Logout</p>
             </div>
@@ -169,15 +170,15 @@
             </div>
             <div id="recent-games" style="display:flex;gap:14px;overflow-x:auto;padding-bottom:8px;scroll-behavior:smooth;">
                 {% if recent_games %}
-                    {% for g in recent_games %}
+                    {% for s in recent_games %}
                         <a href="{% url 'games_hub' %}" style="text-decoration:none;color:inherit;min-width:160px;flex-shrink:0;">
                             <div style="background:linear-gradient(135deg, #1f9cee15, #fec76f15);padding:16px;border-radius:12px;border:1px solid rgba(31,156,238,0.1);transition:all 0.3s ease;" onmouseover="this.style.transform='translateY(-4px)';this.style.boxShadow='0 8px 16px rgba(31,156,238,0.15)'" onmouseout="this.style.transform='none';this.style.boxShadow='none'">
-                                <div style="font-size:2rem;margin-bottom:8px;">
+                                <div style="font-size:2rem;margin-bottom:8px;display:flex;align-items:center;gap:8px;">
                                     <img src="{% static 'svg/game-controller.svg' %}" alt="game" style="width:36px;height:36px;display:inline-block;vertical-align:middle;"/>
+                                    <div style="font-weight:700;color:var(--text-dark);">{{ s.game|default:'Game' }}</div>
                                 </div>
-                                <div style="font-weight:600;font-size:0.95rem;color:var(--text-dark);margin-bottom:4px;">{{ g.user.username }}</div>
-                                <div style="color:var(--primary);font-weight:700;font-size:1.1rem;margin-bottom:6px;">{{ g.score }}</div>
-                                <div style="font-size:0.8rem;color:var(--secondary-text);">{{ g.updated_at|date:'M d, Y' }}</div>
+                                <div style="color:var(--primary);font-weight:700;font-size:1.1rem;margin-bottom:6px;">&nbsp;</div>
+                                <div style="font-size:0.8rem;color:var(--secondary-text);">{{ s.last_played|date:'M d, Y H:i' }}</div>
                             </div>
                         </a>
                     {% endfor %}
@@ -189,47 +190,40 @@
 
 
 
-        <!-- For You Section (Recommendations) -->
-        <section class="full-width for-you-section" id="forYouSection" style="display:none;">
-            <div class="for-you-header">
-                <h2>For You</h2>
-                <button class="for-you-refresh" id="refreshRecommendations">Refresh</button>
-            </div>
-            <div id="forYouContainer" class="for-you-grid">
-                <!-- Recommendations will be loaded here via JS -->
-            </div>
-        </section>
-
-        <!-- Bubble Filters (span full width) -->
+        <!-- Bubble Filters + Recently Played Games Section -->
         <section class="full-width" style="margin-bottom:20px;">
-            <!-- Blog For You (header purposely removed per UX request) -->
-            <div id="blogForYouContainer" class="for-you-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:14px;">
-                <!-- Blog recommendations will be loaded here (cards will match community post layout) -->
-            </div>
-        </section>
-
-        <!-- Bubble Filters (span full width) -->
-            <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
-                <button id="homeForYouToggle" type="button" class="filter-bubble" data-sort="for_you" style="padding:8px 16px;border-radius:20px;cursor:pointer;font-weight:600;transition:all 0.2s;font-size:0.9rem;margin-right:6px;">For You</button>
-                <button class="filter-bubble active" type="button" data-sort="latest" style="padding:8px 16px;border-radius:20px;cursor:pointer;font-weight:500;transition:all 0.2s;font-size:0.9rem;">Latest</button>
+            <!-- Filter Bubbles -->
+                <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:8px;">
+                <button id="homeForYouToggle" class="filter-bubble active" type="button" data-sort="for_you" style="padding:8px 16px;border-radius:20px;cursor:pointer;font-weight:500;transition:all 0.2s;font-size:0.9rem;">For you</button>
+                <button class="filter-bubble" type="button" data-sort="latest" style="padding:8px 16px;border-radius:20px;cursor:pointer;font-weight:500;transition:all 0.2s;font-size:0.9rem;">Latest</button>
                 <button class="filter-bubble" type="button" data-sort="most_liked" style="padding:8px 16px;border-radius:20px;cursor:pointer;font-weight:500;transition:all 0.2s;font-size:0.9rem;">Most liked</button>
                 <button class="filter-bubble" type="button" data-sort="most_viewed" style="padding:8px 16px;border-radius:20px;cursor:pointer;font-weight:500;transition:all 0.2s;font-size:0.9rem;">Most viewed</button>
                 <button class="filter-bubble" type="button" data-sort="trending" style="padding:8px 16px;border-radius:20px;cursor:pointer;font-weight:500;transition:all 0.2s;font-size:0.9rem;">Trending</button>
                 <button class="filter-bubble" type="button" data-sort="bookmarks" style="padding:8px 16px;border-radius:20px;cursor:pointer;font-weight:500;transition:all 0.2s;font-size:0.9rem;">Bookmarks</button>
             </div>
-        </section>
 
-        <!-- For You - Community Posts -->
-        <section class="full-width" style="margin-bottom:20px;">
-            <!-- Community For You (header removed) -->
-            <div id="communityForYouContainer" class="for-you-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:14px;">
-                <!-- Community recommendations will be loaded here -->
+            <!-- Recently Played Games Section -->
+            <div id="recentlyPlayedContainer" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px;margin-bottom:20px;">
+                <!-- Recently played games will be loaded here -->
             </div>
         </section>
 
-        <!-- Community posts feed (centered column) -->
+        <!-- For You recommendations containers (shown by default) -->
+        <section id="forYouSection" style="display:block;margin-bottom:20px;">
+            <!-- Blog recommendations (grid layout) -->
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:12px;">
+                <div id="blogForYouContainer" style="min-height:120px;"><!-- blogs will render here --></div>
+            </div>
+        </section>
+
+        <!-- Community For You posts (single-column centered) -->
+        <section id="communityForYouSection" style="display:block;margin-bottom:8px;">
+            <div id="communityForYouContainer" style="min-height:200px;"><!-- community posts will render here --></div>
+        </section>
+
+        <!-- Community posts feed (Latest/Most liked/etc - centered column) -->
         <div class="posts-center">
-            <section id="community-feed" style="display:flex;flex-direction:column;gap:14px;">
+            <section id="community-feed" style="display:none;flex-direction:column;gap:14px;margin-top:8px;">
                 <!-- posts will be appended here by JS -->
             </section>
 
@@ -304,6 +298,12 @@
 </form>
 
 <script>
+// Utility function to get CSRF token from cookies
+function csrfToken() {
+    const token = (document.cookie.match(/csrftoken=([^;]+)/)||[])[1];
+    return token || '';
+}
+
 // Theme handling: initialize and listen for system changes when in 'system' mode
  (() => {
     const serverPref = "{{ request.user.theme_preference|default:'system' }}";
@@ -647,11 +647,13 @@ saveCommunityBtn.addEventListener('click', async () => {
 
 // Onboarding is mandatory; skips removed so users must select required tags.
 
-// Load all recommendation sections
+// Load all recommendation sections (returns a Promise that resolves when all are done)
 async function loadAllRecommendations() {
-    loadForYouRecommendations();
-    loadBlogRecommendations();
-    loadCommunityRecommendations();
+    return Promise.all([
+        loadForYouRecommendations(),
+        loadBlogRecommendations(),
+        loadCommunityRecommendations(),
+    ]);
 }
 
 // Load "For You" game recommendations
@@ -660,9 +662,9 @@ async function loadForYouRecommendations() {
         const res = await fetch('/recommend/for-you/');
         const data = await res.json();
 
-        // Prepare containers
-        const blogContainer = document.getElementById('blogForYouContainer');
-        const communityContainer = document.getElementById('communityForYouContainer');
+            // Prepare containers (support home and blog page container IDs)
+            const blogContainer = document.getElementById('blogForYouContainer') || document.getElementById('blogPageForYouContainer');
+            const communityContainer = document.getElementById('communityForYouContainer') || document.getElementById('communityForYouContainer');
         const gamesForYou = [];
 
         if (data.results && data.results.length > 0) {
@@ -672,18 +674,18 @@ async function loadForYouRecommendations() {
 
             data.results.forEach(rec => {
                 // Backend provides a `type` field now: 'blog', 'community', 'game', or 'unknown'
-                if (rec.type === 'blog') {
+                    if (rec.type === 'blog') {
                     if (!blogContainer) return;
                     const card = document.createElement('div');
                     card.className = 'for-you-card';
                     card.style.cursor = 'pointer';
                     card.onclick = () => window.location.href = `/posts/${rec.id}/`;
                     card.innerHTML = `
-                        <div style="width:100%;height:140px;display:flex;align-items:center;justify-content:center;background:var(--muted-bg, #f3f4f6);border-radius:8px;overflow:hidden;">
-                            ${rec.image ? `<img src="${rec.image}" alt="${rec.title}" style="max-width:100%;max-height:100%;object-fit:contain;"/>` : `<div style=\"width:60%;height:60%;background:linear-gradient(135deg,#eaeef9,#f7f5f0);border-radius:6px;\"></div>`}
+                            <div style="width:100%;aspect-ratio:1;display:flex;align-items:center;justify-content:center;background:var(--muted-bg, #f3f4f6);border-radius:8px;overflow:hidden;">
+                                ${rec.image ? `<img src="${rec.image}" alt="${rec.title}" style="width:100%;height:100%;object-fit:cover;object-position:center;"/>` : `<div style=\"width:100%;height:100%;background:linear-gradient(135deg,#eaeef9,#f7f5f0);\"></div>`}
                         </div>
-                        <div style="margin-top:8px;font-weight:700;color:var(--text-dark);">${rec.title}</div>
-                        ${rec.excerpt ? `<div style="color:var(--secondary-text);font-size:0.95rem;margin-top:6px;">${rec.excerpt}</div>` : ''}
+                        <div style="margin-top:8px;font-weight:700;color:var(--text-dark);line-height:1.3;">${rec.title}</div>
+                        ${rec.excerpt ? `<div style="color:var(--secondary-text);font-size:0.85rem;margin-top:4px;line-height:1.3;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;">${rec.excerpt}</div>` : ''}
                     `;
                     blogContainer.appendChild(card);
                 } else if (rec.type === 'community') {
@@ -693,11 +695,11 @@ async function loadForYouRecommendations() {
                     card.style.cursor = 'pointer';
                     card.onclick = () => { window.location.href = `/communities/post/${rec.id}/`; };
                     card.innerHTML = `
-                        <div style="width:100%;height:140px;display:flex;align-items:center;justify-content:center;background:var(--muted-bg, #f3f4f6);border-radius:8px;overflow:hidden;">
-                            ${rec.image ? `<img src="${rec.image}" alt="${rec.title}" style="max-width:100%;max-height:100%;object-fit:contain;"/>` : `<div style=\"width:60%;height:60%;background:linear-gradient(135deg,#f0f4f8,#f7f5f0);border-radius:6px;\"></div>`}
+                        <div style="width:100%;height:200px;display:flex;align-items:center;justify-content:center;background:var(--muted-bg, #f3f4f6);border-radius:8px;overflow:hidden;">
+                            ${rec.image ? `<img src="${rec.image}" alt="${rec.title}" style="max-width:100%;max-height:100%;object-fit:cover;width:100%;height:100%;"/>` : `<div style=\"width:100%;height:100%;background:linear-gradient(135deg,#f0f4f8,#f7f5f0);\"></div>`}
                         </div>
-                        <div style="margin-top:8px;font-weight:700;color:var(--text-dark);">${rec.title}</div>
-                        ${rec.excerpt ? `<div style="color:var(--secondary-text);font-size:0.95rem;margin-top:6px;">${rec.excerpt}</div>` : ''}
+                        <div style="margin-top:8px;font-weight:700;color:var(--text-dark);line-height:1.3;">${rec.title}</div>
+                        ${rec.excerpt ? `<div style="color:var(--secondary-text);font-size:0.85rem;margin-top:4px;line-height:1.3;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;">${rec.excerpt}</div>` : ''}
                     `;
                     communityContainer.appendChild(card);
                 } else if (rec.type === 'game') {
@@ -725,80 +727,433 @@ async function loadForYouRecommendations() {
                 // Hide the main For You games section if no post recs exist
                 if (forYouSectionEl) forYouSectionEl.style.display = 'none';
             }
-
-            // Make the home For You toggle active by default when recommendations load (if there are post recs)
-            const homeToggle = document.getElementById('homeForYouToggle');
-            if (homeToggle && ((blogContainer && blogContainer.children.length>0) || (communityContainer && communityContainer.children.length>0))) {
-                document.querySelectorAll('.filter-bubble').forEach(b => b.classList.remove('active'));
-                homeToggle.classList.add('active');
-            }
         }
     } catch (err) {
         console.error('Failed to load recommendations:', err);
     }
 }
 
+// Override For You loader to skip blog/community rendering on home and collect only games
+loadForYouRecommendations = async function() {
+    try {
+        const res = await fetch('/recommend/for-you/');
+        const data = await res.json();
+        const gamesForYou = [];
+        if (data.results && data.results.length > 0) {
+            data.results.forEach(rec => { if (rec.type === 'game') gamesForYou.push(rec); });
+            try { sessionStorage.setItem('forYouGames', JSON.stringify(gamesForYou)); } catch(e) {}
+        }
+    } catch(err) { console.error('Failed to load recommendations (override):', err); }
+}
+
 // Load blog recommendations
 async function loadBlogRecommendations() {
     try {
+        // Only render blog recommendations on the blog page.
+        // The dashboard home should not show blog cards in the For You section.
+        const container = document.getElementById('blogPageForYouContainer');
+        if (!container) return;
+
         const res = await fetch('/recommend/blog-recommendations/');
         const data = await res.json();
         if (data.results && data.results.length > 0) {
-            const container = document.getElementById('blogForYouContainer');
             container.innerHTML = '';
-            // Use the community-like card layout: centered image, title, excerpt
+            // Render blog cards as rectangles (landscape orientation)
             data.results.forEach(rec => {
                 const card = document.createElement('div');
                 card.className = 'for-you-card';
                 card.style.cursor = 'pointer';
                 card.onclick = () => window.location.href = `/posts/${rec.id}/`;
                 card.innerHTML = `
-                    <div style="width:100%;height:140px;display:flex;align-items:center;justify-content:center;background:#f3f4f6;border-radius:8px;overflow:hidden;">
-                        ${rec.image ? `<img src="${rec.image}" alt="${rec.title}" style="max-width:100%;max-height:100%;object-fit:contain;"/>` : `<div style=\"width:60%;height:60%;background:linear-gradient(135deg,#eaeef9,#f7f5f0);border-radius:6px;\"></div>`}
+                    <div style="width:100%;height:100px;display:flex;align-items:center;justify-content:center;background:#f3f4f6;border-radius:8px;overflow:hidden;">
+                        ${rec.image ? `<img src="${rec.image}" alt="${rec.title}" style="max-width:100%;max-height:100%;object-fit:cover;width:100%;"/>` : `<div style=\"width:100%;height:100%;background:linear-gradient(135deg,#eaeef9,#f7f5f0);\"></div>`}
                     </div>
-                    <div style="margin-top:8px;font-weight:700;color:var(--text-dark);">${rec.title}</div>
-                    ${rec.excerpt ? `<div style="color:var(--secondary-text);font-size:0.95rem;margin-top:6px;">${rec.excerpt}</div>` : ''}
+                    <div style="margin-top:8px;font-weight:700;color:var(--text-dark);line-height:1.3;">${rec.title}</div>
+                    ${rec.excerpt ? `<div style="color:var(--secondary-text);font-size:0.85rem;margin-top:4px;line-height:1.3;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;">${rec.excerpt}</div>` : ''}
                 `;
                 container.appendChild(card);
             });
-            // Activate blog For You bubble on dashboard when blog recs load
-            const blogToggle = document.getElementById('blogForYouToggle');
-            if (blogToggle) {
-                document.querySelectorAll('.filter-bubble').forEach(b => b.classList.remove('active'));
-                blogToggle.classList.add('active');
-            }
         }
     } catch (err) {
         console.error('Failed to load blog recommendations:', err);
     }
 }
 
-// Load community recommendations
+// Load community recommendations - single column large posts with creator/community avatars (UPDATED: dropdown z-index fix, placeholder images, like/dislike order)
 async function loadCommunityRecommendations() {
     try {
         const res = await fetch('/recommend/community-recommendations/');
         const data = await res.json();
+        console.log('Community recommendations data:', data);
         if (data.results && data.results.length > 0) {
             const container = document.getElementById('communityForYouContainer');
+            if (!container) return;
             container.innerHTML = '';
-                // Render community cards with centered image + title + excerpt
-                data.results.forEach(rec => {
-                    const card = document.createElement('div');
-                    card.className = 'for-you-card';
-                    card.style.cursor = 'pointer';
-                    card.onclick = () => { window.location.href = `/communities/post/${rec.id}/`; };
-                    card.innerHTML = `
-                        <div style="width:100%;height:140px;display:flex;align-items:center;justify-content:center;background:#f3f4f6;border-radius:8px;overflow:hidden;">
-                            ${rec.image ? `<img src="${rec.image}" alt="${rec.title}" style="max-width:100%;max-height:100%;object-fit:contain;"/>` : `<div style=\"width:60%;height:60%;background:linear-gradient(135deg,#f0f4f8,#f7f5f0);border-radius:6px;\"></div>`}
-                        </div>
-                        <div style="margin-top:8px;font-weight:700;color:var(--text-dark);">${rec.title}</div>
-                        ${rec.excerpt ? `<div style="color:var(--secondary-text);font-size:0.95rem;margin-top:6px;">${rec.excerpt}</div>` : ''}
-                    `;
-                    container.appendChild(card);
+
+            data.results.forEach(rec => {
+                const card = document.createElement('div');
+                card.className = 'for-you-post-card';
+                card.style.background = 'var(--card-bg)';
+                card.style.border = '1px solid var(--border-color)';
+                card.style.borderRadius = '12px';
+                card.style.overflow = 'hidden';
+                card.style.cursor = 'pointer';
+                card.style.display = 'flex';
+                card.style.flexDirection = 'column';
+                card.style.transition = 'transform 0.2s, box-shadow 0.2s';
+                card.style.width = 'min(100%, 600px)';
+                card.style.boxShadow = '0 4px 12px rgba(0,0,0,0.08)';
+
+                // Image area with avatars
+                const imgWrapper = document.createElement('div');
+                imgWrapper.style.position = 'relative';
+                imgWrapper.style.width = '100%';
+                imgWrapper.style.aspectRatio = '16/9';
+                imgWrapper.style.backgroundColor = '#f0f0f0';
+                imgWrapper.style.display = 'flex';
+                imgWrapper.style.alignItems = 'center';
+                imgWrapper.style.justifyContent = 'center';
+                imgWrapper.style.overflow = 'hidden';
+
+                if (rec.image) {
+                    const img = document.createElement('img');
+                    img.src = rec.image;
+                    img.alt = rec.title || '';
+                    img.style.width = '100%';
+                    img.style.height = '100%';
+                    img.style.objectFit = 'cover';
+                    img.style.objectPosition = 'center';
+                    imgWrapper.appendChild(img);
+                    img.onerror = () => {
+                        img.style.display = 'none';
+                        const fallback = document.createElement('div');
+                        fallback.style.width = '100%';
+                        fallback.style.height = '100%';
+                        fallback.style.background = 'linear-gradient(135deg, #cbd5e1, #94a3b8)';
+                        fallback.style.display = 'flex';
+                        fallback.style.alignItems = 'center';
+                        fallback.style.justifyContent = 'center';
+                        fallback.textContent = 'Image not found';
+                        fallback.style.color = '#64748b';
+                        fallback.style.fontSize = '14px';
+                        imgWrapper.appendChild(fallback);
+                    };
+                } else {
+                    const fallback = document.createElement('div');
+                    fallback.style.width = '100%';
+                    fallback.style.height = '100%';
+                    fallback.style.background = 'linear-gradient(135deg, #cbd5e1, #94a3b8)';
+                    fallback.style.display = 'flex';
+                    fallback.style.alignItems = 'center';
+                    fallback.style.justifyContent = 'center';
+                    fallback.textContent = 'No image';
+                    fallback.style.color = '#64748b';
+                    fallback.style.fontSize = '14px';
+                    imgWrapper.appendChild(fallback);
+                }
+
+                // Community avatar (top-left)
+                const commAvatar = document.createElement('div');
+                commAvatar.style.position = 'absolute';
+                commAvatar.style.left = '12px';
+                commAvatar.style.top = '12px';
+                commAvatar.style.width = '48px';
+                commAvatar.style.height = '48px';
+                commAvatar.style.borderRadius = '50%';
+                commAvatar.style.border = '3px solid #fff';
+                commAvatar.style.display = 'flex';
+                commAvatar.style.alignItems = 'center';
+                commAvatar.style.justifyContent = 'center';
+                commAvatar.style.background = '#e5e7eb';
+                commAvatar.style.overflow = 'hidden';
+                commAvatar.style.cursor = 'pointer';
+                commAvatar.style.zIndex = '2';
+                if (rec.community_image) {
+                    const ca = document.createElement('img');
+                    ca.src = rec.community_image;
+                    ca.style.width = '100%';
+                    ca.style.height = '100%';
+                    ca.style.objectFit = 'cover';
+                    commAvatar.appendChild(ca);
+                } else {
+                    commAvatar.textContent = rec.community_name ? rec.community_name.slice(0,1).toUpperCase() : 'C';
+                    commAvatar.style.fontWeight = '700';
+                    commAvatar.style.color = '#374151';
+                    commAvatar.style.fontSize = '20px';
+                }
+                commAvatar.onclick = (e) => { e.stopPropagation(); if (rec.community_id) window.location.href = `/communities/${rec.community_id}/`; };
+                imgWrapper.appendChild(commAvatar);
+
+                // Author avatar (top-right)
+                const authAvatar = document.createElement('div');
+                authAvatar.style.position = 'absolute';
+                authAvatar.style.right = '12px';
+                authAvatar.style.top = '12px';
+                authAvatar.style.width = '48px';
+                authAvatar.style.height = '48px';
+                authAvatar.style.borderRadius = '50%';
+                authAvatar.style.border = '3px solid #fff';
+                authAvatar.style.display = 'flex';
+                authAvatar.style.alignItems = 'center';
+                authAvatar.style.justifyContent = 'center';
+                authAvatar.style.background = '#d1d5db';
+                authAvatar.style.overflow = 'hidden';
+                authAvatar.style.cursor = 'pointer';
+                authAvatar.style.zIndex = '2';
+                if (rec.author_avatar) {
+                    const aa = document.createElement('img');
+                    aa.src = rec.author_avatar;
+                    aa.style.width = '100%';
+                    aa.style.height = '100%';
+                    aa.style.objectFit = 'cover';
+                    authAvatar.appendChild(aa);
+                } else {
+                    authAvatar.textContent = rec.author_username ? rec.author_username.slice(0,1).toUpperCase() : 'U';
+                    authAvatar.style.fontWeight = '700';
+                    authAvatar.style.color = '#374151';
+                    authAvatar.style.fontSize = '20px';
+                }
+                authAvatar.onclick = (e) => { e.stopPropagation(); if (rec.author_id) window.location.href = `/accounts/user/${rec.author_id}/public-profile/`; };
+                imgWrapper.appendChild(authAvatar);
+
+                card.appendChild(imgWrapper);
+
+                // Content section
+                const content = document.createElement('div');
+                content.style.padding = '16px';
+                content.style.display = 'flex';
+                content.style.flexDirection = 'column';
+                content.style.gap = '12px';
+
+                // Community and author info
+                const meta = document.createElement('div');
+                meta.style.display = 'flex';
+                meta.style.gap = '8px';
+                meta.style.alignItems = 'center';
+                meta.style.fontSize = '0.85rem';
+                meta.style.color = 'var(--secondary-text)';
+                meta.innerHTML = `<strong style="color:var(--text-dark);">${rec.community_name || 'Community'}</strong> • <span>${rec.author_username || 'User'}</span>`;
+                content.appendChild(meta);
+
+                // Title
+                const title = document.createElement('h3');
+                title.style.margin = '0';
+                title.style.fontSize = '1.1rem';
+                title.style.fontWeight = '700';
+                title.style.color = 'var(--text-dark)';
+                title.style.lineHeight = '1.4';
+                title.textContent = rec.title || '';
+                content.appendChild(title);
+
+                // Excerpt
+                if (rec.excerpt) {
+                    const excerpt = document.createElement('p');
+                    excerpt.style.margin = '0';
+                    excerpt.style.color = 'var(--secondary-text)';
+                    excerpt.style.fontSize = '0.95rem';
+                    excerpt.style.lineHeight = '1.5';
+                    excerpt.style.display = '-webkit-box';
+                    excerpt.style.webkitLineClamp = '2';
+                    excerpt.style.webkitBoxOrient = 'vertical';
+                    excerpt.style.overflow = 'hidden';
+                    excerpt.textContent = rec.excerpt;
+                    content.appendChild(excerpt);
+                }
+
+                // Action buttons
+                const actions = document.createElement('div');
+                actions.style.display = 'flex';
+                actions.style.gap = '12px';
+                actions.style.alignItems = 'center';
+                actions.style.marginTop = '8px';
+                actions.style.paddingTop = '12px';
+                actions.style.borderTop = '1px solid var(--border-color)';
+                actions.style.flexWrap = 'wrap';
+
+                // Dislike button (create first so like button can reference it)
+                const dislikeBtn = document.createElement('button');
+                dislikeBtn.className = 'foryou-action-btn';
+                dislikeBtn.style.cssText = 'background:none;border:none;cursor:pointer;padding:0;display:flex;align-items:center;gap:6px;color:var(--secondary-text);font-size:0.9rem;transition:color 0.2s;';
+                dislikeBtn.innerHTML = `<svg xmlns='http://www.w3.org/2000/svg' width='18' height='18' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2'><path d='M17 14V2'/><path d='M9 18.12 10 14H4.17a2 2 0 0 1-1.92-2.56l2.33-8A2 2 0 0 1 6.5 2H20a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-2.76a2 2 0 0 0-1.79 1.11L12 22a3.13 3.13 0 0 1-3-3.88Z'/></svg><span class='dislike-count'>${rec.dislikes_count||0}</span>`;
+
+                // Like button
+                const likeBtn = document.createElement('button');
+                likeBtn.className = 'foryou-action-btn';
+                likeBtn.style.cssText = 'background:none;border:none;cursor:pointer;padding:0;display:flex;align-items:center;gap:6px;color:var(--secondary-text);font-size:0.9rem;transition:color 0.2s;';
+                likeBtn.innerHTML = `<svg xmlns='http://www.w3.org/2000/svg' width='18' height='18' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2'><path d='M7 10v12'/><path d='M15 5.88 14 10h5.83a2 2 0 0 1 1.92 2.56l-2.33 8A2 2 0 0 1 17.5 22H4a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2h2.76a2 2 0 0 0 1.79-1.11L12 2a3.13 3.13 0 0 1 3 3.88Z'/></svg><span class='like-count'>${rec.likes_count||0}</span>`;
+                
+                likeBtn.addEventListener('click', async (e) => { e.stopPropagation(); 
+                    try { 
+                        const r = await fetch(`/communities/api/post/${rec.id}/like/`, { method:'POST',credentials:'include',headers:{'X-CSRFToken':csrfToken(),'X-Requested-With':'XMLHttpRequest'} }); 
+                        if(!r.ok) throw new Error('Network'); 
+                        const j = await r.json(); 
+                        likeBtn.querySelector('.like-count').textContent = j.likes_count || 0; 
+                        dislikeBtn.querySelector('.dislike-count').textContent = j.dislikes_count || 0;
+                        if(j.liked) { likeBtn.style.color='var(--primary)'; dislikeBtn.style.color='var(--secondary-text)'; } 
+                        else { likeBtn.style.color='var(--secondary-text)'; } 
+                    } catch(err){console.error(err);} 
                 });
+                actions.appendChild(likeBtn);
+                
+                dislikeBtn.addEventListener('click', async (e) => { e.stopPropagation(); 
+                    try { 
+                        const r = await fetch(`/communities/api/post/${rec.id}/dislike/`, { method:'POST',credentials:'include',headers:{'X-CSRFToken':csrfToken(),'X-Requested-With':'XMLHttpRequest'} }); 
+                        if(!r.ok) throw new Error('Network'); 
+                        const j = await r.json(); 
+                        dislikeBtn.querySelector('.dislike-count').textContent = j.dislikes_count || 0; 
+                        likeBtn.querySelector('.like-count').textContent = j.likes_count || 0;
+                        if(j.disliked) { dislikeBtn.style.color='#e74c3c'; likeBtn.style.color='var(--secondary-text)'; } 
+                        else { dislikeBtn.style.color='var(--secondary-text)'; } 
+                    } catch(err){console.error(err);} 
+                });
+                actions.appendChild(dislikeBtn);
+
+                // Comment button
+                const commentBtn = document.createElement('a');
+                commentBtn.href = `/communities/post/${rec.id}/`;
+                commentBtn.style.cssText = 'display:flex;align-items:center;gap:6px;color:var(--secondary-text);text-decoration:none;font-size:0.9rem;transition:color 0.2s;';
+                commentBtn.innerHTML = `<svg xmlns='http://www.w3.org/2000/svg' width='18' height='18' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2'><path d='M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z'/></svg><span>${rec.comments_count||0}</span>`;
+                commentBtn.onmouseover = () => commentBtn.style.color = 'var(--primary)';
+                commentBtn.onmouseout = () => commentBtn.style.color = 'var(--secondary-text)';
+                actions.appendChild(commentBtn);
+
+                // Bookmark button
+                const bookmarkBtn = document.createElement('button');
+                bookmarkBtn.className = 'foryou-action-btn';
+                bookmarkBtn.style.cssText = 'background:none;border:none;cursor:pointer;padding:0;display:flex;align-items:center;gap:6px;color:var(--secondary-text);font-size:0.9rem;transition:color 0.2s;margin-left:auto;';
+                bookmarkBtn.innerHTML = rec.user_bookmarked ? `<svg width='18' height='18' fill='currentColor' viewBox='0 0 24 24'><path d='m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2Z'/></svg>` : `<svg width='18' height='18' fill='none' stroke='currentColor' stroke-width='2' viewBox='0 0 24 24'><path d='m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z'/></svg>`;
+                if (rec.user_bookmarked) bookmarkBtn.style.color = 'var(--primary)';
+                
+                bookmarkBtn.addEventListener('click', async (e) => { e.stopPropagation(); 
+                    try { 
+                        const r = await fetch(`/communities/api/post/${rec.id}/bookmark/`, { method:'POST',credentials:'include',headers:{'X-CSRFToken':csrfToken(),'X-Requested-With':'XMLHttpRequest'} }); 
+                        if(!r.ok) throw new Error('Network'); 
+                        const j = await r.json(); 
+                        bookmarkBtn.style.color = j.bookmarked ? 'var(--primary)' : 'var(--secondary-text)'; 
+                        bookmarkBtn.innerHTML = j.bookmarked ? `<svg width='18' height='18' fill='currentColor' viewBox='0 0 24 24'><path d='m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2Z'/></svg>` : `<svg width='18' height='18' fill='none' stroke='currentColor' stroke-width='2' viewBox='0 0 24 24'><path d='m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z'/></svg>`; 
+                    } catch(err){console.error(err);} 
+                });
+                actions.appendChild(bookmarkBtn);
+
+                // Menu button (ellipsis) with dropdown for Report and Share
+                const menuWrapper = document.createElement('div');
+                menuWrapper.style.position = 'relative';
+                menuWrapper.style.display = 'inline-block';
+                menuWrapper.style.zIndex = '10';
+                
+                const menuBtn = document.createElement('button');
+                menuBtn.className = 'foryou-action-btn';
+                menuBtn.style.cssText = 'background:none;border:none;cursor:pointer;padding:0;display:flex;align-items:center;gap:6px;color:var(--secondary-text);font-size:0.9rem;transition:color 0.2s;';
+                menuBtn.innerHTML = `<svg xmlns='http://www.w3.org/2000/svg' width='18' height='18' viewBox='0 0 24 24' fill='currentColor'><circle cx='5' cy='12' r='2'/><circle cx='12' cy='12' r='2'/><circle cx='19' cy='12' r='2'/></svg>`;
+                
+                // Dropdown menu
+                const dropdown = document.createElement('div');
+                dropdown.style.cssText = 'position:absolute;top:calc(100% + 4px);right:0;background:var(--card-bg);border:1px solid var(--border-color);border-radius:8px;min-width:140px;z-index:10000;display:none;box-shadow:0 12px 24px rgba(0,0,0,0.15);overflow:hidden;';
+                
+                // Share option
+                const shareOption = document.createElement('button');
+                shareOption.style.cssText = 'display:block;width:100%;padding:10px 12px;border:none;background:none;text-align:left;cursor:pointer;color:var(--text-dark);font-size:0.9rem;transition:background 0.2s;';
+                shareOption.textContent = 'Share';
+                shareOption.onmouseover = () => shareOption.style.background = 'var(--hover-bg, rgba(0,0,0,0.05))';
+                shareOption.onmouseout = () => shareOption.style.background = 'none';
+                shareOption.onclick = (e) => { e.stopPropagation(); 
+                    const url = window.location.origin + `/communities/post/${rec.id}/`;
+                    if(navigator.share) {
+                        navigator.share({title: rec.title, text: rec.excerpt, url: url});
+                    } else {
+                        alert('Share URL: ' + url);
+                    }
+                    dropdown.style.display = 'none';
+                };
+                dropdown.appendChild(shareOption);
+                
+                // Report option
+                const reportOption = document.createElement('button');
+                reportOption.style.cssText = 'display:block;width:100%;padding:10px 12px;border:none;background:none;text-align:left;cursor:pointer;color:#e11d48;font-size:0.9rem;transition:background 0.2s;border-top:1px solid var(--border-color);';
+                reportOption.textContent = 'Report';
+                reportOption.onmouseover = () => reportOption.style.background = 'var(--hover-bg, rgba(0,0,0,0.05))';
+                reportOption.onmouseout = () => reportOption.style.background = 'none';
+                reportOption.onclick = (e) => { e.stopPropagation(); 
+                    const reason = prompt('Why are you reporting this post?'); 
+                    if(!reason) return; 
+                    try { 
+                        fetch(`/communities/api/post/${rec.id}/report/`, { method:'POST',credentials:'include',headers:{'Content-Type':'application/json','X-CSRFToken':csrfToken()},body:JSON.stringify({reason}) }).then(r => { if(r.ok) alert('Report submitted'); else alert('Failed'); }); 
+                    } catch(err){console.error(err);} 
+                    dropdown.style.display = 'none';
+                };
+                dropdown.appendChild(reportOption);
+                
+                menuBtn.onclick = (e) => { e.stopPropagation(); dropdown.style.display = dropdown.style.display === 'none' ? 'block' : 'none'; };
+                
+                // Close dropdown on outside click
+                document.addEventListener('click', (e) => {
+                    if (!menuWrapper.contains(e.target)) {
+                        dropdown.style.display = 'none';
+                    }
+                });
+                
+                menuWrapper.appendChild(menuBtn);
+                menuWrapper.appendChild(dropdown);
+                actions.appendChild(menuWrapper);
+
+                content.appendChild(actions);
+                card.appendChild(content);
+
+                // Navigate to post detail on card click (excluding buttons/links)
+                card.addEventListener('click', (e) => { 
+                    if (e.target.closest('button') || e.target.closest('a')) return; 
+                    window.location.href = `/communities/post/${rec.id}/`; 
+                });
+
+                // Hover effect
+                card.onmouseover = () => { card.style.transform = 'translateY(-4px)'; card.style.boxShadow = '0 12px 30px rgba(0,0,0,0.12)'; };
+                card.onmouseout = () => { card.style.transform = 'translateY(0)'; card.style.boxShadow = '0 4px 12px rgba(0,0,0,0.08)'; };
+
+                container.appendChild(card);
+            });
         }
     } catch (err) {
         console.error('Failed to load community recommendations:', err);
+    }
+}
+
+// Load recently played games
+async function loadRecentlyPlayedGames() {
+    try {
+        const res = await fetch('/games/api/recently-played/', { credentials: 'include' });
+        if (!res.ok) throw new Error('Failed to fetch recently played games');
+        const data = await res.json();
+        const container = document.getElementById('recentlyPlayedContainer');
+        if (!container) return;
+        
+        container.innerHTML = '';
+        if (!data.games || data.games.length === 0) {
+            container.style.display = 'none';
+            return;
+        }
+
+        // Show games ordered by most recently played
+        data.games.forEach(game => {
+            const gameCard = document.createElement('div');
+            gameCard.style.cursor = 'pointer';
+            gameCard.style.borderRadius = '8px';
+            gameCard.style.overflow = 'hidden';
+            gameCard.style.position = 'relative';
+            gameCard.style.aspectRatio = '1';
+            gameCard.style.background = '#f3f4f6';
+            gameCard.onclick = () => window.location.href = `/games/${game.id}/`;
+            
+            gameCard.innerHTML = `
+                ${game.image ? `<img src="${game.image}" alt="${game.title}" style="width:100%;height:100%;object-fit:cover;"/>` : `<div style="width:100%;height:100%;background:linear-gradient(135deg,#e0e7ff,#f0f4f8);display:flex;align-items:center;justify-content:center;"><span style="color:var(--secondary-text);text-align:center;padding:8px;font-size:0.9rem;">${game.title}</span></div>`}
+                <div style="position:absolute;bottom:0;left:0;right:0;background:linear-gradient(to bottom,transparent,rgba(0,0,0,0.6));padding:8px;color:white;font-weight:600;font-size:0.85rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${game.title}</div>
+            `;
+            container.appendChild(gameCard);
+        });
+        container.style.display = 'grid';
+    } catch (err) {
+        console.warn('Failed to load recently played games:', err);
+        const container = document.getElementById('recentlyPlayedContainer');
+        if (container) container.style.display = 'none';
     }
 }
 
@@ -807,35 +1162,10 @@ document.getElementById('refreshRecommendations')?.addEventListener('click', loa
 document.getElementById('refreshBlogRecommendations')?.addEventListener('click', loadBlogRecommendations);
 document.getElementById('refreshCommunityRecommendations')?.addEventListener('click', loadCommunityRecommendations);
 
-// Home "For You" bubble handler: toggles the main For You section without reloading
-const homeForYouToggle = document.getElementById('homeForYouToggle');
-if (homeForYouToggle) {
-    homeForYouToggle.addEventListener('click', async (e) => {
-        e.preventDefault();
-        const isActive = homeForYouToggle.classList.contains('active');
-        const forYouSectionEl = document.getElementById('forYouSection');
-        if (isActive) {
-            homeForYouToggle.classList.remove('active');
-            // revert to default "Latest" bubble state
-            document.querySelectorAll('.filter-bubble').forEach(b => b.classList.remove('active'));
-            document.querySelector('.filter-bubble[data-sort="latest"]')?.classList.add('active');
-            if (forYouSectionEl) forYouSectionEl.style.display = 'none';
-            return;
-        }
-        // activate For You and load recommendations
-        document.querySelectorAll('.filter-bubble').forEach(b => b.classList.remove('active'));
-        homeForYouToggle.classList.add('active');
-        if (forYouSectionEl) forYouSectionEl.style.display = 'block';
-        await loadForYouRecommendations();
-        // smooth scroll into view a bit above the section
-        const y = (forYouSectionEl) ? Math.max(forYouSectionEl.getBoundingClientRect().top + window.scrollY - 100, 0) : 0;
-        window.scrollTo({ top: y, behavior: 'smooth' });
-    });
-}
-
 // Check interests on page load
 document.addEventListener('DOMContentLoaded', () => {
     setTimeout(checkOnboardingStatus, 500);
+    setTimeout(loadRecentlyPlayedGames, 600);
 });
 
 
@@ -1024,24 +1354,55 @@ window.addEventListener('resize', () => {
 <script src="{% static 'script.js' %}" defer></script>
 
 <script>
-// Ensure filter-bubble active state is robust across pages
-(function(){
-    try{
-        const bubbles = document.querySelectorAll('.filter-bubble');
-        bubbles.forEach(b => {
-            if (b.dataset.managed === 'true') return;
-            b.dataset.managed = 'true';
-            b.addEventListener('click', (e) => {
-                // let dedicated handlers run for home/blog toggles; for others ensure visual state
-                const id = b.id || '';
-                if (id === 'homeForYouToggle' || id === 'blogForYouToggle') return;
-                // toggle active visual
-                document.querySelectorAll('.filter-bubble').forEach(x => x.classList.remove('active'));
-                b.classList.add('active');
+// Ensure filter-bubble active state is robust and updates feed
+    (function(){
+        try{
+            // Skip this handler if we're on the blog page - let blog_list.html handle bubbles
+            if (document.getElementById('blogForYouSection')) {
+                return;
+            }
+            const bubbles = document.querySelectorAll('.filter-bubble');
+            const forYouSection = document.getElementById('forYouSection');
+            bubbles.forEach(b => {
+                if (b.dataset.managed === 'true') return;
+                b.dataset.managed = 'true';
+                b.addEventListener('click', async (e) => {
+                    const newSort = b.dataset.sort;
+                    if (!newSort) return;
+
+                    // Update visual state
+                    document.querySelectorAll('.filter-bubble').forEach(x => x.classList.remove('active'));
+                    b.classList.add('active');
+
+                    // Special case: For You should load recommendation widgets
+                    if (newSort === 'for_you') {
+                        // Hide community feed, show For You section
+                        if (forYouSection) forYouSection.style.display = 'block';
+                        const feed = document.getElementById('community-feed'); if (feed) feed.style.display = 'none';
+                        // Clear containers to ensure fresh content loads
+                        const bc = document.getElementById('blogForYouContainer'); if (bc) bc.innerHTML = '';
+                        const cc = document.getElementById('communityForYouContainer'); if (cc) cc.innerHTML = '';
+                        const fc = document.getElementById('forYouContainer'); if (fc) fc.innerHTML = '';
+                        // Reset offset for infinite scroll
+                        if (window.communityPostOffset !== undefined) window.communityPostOffset = 0;
+                        if (window.communityPostEndReached !== undefined) window.communityPostEndReached = false;
+                        // load recommendations (blog + community + games) and wait for them to finish
+                        try { if (typeof loadAllRecommendations === 'function') await loadAllRecommendations(); } catch(e){ console.warn('loadAllRecommendations failed', e); }
+                        return;
+                    }
+
+                    // Regular bubbles: hide For You section and show community feed
+                    if (forYouSection) forYouSection.style.display = 'none';
+                    const feed = document.getElementById('community-feed'); if (feed) feed.style.display = 'flex';
+                    // Reset infinite scroll state
+                    if (window.communityPostOffset !== undefined) window.communityPostOffset = 0;
+                    if (window.communityPostEndReached !== undefined) window.communityPostEndReached = false;
+                    // Dispatch custom event to reset the feed with new sort
+                    window.dispatchEvent(new CustomEvent('sortChange', { detail: { sort: newSort } }));
+                });
             });
-        });
-    }catch(err){ console.warn('filter-bubble manager init failed', err); }
-})();
+        }catch(err){ console.warn('filter-bubble manager init failed', err); }
+    })();
 
 // Community posts infinite scroll
 (() => {
@@ -1052,24 +1413,46 @@ window.addEventListener('resize', () => {
     const apiUrl = "{% url 'community_posts_api' %}";
 
     let offset = 0;
+    let sort = 'latest';  // <-- Initialize sort variable
     const limit = 8;
     let loading = false;
     let endReached = false;
 
-    // Get CSRF token from cookie or hidden csrf input
-    function csrfToken() {
-        let token = '';
-        const cookies = document.cookie.split(';');
-        for (let cookie of cookies) {
-            cookie = cookie.trim();
-            if (cookie.startsWith('csrftoken=')) {
-                token = cookie.substring('csrftoken='.length);
-                break;
-            }
+    // Expose to window for external reset (e.g., from bubble click handlers)
+    Object.defineProperty(window, 'communityPostOffset', {
+        get() { return offset; },
+        set(val) { offset = val; }
+    });
+    Object.defineProperty(window, 'communityPostEndReached', {
+        get() { return endReached; },
+        set(val) { endReached = val; }
+    });
+    Object.defineProperty(window, 'communityPostLoading', {
+        get() { return loading; },
+        set(val) { loading = val; }
+    });
+
+    // Listen for sort changes from filter bubbles
+    window.addEventListener('sortChange', (e) => {
+        const sort_value = e.detail && e.detail.sort ? e.detail.sort : 'latest';
+        
+        // Ignore For You sorts in this listener - they're handled by the bubble click handler
+        if (sort_value === 'for_you') {
+            return;
         }
-        return token || document.querySelector('[name=csrfmiddlewaretoken]')?.value || '';
-    }
-    let sort = 'latest';
+        
+        // Ensure For You UI is hidden when switching to feed sorts
+        const forYouSection = document.getElementById('forYouSection');
+        if (forYouSection) forYouSection.style.display = 'none';
+        const feed = document.getElementById('community-feed'); if (feed) feed.style.display = 'flex';
+
+        sort = sort_value;
+        offset = 0;
+        endReached = false;
+        feedEl.innerHTML = '';
+        showEnd(false);
+        loadMore();
+    });
 
     function showLoading(show) { loadingEl.style.display = show ? 'block' : 'none'; }
     function showEnd(show) { endEl.style.display = show ? 'block' : 'none'; }
@@ -1082,7 +1465,7 @@ window.addEventListener('resize', () => {
 
     function renderPost(p) {
         const card = document.createElement('div');
-        card.className = 'post-card';
+        card.className = 'unified-post-card';
         card.style.display = 'flex';
         card.style.flexDirection = 'column';
         card.style.gap = '12px';
@@ -1108,13 +1491,14 @@ window.addEventListener('resize', () => {
             img.style.height = '40px';
             img.style.borderRadius = '50%';
             img.style.objectFit = 'cover';
+            img.style.border = '2px solid var(--primary)';
             communityIconDiv.appendChild(img);
         } else {
             const fallback = document.createElement('div');
             fallback.style.width = '40px';
             fallback.style.height = '40px';
             fallback.style.borderRadius = '50%';
-            fallback.style.background = '#ddd';
+            fallback.style.background = '#6c63ff';
             fallback.style.display = 'flex';
             fallback.style.alignItems = 'center';
             fallback.style.justifyContent = 'center';
@@ -1153,22 +1537,26 @@ window.addEventListener('resize', () => {
         menuBtn.style.background = 'none';
         menuBtn.style.border = 'none';
         menuBtn.style.cursor = 'pointer';
-        menuBtn.style.padding = '0';
+        menuBtn.style.padding = '4px';
         menuBtn.style.fontSize = '1.2rem';
         menuBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/></svg>`;
         menuBtn.style.color = 'var(--secondary-text)';
+        menuBtn.style.display = 'flex';
+        menuBtn.style.alignItems = 'center';
+        menuBtn.style.justifyContent = 'center';
 
         const menu = document.createElement('div');
-        menu.style.position = 'absolute';
-        menu.style.top = '100%';
-        menu.style.right = '0';
-        menu.style.background = '#fff';
-        menu.style.border = '1px solid #ddd';
+        menu.style.position = 'fixed';
+        menu.style.background = 'var(--card-bg)';
+        menu.style.border = '1px solid var(--border-color)';
         menu.style.borderRadius = '8px';
         menu.style.minWidth = '140px';
         menu.style.display = 'none';
-        menu.style.zIndex = '1000';
-        menu.style.boxShadow = '0 4px 12px rgba(0,0,0,0.1)';
+        menu.style.zIndex = '10001';
+        menu.style.boxShadow = '0 4px 12px rgba(0,0,0,0.15)';
+        menu.style.maxHeight = '500px';
+        menu.style.overflow = 'auto';
+        menu.style.left = '0';\n        menu.style.top = '0';
 
         const reportBtn = document.createElement('button');
         reportBtn.style.display = 'block';
@@ -1181,14 +1569,29 @@ window.addEventListener('resize', () => {
         reportBtn.style.fontSize = '0.9rem';
         reportBtn.style.color = 'var(--text-dark)';
         reportBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 24 24" style="display:inline;margin-right:6px;"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>Report`;
-        reportBtn.onmouseover = () => reportBtn.style.background = '#f5f5f5';
+        reportBtn.onmouseover = () => reportBtn.style.background = 'var(--border-color)';
         reportBtn.onmouseout = () => reportBtn.style.background = 'none';
 
         menu.appendChild(reportBtn);
 
         menuBtn.onclick = (e) => {
             e.stopPropagation();
-            menu.style.display = menu.style.display === 'none' ? 'block' : 'none';
+            if (menu.style.display === 'none') {
+                const rect = menuBtn.getBoundingClientRect();
+                const menuWidth = 140;
+                let left = rect.left - menuWidth + rect.width;
+                const rightEdge = rect.left + rect.width;
+                if (left < 10) left = 10;
+                if (rightEdge + menuWidth + 10 > window.innerWidth) {
+                    left = window.innerWidth - menuWidth - 10;
+                }
+                menu.style.left = left + 'px';
+                menu.style.top = (rect.bottom + 8) + 'px';
+                menu.style.right = 'auto';
+                menu.style.display = 'block';
+            } else {
+                menu.style.display = 'none';
+            }
         };
 
         document.addEventListener('click', () => { menu.style.display = 'none'; });
@@ -1253,34 +1656,28 @@ window.addEventListener('resize', () => {
 
         // Action buttons (like, dislike, comment, author avatar)
         const actions = document.createElement('div');
-        actions.style.display = 'flex';
-        actions.style.gap = '12px';
-        actions.style.alignItems = 'center';
-        actions.style.marginTop = '8px';
-        actions.style.paddingTop = '8px';
-        actions.style.borderTop = '1px solid #eee';
-        actions.style.position = 'relative';
-        actions.style.zIndex = '10';
-        actions.style.overflow = 'visible';
-        actions.style.flexWrap = 'wrap';
+        actions.style.display = 'grid';\n        actions.style.gridTemplateColumns = '1fr auto auto auto';\n        actions.style.gap = '8px';\n        actions.style.alignItems = 'center';\n        actions.style.marginTop = '8px';\n        actions.style.paddingTop = '8px';\n        actions.style.borderTop = '1px solid var(--border-color)';\n        actions.style.position = 'relative';\n        actions.style.zIndex = '10';\n        actions.style.overflow = 'visible';
 
-        // Like button
+        // Like button - full width blue
         const likeBtn = document.createElement('button');
         likeBtn.className = p.user_liked ? 'post-like-btn liked' : 'post-like-btn';
-        likeBtn.style.background = 'none';
+        likeBtn.style.background = '#1f9cee';
         likeBtn.style.border = 'none';
         likeBtn.style.cursor = 'pointer';
-        likeBtn.style.padding = '6px 8px';
+        likeBtn.style.padding = '8px 12px';
         likeBtn.style.fontSize = '0.9rem';
-        likeBtn.style.color = p.user_liked ? 'var(--primary)' : 'var(--secondary-text)';
+        likeBtn.style.color = 'white';
         likeBtn.style.display = 'flex';
         likeBtn.style.alignItems = 'center';
+        likeBtn.style.justifyContent = 'center';
         likeBtn.style.gap = '6px';
-        likeBtn.style.transition = 'color 0.2s';
+        likeBtn.style.transition = 'all 0.2s';
         likeBtn.style.position = 'relative';
         likeBtn.style.zIndex = '260';
         likeBtn.style.overflow = 'visible';
         likeBtn.style.whiteSpace = 'nowrap';
+        likeBtn.style.flex = '1';
+        likeBtn.style.borderRadius = '6px';
         likeBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24" style="flex-shrink:0;"><path d="M7 10v12"/><path d="M15 5.88 14 10h5.83a2 2 0 0 1 1.92 2.56l-2.33 8A2 2 0 0 1 17.5 22H4a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2h2.76a2 2 0 0 0 1.79-1.11L12 2a3.13 3.13 0 0 1 3 3.88Z"/></svg><span class="like-count">${p.likes_count}</span>`;
         likeBtn.onclick = async (e) => {
             e.stopPropagation();
@@ -1308,8 +1705,8 @@ window.addEventListener('resize', () => {
                 console.error('Like error:', err);
             }
         };
-        likeBtn.onmouseover = () => likeBtn.style.opacity = '0.8';
-        likeBtn.onmouseout = () => likeBtn.style.opacity = '1';
+        likeBtn.onmouseover = () => likeBtn.style.background = '#1678c2';
+        likeBtn.onmouseout = () => likeBtn.style.background = '#1f9cee';
 
         // Dislike button
         const dislikeBtn = document.createElement('button');
@@ -1317,18 +1714,20 @@ window.addEventListener('resize', () => {
         dislikeBtn.style.background = 'none';
         dislikeBtn.style.border = 'none';
         dislikeBtn.style.cursor = 'pointer';
-        dislikeBtn.style.padding = '6px 8px';
-        dislikeBtn.style.fontSize = '0.9rem';
+        dislikeBtn.style.padding = '4px 6px';
+        dislikeBtn.style.fontSize = '0.8rem';
         dislikeBtn.style.color = p.user_disliked ? '#e74c3c' : 'var(--secondary-text)';
         dislikeBtn.style.display = 'flex';
         dislikeBtn.style.alignItems = 'center';
-        dislikeBtn.style.gap = '6px';
+        dislikeBtn.style.justifyContent = 'center';
+        dislikeBtn.style.gap = '4px';
         dislikeBtn.style.transition = 'color 0.2s';
         dislikeBtn.style.position = 'relative';
         dislikeBtn.style.zIndex = '260';
         dislikeBtn.style.overflow = 'visible';
         dislikeBtn.style.whiteSpace = 'nowrap';
-        dislikeBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24" style="flex-shrink:0;"><path d="M17 14V2"/><path d="M9 18.12 10 14H4.17a2 2 0 0 1-1.92-2.56l2.33-8A2 2 0 0 1 6.5 2H20a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-2.76a2 2 0 0 0-1.79 1.11L12 22a3.13 3.13 0 0 1-3-3.88Z"/></svg><span class="dislike-count">${p.dislikes_count}</span>`;
+        dislikeBtn.style.borderRadius = '4px';
+        dislikeBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24" style="flex-shrink:0;"><path d="M17 14V2"/><path d="M9 18.12 10 14H4.17a2 2 0 0 1-1.92-2.56l2.33-8A2 2 0 0 1 6.5 2H20a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-2.76a2 2 0 0 0-1.79 1.11L12 22a3.13 3.13 0 0 1-3-3.88Z"/></svg><span class="dislike-count">${p.dislikes_count}</span>`;
         dislikeBtn.onclick = async (e) => {
             e.stopPropagation();
             e.preventDefault();
@@ -1364,18 +1763,20 @@ window.addEventListener('resize', () => {
         bookmarkBtn.style.background = 'none';
         bookmarkBtn.style.border = 'none';
         bookmarkBtn.style.cursor = 'pointer';
-        bookmarkBtn.style.padding = '6px 8px';
-        bookmarkBtn.style.fontSize = '0.9rem';
+        bookmarkBtn.style.padding = '4px 6px';
+        bookmarkBtn.style.fontSize = '0.8rem';
         bookmarkBtn.style.color = p.user_bookmarked ? 'var(--primary)' : 'var(--secondary-text)';
         bookmarkBtn.style.display = 'flex';
         bookmarkBtn.style.alignItems = 'center';
-        bookmarkBtn.style.gap = '6px';
+        bookmarkBtn.style.justifyContent = 'center';
+        bookmarkBtn.style.gap = '4px';
         bookmarkBtn.style.transition = 'color 0.2s';
         bookmarkBtn.style.position = 'relative';
         bookmarkBtn.style.zIndex = '260';
         bookmarkBtn.style.overflow = 'visible';
         bookmarkBtn.style.whiteSpace = 'nowrap';
-        bookmarkBtn.innerHTML = p.user_bookmarked ? `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" viewBox="0 0 24 24" style="flex-shrink:0;"><path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2Z"/></svg><span>Bookmarked</span>` : `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="flex-shrink:0;"><path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z"/></svg><span>Bookmark</span>`;
+        bookmarkBtn.style.borderRadius = '4px';
+        bookmarkBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="flex-shrink:0;"><path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z"/></svg>`;
         bookmarkBtn.onclick = async (e) => {
             e.stopPropagation();
             e.preventDefault();
@@ -1384,7 +1785,6 @@ window.addEventListener('resize', () => {
                 if (!res.ok) throw new Error('Network error');
                 const d = await res.json();
                 bookmarkBtn.style.color = d.bookmarked ? 'var(--primary)' : 'var(--secondary-text)';
-                bookmarkBtn.innerHTML = d.bookmarked ? `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" viewBox="0 0 24 24" style="flex-shrink:0;"><path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2Z"/></svg><span>Bookmarked</span>` : `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="flex-shrink:0;"><path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z"/></svg><span>Bookmark</span>`;
                 d.bookmarked ? bookmarkBtn.classList.add('bookmarked') : bookmarkBtn.classList.remove('bookmarked');
             } catch (err) {
                 console.error('Bookmark error:', err);
@@ -1399,15 +1799,17 @@ window.addEventListener('resize', () => {
         commentBtn.style.background = 'none';
         commentBtn.style.border = 'none';
         commentBtn.style.cursor = 'pointer';
-        commentBtn.style.padding = '6px 8px';
-        commentBtn.style.fontSize = '0.9rem';
+        commentBtn.style.padding = '4px 6px';
+        commentBtn.style.fontSize = '0.8rem';
         commentBtn.style.color = 'var(--secondary-text)';
         commentBtn.style.textDecoration = 'none';
         commentBtn.style.display = 'flex';
         commentBtn.style.alignItems = 'center';
-        commentBtn.style.gap = '6px';
+        commentBtn.style.justifyContent = 'center';
+        commentBtn.style.gap = '4px';
         commentBtn.style.whiteSpace = 'nowrap';
-        commentBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24" style="flex-shrink:0;"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg><span>${p.comments_count || 0}</span>`;
+        commentBtn.style.borderRadius = '4px';
+        commentBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24" style="flex-shrink:0;"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg><span>${p.comments_count || 0}</span>`;
         commentBtn.onmouseover = () => commentBtn.style.color = 'var(--primary)';
         commentBtn.onmouseout = () => commentBtn.style.color = 'var(--secondary-text)';
 
@@ -1422,6 +1824,7 @@ window.addEventListener('resize', () => {
             aimg.style.height = '32px';
             aimg.style.borderRadius = '50%';
             aimg.style.objectFit = 'cover';
+            aimg.style.border = '2px solid var(--primary)';
             aimg.className = 'creator-pfp user-profile-trigger';
             aimg.dataset.userId = p.author_id;
             aimg.dataset.username = p.author_username || '';
@@ -1432,12 +1835,14 @@ window.addEventListener('resize', () => {
             afb.style.width = '32px';
             afb.style.height = '32px';
             afb.style.borderRadius = '50%';
-            afb.style.background = '#999';
+            afb.style.background = '#ff6b6b';
             afb.style.color = '#fff';
             afb.style.display = 'flex';
             afb.style.alignItems = 'center';
             afb.style.justifyContent = 'center';
             afb.style.fontWeight = 'bold';
+            afb.style.fontSize = '0.85rem';
+            afb.style.border = '2px solid var(--primary)';
             afb.textContent = p.author_username ? p.author_username.slice(0,1).toUpperCase() : 'U';
             afb.className = 'creator-pfp user-profile-trigger';
             afb.dataset.userId = p.author_id;
@@ -1445,6 +1850,10 @@ window.addEventListener('resize', () => {
             afb.style.cursor = 'pointer';
             authorAvatarDiv.appendChild(afb);
         }
+
+        // Make author avatar clickable to open profile
+        authorAvatarDiv.style.cursor = 'pointer';
+        authorAvatarDiv.onclick = (e) => { e.stopPropagation(); if (p.author_id) window.location.href = `/accounts/user/${p.author_id}/public-profile/`; };
 
         actions.appendChild(likeBtn);
         actions.appendChild(dislikeBtn);
@@ -1678,26 +2087,185 @@ window.addEventListener('resize', () => {
       if (e.target === notificationModal) notificationModal.style.display = 'none';
     });
 
-    // bubble filter click
-    bubbles.forEach(b => b.addEventListener('click', (ev) => {
-        bubbles.forEach(x => {
-            x.classList.remove('active');
-            x.style.borderColor = '#ddd';
-            x.style.background = '#fff';
-            x.style.color = 'var(--text-dark)';
-        });
-        b.classList.add('active');
-        b.style.borderColor = 'var(--primary)';
-        b.style.background = 'var(--primary)';
-        b.style.color = '#fff';
-        sort = b.getAttribute('data-sort') || 'latest';
-        // reset
-        offset = 0; endReached = false; feedEl.innerHTML = '';
-        showEnd(false);
-        loadMore();
-    }));
+    // REMOVED: Duplicate bubble handler - use the one at line 1030 instead
 
 })();
+</script>
+
+<!-- AI Chat Quick Access Bubble -->
+<div id="aiChatBubble" style="position:fixed;bottom:30px;right:30px;width:60px;height:60px;border-radius:50%;background:var(--primary, #1f9cee);display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 4px 12px rgba(31,156,238,0.4);transition:all 0.3s;z-index:999;">
+    <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-bot-icon lucide-bot"><path d="M12 8V4H8"/><rect width="16" height="12" x="4" y="8" rx="2"/><path d="M2 14h2"/><path d="M20 14h2"/><path d="M15 13v2"/><path d="M9 13v2"/></svg>
+</div>
+
+<style>
+#aiChatBubble:hover {
+    transform: scale(1.1);
+    box-shadow: 0 6px 16px rgba(31,156,238,0.6);
+}
+
+@media (max-width: 768px) {
+    #aiChatBubble {
+        bottom: 20px;
+        right: 20px;
+        width: 50px;
+        height: 50px;
+    }
+    
+    #aiChatBubble svg {
+        width: 24px;
+        height: 24px;
+    }
+}
+</style>
+
+<style>
+/* Unified post card appearance across For You, Latest, Subscriptions */
+.unified-post-card {
+    background: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    box-shadow: 0 6px 18px rgba(0,0,0,0.04);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+.unified-post-card .post-media, .unified-post-card > div[style*="aspect-ratio"] {
+    width: 100%;
+    aspect-ratio: 1 / 1;
+    overflow: hidden;
+    display: block;
+}
+.unified-post-card h3, .unified-post-card div[style*="fontWeight: '700'"] {
+    margin: 0 12px;
+}
+.unified-post-card .post-content, .unified-post-card .excerpt {
+    margin: 0 12px 12px 12px;
+    color: var(--secondary-text);
+    font-size: 0.95rem;
+}
+/* Make For You community container show one large card per row, centered */
+#communityForYouSection {
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    width: 100%;
+}
+
+#communityForYouContainer {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 24px;
+    width: 100%;
+    max-width: 100%;
+    padding: 0 12px;
+}
+
+.for-you-post-card {
+    transition: all 0.2s ease;
+}
+
+.for-you-post-card:hover {
+    box-shadow: 0 12px 30px rgba(0,0,0,0.15);
+}
+
+/* Responsive sizing */
+@media (max-width: 640px) {
+    #communityForYouContainer { padding: 0 8px; }
+    .for-you-post-card { width: 100% !important; }
+}
+
+@media (min-width: 641px) and (max-width: 1024px) {
+    .for-you-post-card { width: min(100%, 550px); }
+}
+
+@media (min-width: 1025px) {
+    .for-you-post-card { width: min(100%, 600px); }
+}
+
+/* Dark/Light mode support */
+@media (prefers-color-scheme: light) {
+    .for-you-post-card {
+        background: #ffffff;
+        border-color: #e5e7eb;
+    }
+    .for-you-post-card .foryou-action-btn:hover {
+        color: var(--primary);
+    }
+}
+
+@media (prefers-color-scheme: dark) {
+    .for-you-post-card {
+        background: #1f2937;
+        border-color: #374151;
+    }
+    .for-you-post-card .foryou-action-btn:hover {
+        color: var(--primary);
+    }
+}
+
+/* Styles for blog/games For You cards */
+.for-you-card {
+    background: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    padding: 12px;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+}
+
+.for-you-card:hover {
+    box-shadow: 0 6px 16px rgba(0,0,0,0.12);
+    transform: translateY(-2px);
+}
+
+/* Center the feed column and force single-column layout */
+.posts-center { display:flex; justify-content:center; }
+#community-feed { display:flex; flex-direction:column; gap:20px; align-items:center; width:100%; }
+.unified-post-card .post-media { width:100%; height:auto; aspect-ratio:1/1; }
+
+/* Action button styles for unified cards */
+.unified-post-card .post-like-btn,
+.unified-post-card .post-dislike-btn,
+.unified-post-card .post-bookmark-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: var(--secondary-text);
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+.unified-post-card .post-like-btn.liked { color: var(--primary); }
+.unified-post-card .post-dislike-btn.disliked { color: #e74c3c; }
+.unified-post-card .post-bookmark-btn.bookmarked { color: var(--primary); }
+.unified-post-card .creator-pfp { width:32px; height:32px; border-radius:50%; object-fit:cover; }
+</style>
+
+<script>
+// AI Chat bubble functionality
+document.addEventListener('DOMContentLoaded', () => {
+    const aiChatBubble = document.getElementById('aiChatBubble');
+    if (aiChatBubble) {
+        // If we're already on the chatbot page, hide the bubble
+        const chatbotPath = '{% url "chatbot_page" %}';
+        const currentPath = window.location.pathname || '';
+        if (currentPath === chatbotPath || currentPath.startsWith(chatbotPath)) {
+            aiChatBubble.style.display = 'none';
+            return;
+        }
+
+        // Set bubble color to user's accent color
+        const accentColor = getComputedStyle(document.documentElement).getPropertyValue('--primary').trim();
+        if (accentColor) aiChatBubble.style.background = accentColor;
+
+        // Navigate to AI chat page on click
+        aiChatBubble.addEventListener('click', () => {
+            window.location.href = chatbotPath;
+        });
+    }
+});
 </script>
 
 {% block extra_js %}{% endblock %}

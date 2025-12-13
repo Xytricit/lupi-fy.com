@@ -10,6 +10,7 @@ urlpatterns = [
     path("", include("core.urls")),
     path("posts/", include("blog.urls")),
     path("communities/", include("communities.urls")),
+    path("games/", include("games.urls")),
     path("recommend/", include("recommend.urls")),
     path("chatbot/", include("chatbot.urls")),
 ]

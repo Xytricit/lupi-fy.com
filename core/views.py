@@ -1,4 +1,5 @@
 from datetime import timedelta
+import os
 
 from django.conf import settings
 from django.contrib.auth import get_user_model
@@ -24,10 +25,20 @@ def dashboard_view(request):
     community_pages = ["communities", "create_community", "view_community"]
     subscription_pages = ["subscriptions", "subscription_detail"]
 
-    # Recently played (last 8 recent games by updated time, most recent first)
-    recent_games = WordListGame.objects.select_related("user").order_by("-updated_at")[
-        :8
-    ]
+    # Recently played (current user's last 8 game sessions by last_played)
+    from accounts.models import UserGameSession, WordListGame
+    from django.db import DatabaseError
+
+    try:
+        # Evaluate the queryset here so any DB errors occur inside the try
+        recent_games_qs = (
+            UserGameSession.objects.filter(user=request.user)
+            .order_by("-last_played")[:8]
+        )
+        recent_games = list(recent_games_qs)
+    except DatabaseError:
+        # Migration/table may not exist in this environment; fall back to WordListGame
+        recent_games = list(WordListGame.objects.select_related("user").order_by("-updated_at")[:8])
 
     # Popular communities (for sidebar)
     popular_communities = Community.objects.annotate(
@@ -265,6 +276,24 @@ def search_suggestions(request):
         )
 
     return JsonResponse({"groups": grouped, "include_users": include_users})
+
+
+def lupiforge_guide_view(request):
+    """Render the LupiForge user guide markdown file into a readable page.
+
+    The markdown is read from the repository root `LUPIFORGE_USER_GUIDE.md`
+    and passed to the template where client-side `marked.js` converts it to
+    HTML. This avoids adding a server-side markdown dependency.
+    """
+    guide_path = os.path.join(getattr(settings, 'BASE_DIR', ''), 'LUPIFORGE_USER_GUIDE.md')
+    markdown_text = ''
+    try:
+        with open(guide_path, 'r', encoding='utf-8') as fh:
+            markdown_text = fh.read()
+    except Exception:
+        markdown_text = '# LupiForge Guide\n\nGuide not found. Please contact the site administrator.'
+
+    return render(request, 'lupiforge_guide.html', {'markdown': markdown_text})
 
 
 def search_api(request):

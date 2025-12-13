@@ -24,6 +24,7 @@
         background: var(--bg-color);
         border-radius: 12px;
         box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        overflow: visible;
     }
 
     /* Avoid clipping interactive icons inside comment boxes / replies */
@@ -45,6 +46,7 @@
         margin-bottom: 20px;
         padding-bottom: 16px;
         border-bottom: 1px solid var(--border-color);
+        overflow: visible;
     }
 
     .post-header-left {
@@ -52,6 +54,7 @@
         align-items: center;
         gap: 12px;
         flex: 1;
+        overflow: visible;
     }
 
     .community-icon {
@@ -88,37 +91,44 @@
     }
 
     .more-btn {
-        background: none;
-        border: none;
+        background: rgba(31, 156, 238, 0.08);
+        border: 1px solid var(--border-color);
         cursor: pointer;
-        padding: 8px;
-        color: var(--secondary-text);
+        padding: 8px 10px;
+        color: var(--text-color);
         font-size: 1.2rem;
         position: relative;
         display: flex;
         align-items: center;
         justify-content: center;
+        border-radius: 6px;
+        transition: all 0.2s ease;
+        z-index: 250;
     }
 
     .more-btn:hover {
-        color: var(--text-color);
+        color: var(--primary);
+        background: rgba(31, 156, 238, 0.15);
+        border-color: var(--primary);
+        transform: scale(1.1);
     }
 
     .post-menu {
-        position: absolute;
-        top: 40px;
-        right: 0;
+        position: fixed;
+        top: auto;
+        right: auto;
         background: var(--card-bg);
         border: 1px solid var(--border-color);
         border-radius: 8px;
         box-shadow: 0 4px 12px rgba(0,0,0,0.15);
         min-width: 180px;
-        z-index: 100;
-        display: none;
+        z-index: 10000;
+        display: none !important;
+        overflow: visible;
     }
 
     .post-menu.active {
-        display: block;
+        display: block !important;
     }
 
     .menu-item {
@@ -144,19 +154,114 @@
         color: #e74c3c;
     }
 
-    .post-title {
-        font-size: 1.4rem;
-        font-weight: 700;
-        color: var(--text-color);
-        margin-bottom: 12px;
+    .menu-item.active {
+        color: var(--primary);
+        font-weight: 600;
+        background: rgba(31, 156, 238, 0.1);
+    }
+
+    .menu-item.active.danger {
+        color: #e74c3c;
+        background: rgba(231, 76, 60, 0.1);
+    }
+
+    .post-menu {
+        position: fixed;
+        top: auto;
+        right: auto;
+        background: var(--card-bg);
+        border: 2px solid var(--primary);
+        border-radius: 12px;
+        box-shadow: 0 8px 24px rgba(31, 156, 238, 0.2);
+        min-width: 200px;
+        z-index: 10000;
+        display: none !important;
+        overflow: visible;
+        animation: slideDown 0.2s ease;
+        padding: 8px 0;
+    }
+
+    @keyframes slideDown {
+        from {
+            opacity: 0;
+            transform: translateY(-8px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    .post-menu.active {
+        display: block !important;
+    }
+            .menu-item.active.danger {
+                color: #e74c3c;
+                background: rgba(231, 76, 60, 0.1);
+            }
+
+            .user-profile-dropdown {
+                position: absolute;
+                top: 100%;
+                left: 0;
+                background: var(--card-bg);
+                border: 1px solid var(--border-color);
+                border-radius: 8px;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+                z-index: 1001;
+                display: none;
+                min-width: 160px;
+                margin-top: 4px;
+                animation: slideDown 0.2s ease;
+            }
+
+            .user-profile-dropdown.show {
+                display: block;
+            }
+
+            .user-profile-dropdown a {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                padding: 10px 16px;
+                text-decoration: none;
+                color: var(--text-color);
+                transition: background 0.2s;
+                border: none;
+                background: none;
+                cursor: pointer;
+                width: 100%;
+                text-align: left;
+                font-size: 0.95rem;
+            }
+
+            .user-profile-dropdown a:hover {
+                background: rgba(31, 156, 238, 0.1);
+                color: var(--primary);
+            }
+        position: relative;
+    }
+
+    .post-image-wrapper::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: linear-gradient(135deg, #1f9cee, #fec76f);
+        filter: blur(30px) brightness(0.7);
+        z-index: 0;
     }
 
     .post-image {
         width: 100%;
-        aspect-ratio: 1 / 1;
-        object-fit: cover;
+        height: 100%;
+        object-fit: contain;
         border-radius: 10px;
-        margin-bottom: 16px;
+        margin-bottom: 0;
+        position: relative;
+        z-index: 1;
     }
 
     .post-image-fallback {
@@ -251,6 +356,15 @@
         stroke: #e74c3c !important;
     }
 
+    .action-btn.bookmarked {
+        color: var(--primary);
+    }
+
+    .action-btn.bookmarked svg {
+        fill: var(--primary) !important;
+        stroke: var(--primary) !important;
+    }
+
     /* Ensure comment/reply like & dislike buttons show filled color when active */
     .comment-like-action.liked { color: var(--primary) !important; }
     .comment-like-action.liked svg { fill: var(--primary) !important; stroke: var(--primary) !important; }
@@ -343,20 +457,56 @@
     <!-- Post Header -->
     <div class="post-header">
         <div class="post-header-left">
-            {% if post.community.community_image %}
-                <img src="{{ post.community.community_image.url }}" alt="{{ post.community.name }}" class="community-icon">
-            {% else %}
-                <div class="community-icon" style="background: linear-gradient(135deg, #1f9cee15, #fec76f15); display: flex; align-items: center; justify-content: center; font-size: 1.2rem;">🌍</div>
-            {% endif %}
-            <div class="header-info">
-                <a href="{% url 'community_detail' post.community.id %}" class="community-name">
-                    {{ post.community.name }}
-                </a>
-                <div class="post-date">{{ post.created_at|date:"M d, Y \a\t g:i A" }}</div>
+            <!-- Community Icon -->
+            <div style="display: flex; align-items: center; gap: 8px;">
+                {% if post.community.community_image %}
+                    <img src="{{ post.community.community_image.url }}" alt="{{ post.community.name }}" class="community-icon">
+                {% else %}
+                    <div class="community-icon" style="background: linear-gradient(135deg, #1f9cee15, #fec76f15); display: flex; align-items: center; justify-content: center; font-size: 1.2rem;">🌍</div>
+                {% endif %}
+                <div style="display: flex; flex-direction: column; gap: 4px;">
+                    <a href="{% url 'community_detail' post.community.id %}" class="community-name">
+                        {{ post.community.name }}
+                    </a>
+                    <div class="post-date">in {{ post.community.name }}</div>
+                </div>
+            </div>
+
+            <!-- Author Info -->
+            <div style="display: flex; align-items: center; gap: 8px; margin-left: 16px; padding-left: 16px; border-left: 1px solid var(--border-color);">
+                <div style="position: relative;">
+                    <img src="{% if post.author.avatar %}{{ post.author.avatar.url }}{% else %}https://via.placeholder.com/32?text={{ post.author.username|first }}{% endif %}" 
+                         alt="{{ post.author.username }}" 
+                         style="width: 32px; height: 32px; border-radius: 50%; object-fit: cover; cursor: pointer;"
+                         class="user-profile-trigger author-avatar-trigger"
+                         data-user-id="{{ post.author.id }}" data-username="{{ post.author.username }}"
+                         data-allow-public-socials="{{ post.author.allow_public_socials }}"
+                         title="Click for profile options">
+                    <div class="user-profile-dropdown author-profile-dropdown" data-user-id="{{ post.author.id }}">
+                        <a href="{% url 'public_profile_view' post.author.id %}" style="display: flex; align-items: center; gap: 6px; padding: 10px 16px;">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                                <circle cx="12" cy="7" r="4"/>
+                            </svg>
+                            View Profile
+                        </a>
+                    </div>
+                </div>
+                <div style="display: flex; flex-direction: column; gap: 2px;">
+                    <strong style="display: flex; align-items: center; gap: 4px; font-size: 0.9rem;">
+                        {{ post.author.username }}
+                        {% if post.author.is_verified %}
+                        <svg style="width: 14px; height: 14px; color: #1f9cee;" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" title="Verified">
+                          <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/>
+                        </svg>
+                        {% endif %}
+                    </strong>
+                    <span style="font-size: 0.8rem; color: var(--secondary-text);">{{ post.created_at|date:"M d, Y \a\t g:i A" }}</span>
+                </div>
             </div>
         </div>
 
-        <div style="position: relative;">
+        <div style="position: relative; z-index: 300;">
             <button class="more-btn" id="moreBtn">
                 <svg width="24" height="24" viewBox="0 0 24 24">
                     <circle cx="12" cy="12" r="1" fill="currentColor"/>
@@ -364,9 +514,23 @@
                     <circle cx="5" cy="12" r="1" fill="currentColor"/>
                 </svg>
             </button>
-            <div class="post-menu" id="postMenu">
-                <button class="menu-item" id="bookmarkBtn">
-                    <svg width="18" height="18" viewBox="0 0 24 24">
+            <div class="post-menu" id="postMenu" style="z-index: 1000;">
+                <button class="menu-item {% if user_liked %}active{% endif %}" id="menuLikeBtn" data-action="like">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M7 10v12"/>
+                        <path d="M15 5.88 14 10h5.83a2 2 0 0 1 1.92 2.56l-2.33 8A2 2 0 0 1 17.5 22H4a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2h2.76a2 2 0 0 0 1.79-1.11L12 2a3.13 3.13 0 0 1 3 3.88Z"/>
+                    </svg>
+                    <span>Like</span>
+                </button>
+                <button class="menu-item danger {% if user_disliked %}active{% endif %}" id="menuDislikeBtn" data-action="dislike">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M17 14V2"/>
+                        <path d="M9 18.12 10 14H4.17a2 2 0 0 1-1.92-2.56l2.33-8A2 2 0 0 1 6.5 2H20a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-2.76a2 2 0 0 0-1.79 1.11L12 22a3.13 3.13 0 0 1-3-3.88Z"/>
+                    </svg>
+                    <span>Dislike</span>
+                </button>
+                <button class="menu-item {% if user_bookmarked %}active{% endif %}" id="menuBookmarkBtn" data-action="bookmark">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/>
                     </svg>
                     <span>Bookmark</span>
@@ -387,7 +551,9 @@
 
     <!-- Post Image -->
     {% if post.image %}
-        <img src="{{ post.image.url }}" alt="{{ post.title }}" class="post-image">
+        <div class="post-image-wrapper">
+            <img src="{{ post.image.url }}" alt="{{ post.title }}" class="post-image">
+        </div>
     {% else %}
         <div class="post-image-fallback">📸 No image</div>
     {% endif %}
@@ -521,9 +687,9 @@ document.addEventListener('DOMContentLoaded', function() {
         }
 
         let url = '';
-        if (btn.id === 'likeBtn') url = `/communities/api/post/${postId}/like/`;
-        else if (btn.id === 'dislikeBtn') url = `/communities/api/post/${postId}/dislike/`;
-        else if (btn.id === 'bookmarkBtn') url = `/communities/api/post/${postId}/bookmark/`;
+        if (btn.id === 'likeBtn' || btn.id === 'menuLikeBtn') url = `/communities/api/post/${postId}/like/`;
+        else if (btn.id === 'dislikeBtn' || btn.id === 'menuDislikeBtn') url = `/communities/api/post/${postId}/dislike/`;
+        else if (btn.id === 'bookmarkBtn' || btn.id === 'menuBookmarkBtn') url = `/communities/api/post/${postId}/bookmark/`;
         else if (btn.classList.contains('comment-like-action')) url = `/communities/api/comment/${btn.dataset.commentId}/like/`;
         else if (btn.classList.contains('comment-dislike-action')) url = `/communities/api/comment/${btn.dataset.commentId}/dislike/`;
         else if (btn.id === 'reportBtn') {
@@ -533,7 +699,16 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         } else if (btn.id === 'moreBtn') {
             e.stopPropagation();
-            document.getElementById('postMenu').classList.toggle('active');
+            const menu = document.getElementById('postMenu');
+            menu.classList.toggle('active');
+            
+            // Position menu dynamically below the button
+            if (menu.classList.contains('active')) {
+                const btn = document.getElementById('moreBtn');
+                const btnRect = btn.getBoundingClientRect();
+                menu.style.top = (btnRect.bottom + 10) + 'px';
+                menu.style.right = (window.innerWidth - btnRect.right) + 'px';
+            }
             return;
         } else if (btn.id === 'commentBtn') {
             e.preventDefault();
@@ -555,30 +730,58 @@ document.addEventListener('DOMContentLoaded', function() {
             const data = await res.json();
 
             // Update UI
-            if (btn.id === 'likeBtn') {
-                btn.querySelector('.action-count').textContent = data.likes_count;
-                const disBtn = document.getElementById('dislikeBtn');
-                if (disBtn) disBtn.querySelector('.action-count').textContent = data.dislikes_count;
-                if (data.liked) {
-                    btn.classList.add('liked');
-                    if (disBtn) disBtn.classList.remove('disliked');
-                } else {
-                    btn.classList.remove('liked');
-                }
-            } else if (btn.id === 'dislikeBtn') {
-                btn.querySelector('.action-count').textContent = data.dislikes_count;
+            if (btn.id === 'likeBtn' || btn.id === 'menuLikeBtn') {
                 const likeBtn = document.getElementById('likeBtn');
+                const dislikeBtn = document.getElementById('dislikeBtn');
+                const menuLikeBtn = document.getElementById('menuLikeBtn');
+                const menuDislikeBtn = document.getElementById('menuDislikeBtn');
+                
                 if (likeBtn) likeBtn.querySelector('.action-count').textContent = data.likes_count;
-                if (data.disliked) {
-                    btn.classList.add('disliked');
-                    if (likeBtn) likeBtn.classList.remove('liked');
+                if (dislikeBtn) dislikeBtn.querySelector('.action-count').textContent = data.dislikes_count;
+                
+                if (data.liked) {
+                    if (likeBtn) likeBtn.classList.add('liked');
+                    if (dislikeBtn) dislikeBtn.classList.remove('disliked');
+                    if (menuLikeBtn) menuLikeBtn.classList.add('active');
+                    if (menuDislikeBtn) menuDislikeBtn.classList.remove('active');
                 } else {
-                    btn.classList.remove('disliked');
+                    if (likeBtn) likeBtn.classList.remove('liked');
+                    if (menuLikeBtn) menuLikeBtn.classList.remove('active');
                 }
-            } else if (btn.id === 'bookmarkBtn') {
-                btn.innerHTML = data.bookmarked
-                    ? `<svg width="18" height="18" viewBox="0 0 24 24"><path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2Z"/></svg><span>✓ Bookmarked</span>`
-                    : `<svg width="18" height="18" viewBox="0 0 24 24"><path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2Z"/></svg><span>Bookmark</span>`;
+            } else if (btn.id === 'dislikeBtn' || btn.id === 'menuDislikeBtn') {
+                const likeBtn = document.getElementById('likeBtn');
+                const dislikeBtn = document.getElementById('dislikeBtn');
+                const menuLikeBtn = document.getElementById('menuLikeBtn');
+                const menuDislikeBtn = document.getElementById('menuDislikeBtn');
+                
+                if (dislikeBtn) dislikeBtn.querySelector('.action-count').textContent = data.dislikes_count;
+                if (likeBtn) likeBtn.querySelector('.action-count').textContent = data.likes_count;
+                
+                if (data.disliked) {
+                    if (dislikeBtn) dislikeBtn.classList.add('disliked');
+                    if (likeBtn) likeBtn.classList.remove('liked');
+                    if (menuDislikeBtn) menuDislikeBtn.classList.add('active');
+                    if (menuLikeBtn) menuLikeBtn.classList.remove('active');
+                } else {
+                    if (dislikeBtn) dislikeBtn.classList.remove('disliked');
+                    if (menuDislikeBtn) menuDislikeBtn.classList.remove('active');
+                }
+            } else if (btn.id === 'bookmarkBtn' || btn.id === 'menuBookmarkBtn') {
+                const bookmarkBtn = document.getElementById('bookmarkBtn');
+                const menuBookmarkBtn = document.getElementById('menuBookmarkBtn');
+                
+                if (data.bookmarked) {
+                    if (menuBookmarkBtn) menuBookmarkBtn.classList.add('active');
+                    // Update all bookmark button texts
+                    document.querySelectorAll('#bookmarkBtn, #menuBookmarkBtn').forEach(b => {
+                        b.innerHTML = `<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2Z"/></svg><span>✓ Bookmarked</span>`;
+                    });
+                } else {
+                    if (menuBookmarkBtn) menuBookmarkBtn.classList.remove('active');
+                    document.querySelectorAll('#bookmarkBtn, #menuBookmarkBtn').forEach(b => {
+                        b.innerHTML = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2Z"/></svg><span>Bookmark</span>`;
+                    });
+                }
                 document.getElementById('postMenu').classList.remove('active');
             } else if (btn.classList.contains('comment-like-action')) {
                 btn.querySelector('.like-count').textContent = data.likes_count;
@@ -758,10 +961,60 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
+    // User avatar click handler to show profile dropdown
+    document.querySelectorAll('.author-avatar-trigger').forEach(avatar => {
+        avatar.addEventListener('click', async (e) => {
+            e.stopPropagation();
+            const dropdown = avatar.parentElement?.querySelector('.user-profile-dropdown');
+            if (!dropdown) return;
+
+            // Fetch popup JSON to determine privacy + render dropdown dynamically
+            const uid = avatar.dataset.userId;
+            try {
+                const resp = await fetch(`/accounts/user/${uid}/profile/`, { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+                if (!resp.ok) throw new Error('Fetch failed');
+                const data = await resp.json();
+
+                // Build dropdown content
+                let html = '';
+                // Show avatar + username row
+                html += `<a href="/accounts/user/${uid}/public-profile/" style="display:flex;align-items:center;gap:8px;padding:10px 16px;border-bottom:1px solid var(--border-color);">`;
+                if (data.avatar) html += `<img src="${data.avatar}" style="width:32px;height:32px;border-radius:50%"/>`;
+                html += `<span style="font-weight:600;color:var(--text-color)">${data.username}</span></a>`;
+
+                // Privacy / message area
+                if (data.is_private || data.is_own_profile === false && data.allow_public_socials === false) {
+                    html += `<div style="padding:10px 16px;color:var(--secondary-text);font-size:0.95rem;">This account is private.</div>`;
+                } else if (data.is_own_profile) {
+                    html += `<div style="padding:10px 16px;color:var(--secondary-text);font-size:0.95rem;">This is your profile.</div>`;
+                } else {
+                    html += `<div style="padding:10px 16px;color:var(--secondary-text);font-size:0.95rem;">Public profile</div>`;
+                }
+
+                // Actions (View Profile always available)
+                html += `<a href="/accounts/user/${uid}/public-profile/" style="display:block;padding:10px 16px;color:var(--text-color);text-decoration:none;font-weight:600;">View Profile</a>`;
+
+                dropdown.innerHTML = html;
+                dropdown.classList.add('show');
+            } catch (err) {
+                console.error('Profile popup fetch error', err);
+                // Fallback: just toggle existing dropdown
+                dropdown.classList.toggle('show');
+            }
+        });
+    });
+
     // Close menu when clicking outside
     document.addEventListener('click', (e) => {
+        // Close three-dot menu
         if (!e.target.closest('.more-btn') && !e.target.closest('.post-menu')) {
             document.getElementById('postMenu').classList.remove('active');
+        }
+        // Close profile dropdown if clicking outside it
+        if (!e.target.closest('.author-avatar-trigger') && !e.target.closest('.user-profile-dropdown')) {
+            document.querySelectorAll('.user-profile-dropdown.show').forEach(dd => {
+                dd.classList.remove('show');
+            });
         }
     });
 });

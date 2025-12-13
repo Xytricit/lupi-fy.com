@@ -1,0 +1,281 @@
+<!doctype html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Lupi-fy Game Editor</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/phaser@3.60.0/dist/phaser.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/blockly@11.3.0/blockly_compressed.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/blockly@11.3.0/blocks_compressed.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/blockly@11.3.0/en.js"></script>
+    <style>
+        canvas { display: block; margin: 0 auto; }
+        #blocklyDiv { height: 400px; width: 100%; }
+    </style>
+</head>
+<body class="bg-gray-100">
+    <header class="p-4 bg-white shadow">
+        <div class="container mx-auto flex justify-between items-center">
+            <div>
+                <h1 class="text-xl font-semibold">Lupi-fy Game Editor</h1>
+                <input type="text" id="gameTitle" placeholder="Game Title" class="mt-1 px-2 py-1 border rounded text-sm" value="My Game"/>
+            </div>
+            <div class="space-x-2">
+                <button onclick="saveGame()" class="px-3 py-1 bg-blue-600 text-white rounded text-sm">Save</button>
+                <button onclick="publishGame()" class="px-3 py-1 bg-green-600 text-white rounded text-sm">Publish</button>
+                <span class="text-sm">{{ user.username }} ({{ user.profile.role|default:"player" }})</span>
+            </div>
+        </div>
+    </header>
+    <main class="container mx-auto p-4">
+        <div class="grid grid-cols-3 gap-4 h-[600px]">
+            <!-- Canvas -->
+            <div class="col-span-1 bg-white rounded shadow p-2 overflow-auto">
+                <h2 class="mb-2 font-medium">Preview (Phaser)</h2>
+                <div id="canvas-container" style="width: 100%; height: 300px;"></div>
+            </div>
+            <!-- Blockly Editor -->
+            <div class="col-span-2 bg-white rounded shadow p-2 flex flex-col">
+                <h2 class="mb-2 font-medium">Blocks (Drag & Drop Logic)</h2>
+                <div id="blocklyDiv"></div>
+                <button onclick="runPreview()" class="mt-2 px-3 py-1 bg-indigo-600 text-white rounded text-sm">Run Preview</button>
+            </div>
+        </div>
+        <div class="mt-4 bg-white rounded shadow p-4">
+            <h2 class="mb-2 font-medium">Exported Logic JSON (Auto-generated)</h2>
+            <textarea id="logic-json" readonly class="w-full h-32 border p-2 text-xs font-mono bg-gray-50">{"events":[]}</textarea>
+        </div>
+    </main>
+
+    <xml id="toolbox" style="display: none">
+        <category name="Events" colour="230">
+            <block type="on_start"></block>
+            <block type="on_collision"></block>
+            <block type="on_key_press"></block>
+        </category>
+        <category name="Actions" colour="100">
+            <block type="move_sprite"></block>
+            <block type="change_health"></block>
+            <block type="destroy_sprite"></block>
+            <block type="spawn_sprite"></block>
+        </category>
+        <category name="Logic" colour="210">
+            <block type="controls_if"></block>
+            <block type="logic_compare"></block>
+        </category>
+    </xml>
+
+    <script>
+        const gameId = new URLSearchParams(window.location.search).get('id');
+        let workspace;
+        let game;
+
+        // Define custom blocks
+        Blockly.defineBlocksWithJsonArray([
+            {
+                "type": "on_start",
+                "message0": "On Start",
+                "nextStatement": null,
+                "colour": 230,
+                "tooltip": "Triggered when game starts"
+            },
+            {
+                "type": "on_collision",
+                "message0": "On Collision %1 with %2",
+                "args0": [{"type": "field_input", "name": "OBJ1", "text": "player"}, {"type": "field_input", "name": "OBJ2", "text": "enemy"}],
+                "previousStatement": null,
+                "nextStatement": null,
+                "colour": 230,
+                "tooltip": "Triggered on collision"
+            },
+            {
+                "type": "move_sprite",
+                "message0": "Move %1 by X: %2 Y: %3",
+                "args0": [{"type": "field_input", "name": "SPRITE", "text": "sprite"}, {"type": "field_number", "name": "X", "value": 10}, {"type": "field_number", "name": "Y", "value": 0}],
+                "previousStatement": null,
+                "nextStatement": null,
+                "colour": 100,
+                "tooltip": "Move a sprite"
+            },
+            {
+                "type": "change_health",
+                "message0": "Change %1 health by %2",
+                "args0": [{"type": "field_input", "name": "SPRITE", "text": "player"}, {"type": "field_number", "name": "AMOUNT", "value": -10}],
+                "previousStatement": null,
+                "nextStatement": null,
+                "colour": 100,
+                "tooltip": "Modify health"
+            },
+            {
+                "type": "destroy_sprite",
+                "message0": "Destroy %1",
+                "args0": [{"type": "field_input", "name": "SPRITE", "text": "enemy"}],
+                "previousStatement": null,
+                "nextStatement": null,
+                "colour": 100,
+                "tooltip": "Destroy a sprite"
+            },
+            {
+                "type": "spawn_sprite",
+                "message0": "Spawn %1 at X: %2 Y: %3",
+                "args0": [{"type": "field_input", "name": "SPRITE", "text": "enemy"}, {"type": "field_number", "name": "X", "value": 0}, {"type": "field_number", "name": "Y", "value": 0}],
+                "previousStatement": null,
+                "nextStatement": null,
+                "colour": 100,
+                "tooltip": "Spawn a sprite"
+            },
+            {
+                "type": "on_key_press",
+                "message0": "On Key Pressed %1",
+                "args0": [{"type": "field_input", "name": "KEY", "text": "space"}],
+                "previousStatement": null,
+                "nextStatement": null,
+                "colour": 230,
+                "tooltip": "Triggered on key press"
+            }
+        ]);
+
+        // Initialize Blockly
+        workspace = Blockly.inject('blocklyDiv', {
+            toolbox: document.getElementById('toolbox'),
+            collapse: true,
+            comments: true,
+            disable: true,
+            maxBlocks: Infinity,
+            trashcan: true,
+            horizontalLayout: false,
+            toolboxPosition: 'left',
+            css: true,
+            media: 'https://cdn.jsdelivr.net/npm/blockly@11.3.0/media/',
+            rtl: false,
+            scrollbars: true,
+            sounds: false,
+            oneBasedIndex: true
+        });
+
+        workspace.addChangeListener(exportLogic);
+
+        // Initialize Phaser
+        class BootScene extends Phaser.Scene {
+            constructor() {
+                super({ key: 'BootScene' });
+            }
+            preload() {}
+            create() {
+                this.add.text(200, 150, 'Phaser Canvas Ready\nDrag blocks to build logic', { fontSize: '18px', color: '#000' });
+            }
+        }
+
+        const config = {
+            type: Phaser.AUTO,
+            width: 400,
+            height: 300,
+            parent: 'canvas-container',
+            backgroundColor: '#87CEEB',
+            scene: [BootScene]
+        };
+        game = new Phaser.Game(config);
+
+        // Export blocks to logic JSON
+        function exportLogic() {
+            const blocks = workspace.getTopBlocks();
+            const logic = { events: [] };
+            blocks.forEach(block => {
+                const ev = blockToLogic(block);
+                if (ev) logic.events.push(ev);
+            });
+            document.getElementById('logic-json').value = JSON.stringify(logic, null, 2);
+        }
+
+        function blockToLogic(block) {
+            const type = block.type;
+            const data = { type };
+            for (const field of block.inputList) {
+                if (field.fieldRow) {
+                    field.fieldRow.forEach(f => {
+                        if (f.name && f.getValue) {
+                            data[f.name] = f.getValue();
+                        }
+                    });
+                }
+            }
+            return data;
+        }
+
+        // Save game version
+        async function saveGame() {
+            const title = document.getElementById('gameTitle').value;
+            const logicJson = JSON.parse(document.getElementById('logic-json').value);
+            const gameData = {
+                title: title,
+                description: 'Created with Lupi-fy Editor',
+                logic_json: logicJson,
+                bundle_url: 'local://bundle',
+                visibility: 'draft'
+            };
+
+            try {
+                const resp = await fetch('/games/api/save/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken') },
+                    body: JSON.stringify(gameData)
+                });
+                const data = await resp.json();
+                if (resp.ok) {
+                    alert('Game saved! ID: ' + data.game_id);
+                    window.history.replaceState({}, '', '/games/editor/?id=' + data.game_id);
+                } else {
+                    alert('Error: ' + (data.error || 'Unknown error'));
+                }
+            } catch (e) {
+                alert('Save failed: ' + e.message);
+            }
+        }
+
+        // Publish game (submit for review)
+        async function publishGame() {
+            if (!gameId) {
+                alert('Save game first before publishing');
+                return;
+            }
+            try {
+                const resp = await fetch('/games/api/publish/?game_id=' + gameId, {
+                    method: 'POST',
+                    headers: { 'X-CSRFToken': getCookie('csrftoken') }
+                });
+                const data = await resp.json();
+                if (resp.ok) {
+                    alert('Game submitted for review!');
+                } else {
+                    alert('Error: ' + (data.error || 'Unknown error'));
+                }
+            } catch (e) {
+                alert('Publish failed: ' + e.message);
+            }
+        }
+
+        // Run preview (apply logic to Phaser scene)
+        function runPreview() {
+            const logicJson = JSON.parse(document.getElementById('logic-json').value);
+            console.log('Applying logic:', logicJson);
+            alert('Logic preview applied! Check console for details.');
+        }
+
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let cookie of cookies) {
+                    cookie = cookie.trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+    </script>
+</body>
+</html>

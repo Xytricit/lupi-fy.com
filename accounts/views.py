@@ -311,7 +311,6 @@ def dashboard_view(request):
 @login_required
 def subscriptions_view(request):
     user = request.user
-
     # Get all subscriptions linked to this user
     subs = Subscription.objects.filter(user=user)
 
@@ -321,12 +320,14 @@ def subscriptions_view(request):
     )
     author_ids = subs.filter(author__isnull=False).values_list("author_id", flat=True)
 
-    # Fetch subscribed communities + subscribed authors
-    communities = Community.objects.filter(id__in=community_ids)
-    authors = get_user_model().objects.filter(id__in=author_ids)
+    # Joined communities: communities the user is a member of
+    joined_communities = Community.objects.filter(members=user)
 
-    # Fetch posts
-    community_posts = CommunityPost.objects.filter(community_id__in=community_ids)
+    # Subscribed communities (explicit subscriptions)
+    subscribed_communities = Community.objects.filter(id__in=community_ids)
+
+    # Show posts from communities the user has joined (bring back community posts)
+    community_posts = CommunityPost.objects.filter(community__in=joined_communities)
 
     # Also include authors the user follows (via User.following)
     try:
@@ -342,17 +343,18 @@ def subscriptions_view(request):
 
     author_posts = Post.objects.filter(author_id__in=all_author_ids)
 
-    # Provide vars the template expects (subs, subscribed_communities/authors)
+    # Provide vars the template expects (subs, subscribed_communities/authors, joined_communities)
     return render(
         request,
         "accounts/subscriptions.html",
         {
-            "communities": communities,
+            "communities": subscribed_communities,
             "authors": authors,
             "community_posts": community_posts,
             "author_posts": author_posts,
             "subs": subs,
-            "subscribed_communities": communities,
+            "subscribed_communities": subscribed_communities,
+            "joined_communities": joined_communities,
             "subscribed_authors": authors,
         },
     )
@@ -2263,7 +2265,8 @@ def game_lobby_post_message_view(request):
             )
 
         data = json.loads(request.body)
-        message_content = data.get("content", "").strip().lower()
+        # Accept both 'message' and 'content' keys for flexibility
+        message_content = (data.get("content") or data.get("message") or "").strip().lower()
 
         if not message_content:
             return JsonResponse({"error": "Empty message"}, status=400)
@@ -2282,7 +2285,7 @@ def game_lobby_post_message_view(request):
                 GameLobbyMessage.objects.create(
                     user=request.user,
                     author_name=request.user.username,
-                    content=data.get("content"),
+                    content=data.get("content") or data.get("message"),
                     is_system=False,
                 )
                 GameLobbyMessage.objects.create(
@@ -2295,7 +2298,7 @@ def game_lobby_post_message_view(request):
             channel_layer = get_channel_layer()
             payload_msg = {
                 "author": request.user.username,
-                "content": data.get("content"),
+                "content": data.get("content") or data.get("message"),
                 "created_at": timezone.now().isoformat(),
                 "is_system": False,
             }
@@ -2333,7 +2336,7 @@ def game_lobby_post_message_view(request):
             GameLobbyMessage.objects.create(
                 user=request.user,
                 author_name=request.user.username,
-                content=data.get("content"),
+                content=data.get("content") or data.get("message"),
                 is_system=False,
             )
         except Exception:
@@ -2342,7 +2345,7 @@ def game_lobby_post_message_view(request):
             channel_layer = get_channel_layer()
             payload_msg = {
                 "author": request.user.username,
-                "content": data.get("content"),
+                "content": data.get("content") or data.get("message"),
                 "created_at": timezone.now().isoformat(),
                 "is_system": False,
             }
@@ -2599,6 +2602,7 @@ def is_valid_word(word, allowed_letters):
 
 
 @login_required
+@login_required
 def letter_set_game_view(request):
     """Display Letter Set game"""
     # Get or create current game session
@@ -2787,22 +2791,75 @@ def letter_set_start_view(request):
 
 @login_required
 def game_lobby_challenge_start_view(request):
-    """Start or return the user's 12-word lobby challenge (JSON)."""
+    """Return the user's active 12-letter lobby challenge (JSON).
+
+    If the user has an existing not-completed challenge, return it. Otherwise
+    create a new challenge and return that. This preserves progress across
+    reloads.
+    """
     try:
-        # Always generate a fresh 12-letter challenge when this endpoint is called.
-        # This creates a new per-user challenge each time the client requests start.
-        letters = generate_random_letter_list(12)
-        chal = GameLobbyChallenge.objects.create(
-            user=request.user, letters=letters, used_letters=[], completed=False
+        # Try to find the most recent incomplete challenge for this user
+        chal = (
+            GameLobbyChallenge.objects.filter(user=request.user, completed=False)
+            .order_by("-created_at")
+            .first()
         )
+
+        if not chal:
+            letters = generate_random_letter_list(12)
+            chal = GameLobbyChallenge.objects.create(
+                user=request.user, letters=letters, used_letters=[], completed=False
+            )
 
         return JsonResponse(
             {
-                "letters": chal.letters,
-                "used_letters": chal.used_letters,
-                "completed": chal.completed,
+                "challenge": {
+                    "letters": chal.letters,
+                    "used_letters": chal.used_letters,
+                    "completed": chal.completed,
+                }
             }
         )
+    except Exception as e:
+        return JsonResponse({"error": str(e)}, status=500)
+
+
+@login_required
+def game_lobby_challenge_save_view(request):
+    """Save the user's current challenge progress (POST JSON).
+
+    Expects JSON payload: {"used_letters": [...], "completed": true|false}
+    Updates the user's most recent challenge (or creates one if missing).
+    """
+    if request.method != "POST":
+        return JsonResponse({"error": "POST required"}, status=405)
+
+    try:
+        data = json.loads(request.body.decode("utf-8"))
+    except Exception:
+        return JsonResponse({"error": "invalid json"}, status=400)
+
+    used = data.get("used_letters")
+    completed = data.get("completed")
+
+    try:
+        chal = (
+            GameLobbyChallenge.objects.filter(user=request.user).order_by("-created_at").first()
+        )
+        if not chal:
+            # create a fresh one if none exists
+            letters = generate_random_letter_list(12)
+            chal = GameLobbyChallenge.objects.create(
+                user=request.user, letters=letters, used_letters=[], completed=False
+            )
+
+        if isinstance(used, list):
+            chal.used_letters = used
+        if isinstance(completed, bool):
+            chal.completed = completed
+
+        chal.save()
+        return JsonResponse({"success": True})
     except Exception as e:
         return JsonResponse({"error": str(e)}, status=500)
 

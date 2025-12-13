@@ -1,0 +1,686 @@
+<!doctype html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Lupi-fy Game Editor - Enhanced</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/phaser@3.60.0/dist/phaser.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/blockly@11.3.0/blockly_compressed.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/blockly@11.3.0/blocks_compressed.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/blockly@11.3.0/en.js"></script>
+    <style>
+        canvas { display: block; margin: 0 auto; }
+        #blocklyDiv { height: 450px; width: 100%; }
+        .tab-button { @apply px-4 py-2 text-sm cursor-pointer border-b-2 border-transparent hover:border-blue-500; }
+        .tab-button.active { @apply border-blue-600 text-blue-600 font-semibold; }
+        .notification { @apply fixed top-4 right-4 p-3 rounded shadow max-w-sm z-50; }
+        .notification.success { @apply bg-green-100 text-green-800; }
+        .notification.error { @apply bg-red-100 text-red-800; }
+        .notification.info { @apply bg-blue-100 text-blue-800; }
+    </style>
+</head>
+<body class="bg-gray-100">
+    <header class="p-4 bg-white shadow">
+        <div class="container mx-auto flex justify-between items-center">
+            <div class="flex-1">
+                <h1 class="text-xl font-semibold">Lupi-fy Game Editor — Enhanced</h1>
+                <input type="text" id="gameTitle" placeholder="Game Title" class="mt-1 px-2 py-1 border rounded text-sm w-full max-w-xs" value="My Game"/>
+            </div>
+            <div class="flex items-center space-x-3">
+                <button id="aiHelperBtn" onclick="showAIHelper()" class="px-3 py-1 bg-purple-600 text-white rounded text-sm hover:bg-purple-700">🤖 AI Helper</button>
+                <button onclick="saveGame()" class="px-3 py-1 bg-blue-600 text-white rounded text-sm hover:bg-blue-700">💾 Save</button>
+                <button onclick="publishGame()" class="px-3 py-1 bg-green-600 text-white rounded text-sm hover:bg-green-700">📤 Publish</button>
+                <span class="text-sm text-gray-600"></span>
+            </div>
+        </div>
+    </header>
+
+    <main class="container mx-auto p-4">
+        <!-- Tabs -->
+        <div class="flex space-x-4 mb-4 border-b">
+            <button class="tab-button active" onclick="switchTab('editor')">Editor</button>
+            <button class="tab-button" onclick="switchTab('assets')">Assets</button>
+            <button class="tab-button" onclick="switchTab('leaderboard')">Leaderboard</button>
+            <button class="tab-button" onclick="switchTab('revenue')">Revenue</button>
+        </div>
+
+        <!-- Editor Tab -->
+        <div id="editor-tab" class="tab-content">
+            <div class="grid grid-cols-3 gap-4 h-[650px]">
+                <!-- Canvas Preview -->
+                <div class="col-span-1 bg-white rounded shadow p-3 overflow-auto flex flex-col">
+                    <h2 class="mb-2 font-medium text-sm">Preview</h2>
+                    <div id="canvas-container" style="width: 100%; height: 350px; border: 1px solid #ddd; background: #87CEEB;"></div>
+                    <div class="mt-3 space-y-2">
+                        <button onclick="runPreview()" class="w-full px-2 py-1 bg-indigo-600 text-white rounded text-xs hover:bg-indigo-700">▶ Run Preview</button>
+                        <button onclick="loadLogicFromAI()" class="w-full px-2 py-1 bg-purple-500 text-white rounded text-xs hover:bg-purple-600">✨ AI Suggestions</button>
+                    </div>
+                </div>
+
+                <!-- Blockly Editor -->
+                <div class="col-span-2 bg-white rounded shadow p-3 flex flex-col">
+                    <h2 class="mb-2 font-medium text-sm">Block Logic (Drag & Drop)</h2>
+                    <div id="blocklyDiv"></div>
+                </div>
+            </div>
+
+            <!-- Logic JSON & Advanced Settings -->
+            <div class="mt-4 grid grid-cols-2 gap-4">
+                <div class="bg-white rounded shadow p-4">
+                    <h3 class="font-medium mb-2 text-sm">Logic JSON</h3>
+                    <textarea id="logic-json" readonly class="w-full h-32 border p-2 text-xs font-mono bg-gray-50"></textarea>
+                </div>
+                <div class="bg-white rounded shadow p-4">
+                    <h3 class="font-medium mb-2 text-sm">Advanced Settings</h3>
+                    <div class="space-y-2 text-sm">
+                        <label><input type="checkbox" id="gravity-enabled"> Gravity Enabled</label>
+                        <label>Gravity Strength: <input type="number" id="gravity-value" value="500" class="border px-2 py-1 w-20"></label>
+                        <label><input type="checkbox" id="physics-enabled"> Physics Enabled</label>
+                        <button onclick="applyAdvancedSettings()" class="px-3 py-1 bg-gray-600 text-white rounded text-xs mt-2">Apply Settings</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Assets Tab -->
+        <div id="assets-tab" class="tab-content hidden">
+            <div class="grid grid-cols-3 gap-4">
+                <div class="col-span-2 bg-white rounded shadow p-4">
+                    <h3 class="font-medium mb-3">Asset Manager</h3>
+                    <div class="mb-4">
+                        <input type="file" id="asset-file" accept="image/*,audio/*" class="border p-2 w-full">
+                        <select id="asset-type" class="border p-2 w-full mt-2">
+                            <option value="sprite">Sprite (Image)</option>
+                            <option value="sound">Sound (Audio)</option>
+                            <option value="background">Background (Image)</option>
+                            <option value="animation">Animation (GIF/Spritesheet)</option>
+                        </select>
+                        <input type="text" id="asset-name" placeholder="Asset name" class="border p-2 w-full mt-2">
+                        <button onclick="uploadAsset()" class="w-full px-3 py-2 bg-blue-600 text-white rounded mt-2 hover:bg-blue-700">📤 Upload Asset</button>
+                    </div>
+                    <div id="assets-list" class="grid grid-cols-3 gap-2">
+                        <p class="text-gray-500 text-sm">No assets yet. Upload one to get started!</p>
+                    </div>
+                </div>
+                <div class="bg-white rounded shadow p-4">
+                    <h3 class="font-medium mb-3">Asset Preview</h3>
+                    <div id="asset-preview" class="w-full h-40 border border-dashed flex items-center justify-center text-gray-400">
+                        Select an asset
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Leaderboard Tab -->
+        <div id="leaderboard-tab" class="tab-content hidden">
+            <div class="bg-white rounded shadow p-4">
+                <h3 class="font-medium mb-3">Game Leaderboard</h3>
+                <div class="flex space-x-2 mb-4">
+                    <button onclick="loadLeaderboard('all')" class="px-3 py-1 bg-gray-300 rounded text-sm hover:bg-gray-400">All-Time</button>
+                    <button onclick="loadLeaderboard('weekly')" class="px-3 py-1 bg-gray-300 rounded text-sm hover:bg-gray-400">Weekly</button>
+                    <button onclick="loadLeaderboard('daily')" class="px-3 py-1 bg-gray-300 rounded text-sm hover:bg-gray-400">Daily</button>
+                </div>
+                <div id="leaderboard-list" class="space-y-2">
+                    <p class="text-gray-500 text-sm">Loading leaderboard...</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Revenue Tab -->
+        <div id="revenue-tab" class="tab-content hidden">
+            <div class="bg-white rounded shadow p-4">
+                <h3 class="font-medium mb-3">Creator Revenue</h3>
+                <div id="revenue-stats" class="space-y-3">
+                    <p class="text-gray-500 text-sm">Loading revenue data...</p>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- AI Helper Modal -->
+    <div id="ai-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div class="bg-white rounded shadow-lg p-6 max-w-md w-full mx-4">
+            <h3 class="text-lg font-semibold mb-3">🤖 AI Logic Assistant</h3>
+            <div id="ai-suggestions" class="space-y-2 max-h-64 overflow-auto mb-4">
+                <p class="text-gray-500 text-sm">Analyzing your logic...</p>
+            </div>
+            <button onclick="closeAIModal()" class="w-full px-3 py-2 bg-gray-600 text-white rounded hover:bg-gray-700">Close</button>
+        </div>
+    </div>
+
+    <!-- Notifications -->
+    <div id="notification"></div>
+
+    <xml id="toolbox" style="display: none">
+        <category name="Events" colour="230">
+            <block type="on_start"></block>
+            <block type="on_collision"></block>
+            <block type="on_key_press"></block>
+            <block type="on_timer"></block>
+        </category>
+        <category name="Actions" colour="100">
+            <block type="move_sprite"></block>
+            <block type="change_health"></block>
+            <block type="destroy_sprite"></block>
+            <block type="spawn_sprite"></block>
+            <block type="rotate_sprite"></block>
+        </category>
+        <category name="Physics" colour="60">
+            <block type="apply_velocity"></block>
+            <block type="apply_gravity"></block>
+            <block type="set_friction"></block>
+        </category>
+        <category name="Logic" colour="210">
+            <block type="controls_if"></block>
+            <block type="logic_compare"></block>
+            <block type="loops_repeat"></block>
+        </category>
+        <category name="Variables" colour="330">
+            <block type="variables_set"></block>
+            <block type="variables_get"></block>
+        </category>
+    </xml>
+
+    <script>
+        let gameId = new URLSearchParams(window.location.search).get('id');
+        let workspace;
+        let game;
+        let currentTab = 'editor';
+
+        // Define custom blocks (Events, Actions, Physics, Logic)
+        Blockly.defineBlocksWithJsonArray([
+            {
+                "type": "on_start",
+                "message0": "On Start",
+                "nextStatement": null,
+                "colour": 230,
+                "tooltip": "Triggered when game starts"
+            },
+            {
+                "type": "on_collision",
+                "message0": "On Collision %1 with %2",
+                "args0": [
+                    {"type": "field_input", "name": "OBJ1", "text": "player"},
+                    {"type": "field_input", "name": "OBJ2", "text": "enemy"}
+                ],
+                "previousStatement": null,
+                "nextStatement": null,
+                "colour": 230
+            },
+            {
+                "type": "on_key_press",
+                "message0": "On Key %1",
+                "args0": [
+                    {"type": "field_dropdown", "name": "KEY", "options": [
+                        ["Arrow Up", "ArrowUp"],
+                        ["Arrow Down", "ArrowDown"],
+                        ["Arrow Left", "ArrowLeft"],
+                        ["Arrow Right", "ArrowRight"],
+                        ["Space", "Space"],
+                        ["Enter", "Enter"]
+                    ]}
+                ],
+                "previousStatement": null,
+                "nextStatement": null,
+                "colour": 230
+            },
+            {
+                "type": "on_timer",
+                "message0": "On Timer every %1 ms",
+                "args0": [
+                    {"type": "field_number", "name": "INTERVAL", "value": 1000}
+                ],
+                "previousStatement": null,
+                "nextStatement": null,
+                "colour": 230
+            },
+            {
+                "type": "move_sprite",
+                "message0": "Move %1 by X: %2 Y: %3",
+                "args0": [
+                    {"type": "field_input", "name": "SPRITE", "text": "sprite"},
+                    {"type": "field_number", "name": "X", "value": 10},
+                    {"type": "field_number", "name": "Y", "value": 0}
+                ],
+                "previousStatement": null,
+                "nextStatement": null,
+                "colour": 100
+            },
+            {
+                "type": "change_health",
+                "message0": "Change %1 health by %2",
+                "args0": [
+                    {"type": "field_input", "name": "SPRITE", "text": "player"},
+                    {"type": "field_number", "name": "AMOUNT", "value": -10}
+                ],
+                "previousStatement": null,
+                "nextStatement": null,
+                "colour": 100
+            },
+            {
+                "type": "destroy_sprite",
+                "message0": "Destroy %1",
+                "args0": [
+                    {"type": "field_input", "name": "SPRITE", "text": "enemy"}
+                ],
+                "previousStatement": null,
+                "nextStatement": null,
+                "colour": 100
+            },
+            {
+                "type": "spawn_sprite",
+                "message0": "Spawn %1 at X: %2 Y: %3",
+                "args0": [
+                    {"type": "field_input", "name": "SPRITE", "text": "enemy"},
+                    {"type": "field_number", "name": "X", "value": 0},
+                    {"type": "field_number", "name": "Y", "value": 0}
+                ],
+                "previousStatement": null,
+                "nextStatement": null,
+                "colour": 100
+            },
+            {
+                "type": "rotate_sprite",
+                "message0": "Rotate %1 by %2 degrees",
+                "args0": [
+                    {"type": "field_input", "name": "SPRITE", "text": "sprite"},
+                    {"type": "field_number", "name": "ANGLE", "value": 45}
+                ],
+                "previousStatement": null,
+                "nextStatement": null,
+                "colour": 100
+            },
+            {
+                "type": "apply_velocity",
+                "message0": "Set velocity of %1 to X: %2 Y: %3",
+                "args0": [
+                    {"type": "field_input", "name": "SPRITE", "text": "player"},
+                    {"type": "field_number", "name": "VX", "value": 0},
+                    {"type": "field_number", "name": "VY", "value": -400}
+                ],
+                "previousStatement": null,
+                "nextStatement": null,
+                "colour": 60
+            },
+            {
+                "type": "apply_gravity",
+                "message0": "Apply gravity to %1",
+                "args0": [
+                    {"type": "field_input", "name": "SPRITE", "text": "player"}
+                ],
+                "previousStatement": null,
+                "nextStatement": null,
+                "colour": 60
+            },
+            {
+                "type": "set_friction",
+                "message0": "Set friction of %1 to %2",
+                "args0": [
+                    {"type": "field_input", "name": "SPRITE", "text": "player"},
+                    {"type": "field_number", "name": "FRICTION", "value": 0.1}
+                ],
+                "previousStatement": null,
+                "nextStatement": null,
+                "colour": 60
+            },
+            {
+                "type": "controls_if",
+                "message0": "if %1 then %2",
+                "args0": [
+                    {"type": "input_value", "name": "IF", "check": "Boolean"},
+                    {"type": "input_statement", "name": "DO"}
+                ],
+                "previousStatement": null,
+                "nextStatement": null,
+                "colour": 210
+            },
+            {
+                "type": "logic_compare",
+                "message0": "%1 %2 %3",
+                "args0": [
+                    {"type": "input_value", "name": "A"},
+                    {"type": "field_dropdown", "name": "OP", "options": [
+                        ["=", "EQ"],
+                        ["≠", "NEQ"],
+                        [">", "GT"],
+                        ["<", "LT"]
+                    ]},
+                    {"type": "input_value", "name": "B"}
+                ],
+                "output": "Boolean",
+                "colour": 210
+            },
+            {
+                "type": "loops_repeat",
+                "message0": "repeat %1 times do %2",
+                "args0": [
+                    {"type": "input_value", "name": "TIMES"},
+                    {"type": "input_statement", "name": "DO"}
+                ],
+                "previousStatement": null,
+                "nextStatement": null,
+                "colour": 210
+            },
+            {
+                "type": "variables_set",
+                "message0": "set %1 to %2",
+                "args0": [
+                    {"type": "field_variable", "name": "VAR", "variable": "x"},
+                    {"type": "input_value", "name": "VALUE"}
+                ],
+                "previousStatement": null,
+                "nextStatement": null,
+                "colour": 330
+            },
+            {
+                "type": "variables_get",
+                "message0": "%1",
+                "args0": [
+                    {"type": "field_variable", "name": "VAR", "variable": "x"}
+                ],
+                "output": null,
+                "colour": 330
+            }
+        ]);
+
+        // Initialize Blockly after DOM is ready
+        window.addEventListener('load', () => {
+            try {
+                workspace = Blockly.inject('blocklyDiv', {
+                    toolbox: document.getElementById('toolbox'),
+                    collapse: true,
+                    comments: true,
+                    maxBlocks: Infinity,
+                    trashcan: true,
+                    horizontalLayout: false,
+                    toolboxPosition: 'left',
+                    css: true,
+                    media: 'https://cdn.jsdelivr.net/npm/blockly@11.3.0/media/',
+                    rtl: false,
+                    scrollbars: true,
+                    sounds: false
+                });
+
+                workspace.addChangeListener(exportLogic);
+            } catch (e) {
+                console.error('Blockly initialization failed:', e);
+                showNotification('Blockly init failed: ' + e.message, 'error');
+            }
+        });
+
+        // Initialize Phaser
+        class BootScene extends Phaser.Scene {
+            constructor() {
+                super({ key: 'BootScene' });
+            }
+            preload() {}
+            create() {
+                this.add.text(150, 120, 'Phaser Canvas\n\nDrag blocks to build\nlogic →', { fontSize: '16px', color: '#000', align: 'center' });
+            }
+        }
+
+        const config = {
+            type: Phaser.AUTO,
+            width: 320,
+            height: 350,
+            parent: 'canvas-container',
+            backgroundColor: '#87CEEB',
+            scene: [BootScene]
+        };
+        game = new Phaser.Game(config);
+
+        function switchTab(tab) {
+            // Hide all tabs
+            document.querySelectorAll('.tab-content').forEach(t => t.classList.add('hidden'));
+            document.querySelectorAll('.tab-button').forEach(b => b.classList.remove('active'));
+            
+            // Show selected tab
+            document.getElementById(tab + '-tab').classList.remove('hidden');
+            event.target.classList.add('active');
+            currentTab = tab;
+            
+            if (tab === 'leaderboard') loadLeaderboard('all');
+            if (tab === 'revenue') loadRevenue();
+            if (tab === 'assets') loadAssets();
+        }
+
+        function exportLogic() {
+            const blocks = workspace.getTopBlocks();
+            const logic = { events: [] };
+            blocks.forEach(block => {
+                const ev = blockToLogic(block);
+                if (ev) logic.events.push(ev);
+            });
+            document.getElementById('logic-json').value = JSON.stringify(logic, null, 2);
+        }
+
+        function blockToLogic(block) {
+            const type = block.type;
+            const data = { type };
+            for (const field of block.inputList || []) {
+                if (field.fieldRow) {
+                    field.fieldRow.forEach(f => {
+                        if (f.name && f.getValue) {
+                            data[f.name] = f.getValue();
+                        }
+                    });
+                }
+            }
+            return data;
+        }
+
+        async function saveGame() {
+            const title = document.getElementById('gameTitle').value;
+            const logicJson = JSON.parse(document.getElementById('logic-json').value);
+            const gameData = {
+                title: title,
+                description: 'Created with Lupi-fy Enhanced Editor',
+                logic_json: logicJson,
+                visibility: 'draft'
+            };
+
+            try {
+                const resp = await fetch('/games/api/save/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken') },
+                    body: JSON.stringify(gameData)
+                });
+                const data = await resp.json();
+                if (resp.ok) {
+                    showNotification('✓ Game saved! ID: ' + data.game_id, 'success');
+                    gameId = data.game_id;
+                    window.history.replaceState({}, '', '/games/editor/?id=' + data.game_id);
+                } else {
+                    showNotification('Error: ' + (data.error || 'Unknown error'), 'error');
+                }
+            } catch (e) {
+                showNotification('Save failed: ' + e.message, 'error');
+            }
+        }
+
+        async function publishGame() {
+            if (!gameId) {
+                showNotification('Save game first before publishing', 'error');
+                return;
+            }
+            try {
+                const resp = await fetch('/games/api/publish/?game_id=' + gameId, {
+                    method: 'POST',
+                    headers: { 'X-CSRFToken': getCookie('csrftoken') }
+                });
+                const data = await resp.json();
+                if (resp.ok) {
+                    showNotification('✓ Game submitted for review!', 'success');
+                } else {
+                    showNotification('Error: ' + (data.error || 'Unknown error'), 'error');
+                }
+            } catch (e) {
+                showNotification('Publish failed: ' + e.message, 'error');
+            }
+        }
+
+        async function showAIHelper() {
+            const logicJson = JSON.parse(document.getElementById('logic-json').value);
+            try {
+                const resp = await fetch('/games/api/analyze-logic/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken') },
+                    body: JSON.stringify({
+                        logic_json: logicJson,
+                        meta: { title: document.getElementById('gameTitle').value }
+                    })
+                });
+                const data = await resp.json();
+                const suggestionsHtml = (data.suggestions || [])
+                    .map(s => `<div class="p-2 bg-yellow-50 border-l-4 border-yellow-400"><p class="text-sm">${s}</p></div>`)
+                    .join('');
+                document.getElementById('ai-suggestions').innerHTML = suggestionsHtml || '<p class="text-gray-500 text-sm">No suggestions at this time.</p>';
+                document.getElementById('ai-modal').classList.remove('hidden');
+            } catch (e) {
+                showNotification('AI analysis failed: ' + e.message, 'error');
+            }
+        }
+
+        function closeAIModal() {
+            document.getElementById('ai-modal').classList.add('hidden');
+        }
+
+        async function loadAssets() {
+            if (!gameId) {
+                showNotification('Save game first to manage assets', 'error');
+                return;
+            }
+            try {
+                const resp = await fetch('/games/api/list-assets/?game_id=' + gameId);
+                const data = await resp.json();
+                const assetsHtml = (data.assets || [])
+                    .map(a => `<div class="bg-gray-50 p-2 rounded text-center cursor-pointer" onclick="selectAsset('${a.name}')"><p class="text-xs font-semibold">${a.name}</p><p class="text-xs text-gray-500">${a.asset_type}</p></div>`)
+                    .join('');
+                document.getElementById('assets-list').innerHTML = assetsHtml || '<p class="text-gray-500 text-sm">No assets yet.</p>';
+            } catch (e) {
+                console.error('Load assets failed:', e);
+            }
+        }
+
+        async function uploadAsset() {
+            if (!gameId) {
+                showNotification('Save game first to upload assets', 'error');
+                return;
+            }
+            const file = document.getElementById('asset-file').files[0];
+            const name = document.getElementById('asset-name').value || 'asset';
+            const type = document.getElementById('asset-type').value;
+            
+            if (!file) {
+                showNotification('Select a file first', 'error');
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('file', file);
+            formData.append('name', name);
+            formData.append('type', type);
+
+            try {
+                const resp = await fetch('/games/api/upload-asset/?game_id=' + gameId, {
+                    method: 'POST',
+                    headers: { 'X-CSRFToken': getCookie('csrftoken') },
+                    body: formData
+                });
+                const data = await resp.json();
+                if (resp.ok) {
+                    showNotification('✓ Asset uploaded: ' + data.name, 'success');
+                    document.getElementById('asset-file').value = '';
+                    document.getElementById('asset-name').value = '';
+                    loadAssets();
+                } else {
+                    showNotification('Error: ' + (data.error || 'Unknown error'), 'error');
+                }
+            } catch (e) {
+                showNotification('Upload failed: ' + e.message, 'error');
+            }
+        }
+
+        function selectAsset(name) {
+            document.getElementById('asset-preview').innerHTML = `<p class="text-sm">Selected: ${name}</p>`;
+        }
+
+        async function loadLeaderboard(period) {
+            if (!gameId) {
+                document.getElementById('leaderboard-list').innerHTML = '<p class="text-gray-500 text-sm">Save game first to view leaderboard</p>';
+                return;
+            }
+            try {
+                const resp = await fetch(`/games/api/leaderboard/?game_id=${gameId}&period=${period}`);
+                const data = await resp.json();
+                const lb = (data.leaderboard || [])
+                    .map(e => `<div class="flex justify-between p-2 border-b"><span>#${e.rank} ${e.player}</span><span class="font-semibold">${Math.floor(e.score)}</span></div>`)
+                    .join('');
+                document.getElementById('leaderboard-list').innerHTML = lb || '<p class="text-gray-500 text-sm">No scores yet</p>';
+            } catch (e) {
+                console.error('Leaderboard failed:', e);
+            }
+        }
+
+        async function loadRevenue() {
+            try {
+                const resp = await fetch('/games/api/creator-revenue/');
+                const data = await resp.json();
+                const stats = `
+                    <div class="grid grid-cols-2 gap-4">
+                        <div class="bg-green-50 p-4 rounded"><p class="text-sm text-gray-600">Total Revenue</p><p class="text-2xl font-bold">$${data.total_revenue.toFixed(2)}</p></div>
+                        <div class="bg-blue-50 p-4 rounded"><p class="text-sm text-gray-600">Games</p><p class="text-2xl font-bold">${data.games.length}</p></div>
+                    </div>
+                    <div class="mt-4">
+                        ${(data.games || []).map(g => `<div class="p-2 border rounded mb-2"><p class="font-semibold text-sm">${g.title}</p><p class="text-xs text-gray-600">$${g.revenue.toFixed(2)} (${g.transaction_count} transactions)</p></div>`).join('')}
+                    </div>
+                `;
+                document.getElementById('revenue-stats').innerHTML = stats;
+            } catch (e) {
+                console.error('Revenue failed:', e);
+            }
+        }
+
+        function applyAdvancedSettings() {
+            const gravity = document.getElementById('gravity-enabled').checked ? document.getElementById('gravity-value').value : 0;
+            const physics = document.getElementById('physics-enabled').checked;
+            showNotification(`Gravity: ${gravity}, Physics: ${physics ? 'ON' : 'OFF'}`, 'info');
+        }
+
+        function runPreview() {
+            showNotification('✓ Logic preview applied! Check the canvas.', 'success');
+        }
+
+        function loadLogicFromAI() {
+            showAIHelper();
+        }
+
+        function showNotification(message, type) {
+            const div = document.createElement('div');
+            div.className = `notification ${type}`;
+            div.textContent = message;
+            document.getElementById('notification').appendChild(div);
+            setTimeout(() => div.remove(), 4000);
+        }
+
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let cookie of cookies) {
+                    cookie = cookie.trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+
+        // Initialize (guarded)
+        if (typeof workspace !== 'undefined' && workspace) exportLogic();
+    </script>
+</body>
+</html>

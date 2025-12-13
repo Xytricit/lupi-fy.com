@@ -355,6 +355,10 @@ document.addEventListener('click', (ev) => {
 let activeProfilePopup = null;
 
 document.addEventListener('click', async (e) => {
+  // If this click originated from a post-author specific avatar, let the
+  // page-level handler manage it (we show a small dropdown). Avoid opening
+  // the global profile popup in that case.
+  if (e.target.closest && e.target.closest('.author-avatar-trigger')) return;
   // Close popup if clicking elsewhere
   if (!e.target.closest('.user-profile-trigger') && !e.target.closest('.profile-popup')) {
     if (activeProfilePopup) {

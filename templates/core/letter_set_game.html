@@ -1,550 +1,515 @@
+{% extends "dashboardhome.html" %}
 {% load static %}
 
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Letter Set Game - Lupify</title>
-    <link rel="stylesheet" href="{% static 'style.css' %}">
-    <link rel="stylesheet" href="{% static 'css/letter_set_game-inline.css' %}">
+{% block title %}Letter Set Game - Lupify{% endblock %}
 
-        <script>
-        // Initialize theme early to ensure site-wide dark mode applies
-        (function(){
-            const serverPref = "{{ request.user.theme_preference|default:'' }}";
-            let pref = serverPref || null;
-            try { const local = localStorage.getItem('theme_pref'); if(!pref && local) pref = local; }catch(e){}
-            if(!pref) pref = 'light';
-            document.documentElement.setAttribute('data-theme', pref);
-        })();
-        </script>
+{% block content %}
+<!-- WebSocket Fallback for Development (runserver) -->
+<script src="{% static 'js/websocket-fallback.js' %}"></script>
+<style>
+.game-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 16px;
+}
 
-        .score-display {
-            background: #fef3c7;
-            padding: 15px;
-            border-radius: 8px;
-            text-align: center;
-            margin-bottom: 20px;
-            border: 2px solid var(--accent);
-        }
+.game-header {
+    padding: 32px;
+    background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+    color: white;
+    border-radius: 16px;
+    text-align: center;
+    margin-bottom: 24px;
+}
 
-        .score-number {
-            font-size: 2.5rem;
-            font-weight: 700;
-            color: var(--text-dark);
-        }
+.game-header h1 {
+    margin: 0;
+    font-size: 2.4rem;
+    font-weight: 800;
+}
 
-        .score-label {
-            color: var(--secondary-text);
-            font-size: 0.9rem;
-        }
+.game-header p {
+    margin: 12px 0 0;
+    opacity: 0.95;
+    font-size: 1.05rem;
+}
 
-        .main-panel {
-            background: var(--card-bg);
-            border-radius: 12px;
-            padding: 30px;
-            box-shadow: 0 6px 18px rgba(0,0,0,0.05);
-            display: flex;
-            flex-direction: column;
-        }
+.game-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+    align-items: start;
+}
 
-        .word-input-section {
-            margin-bottom: 30px;
-        }
+.game-panel {
+    background: var(--card-bg);
+    padding: 24px;
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
 
-        .word-input-section h3 {
-            font-size: 1.2rem;
-            margin-bottom: 15px;
-            color: var(--text-dark);
-        }
+.panel-title {
+    font-size: 1.2rem;
+    font-weight: 700;
+    margin-bottom: 16px;
+    color: var(--text-dark);
+}
 
-        .word-input-form {
-            display: flex;
-            gap: 10px;
-        }
+.score-box {
+    background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+    color: white;
+    padding: 20px;
+    border-radius: 12px;
+    text-align: center;
+    margin-bottom: 16px;
+}
 
-        .word-input-form input {
-            flex: 1;
-            border: 2px solid #e5e7eb;
-            border-radius: 8px;
-            padding: 12px 16px;
-            font-size: 1rem;
-            transition: border-color 0.3s;
-        }
+.score-number {
+    font-size: 2.8rem;
+    font-weight: 800;
+    margin: 0;
+}
 
-        .word-input-form input:focus {
-            outline: none;
-            border-color: var(--primary);
-        }
+.score-label {
+    font-size: 0.9rem;
+    opacity: 0.9;
+    margin: 8px 0 0;
+}
 
-        .word-input-form button {
-            background: var(--success);
-            color: white;
-            border: none;
-            border-radius: 8px;
-            padding: 12px 24px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: background 0.3s;
-        }
+.letters-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(50px, 1fr));
+    gap: 10px;
+    margin-bottom: 20px;
+}
 
-        .word-input-form button:hover {
-            background: #059669;
-        }
+.letter-tile {
+    aspect-ratio: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
+    font-weight: 700;
+    font-size: 1.4rem;
+    background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+    color: white;
+    transition: all 0.3s ease;
+    cursor: default;
+}
 
-        .completed-words-section {
-            flex: 1;
-            margin-bottom: 20px;
-        }
+.letter-tile.used {
+    background: var(--success);
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+    transform: scale(1.05);
+}
 
-        .completed-words-section h3 {
-            font-size: 1.1rem;
-            margin-bottom: 15px;
-            color: var(--text-dark);
-        }
+.input-section {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 16px;
+}
 
-        .words-list {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
-            gap: 10px;
-            max-height: 300px;
-            overflow-y: auto;
-        }
+.input-section input {
+    flex: 1;
+    border: 2px solid var(--border-color);
+    border-radius: 8px;
+    padding: 12px;
+    font-size: 1rem;
+    transition: border-color 0.2s;
+}
 
-        .word-badge {
-            background: #dbeafe;
-            color: var(--primary);
-            padding: 10px;
-            border-radius: 8px;
-            text-align: center;
-            font-weight: 600;
-            border-left: 3px solid var(--primary);
-        }
+.input-section input:focus {
+    outline: none;
+    border-color: var(--primary);
+}
 
-        .empty-words {
-            color: var(--secondary-text);
-            text-align: center;
-            padding: 30px;
-            background: #f9fafb;
-            border-radius: 8px;
-        }
+.input-section button {
+    background: var(--primary);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    padding: 12px 24px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s;
+}
 
-        .notification {
-            padding: 15px;
-            border-radius: 8px;
-            margin-bottom: 15px;
-            display: none;
-            animation: slideIn 0.3s ease;
-        }
+.input-section button:hover {
+    background: var(--primary-dark);
+}
 
-        .notification.success {
-            background: #d1fae5;
-            color: var(--success);
-            border-left: 4px solid var(--success);
-            display: block;
-        }
+.input-section button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
 
-        .notification.error {
-            background: #fee2e2;
-            color: var(--danger);
-            border-left: 4px solid var(--danger);
-            display: block;
-        }
+.words-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 12px;
+}
 
-        @keyframes slideIn {
-            from {
-                opacity: 0;
-                transform: translateY(-10px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
+.word-badge {
+    background: var(--primary);
+    color: white;
+    padding: 8px 14px;
+    border-radius: 20px;
+    font-size: 0.9rem;
+    font-weight: 600;
+}
 
-        .chat-panel {
-            background: var(--card-bg);
-            border-radius: 12px;
-            display: flex;
-            flex-direction: column;
-            max-height: 600px;
-            box-shadow: 0 6px 18px rgba(0,0,0,0.05);
-            overflow: hidden;
-        }
+.chat-messages {
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    height: 300px;
+    overflow-y: auto;
+    padding: 12px;
+    margin-bottom: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
 
-        .chat-messages {
-            flex: 1;
-            overflow-y: auto;
-            padding: 20px;
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-        }
+.chat-message {
+    padding: 10px 12px;
+    border-radius: 8px;
+    background: var(--bg);
+    font-size: 0.9rem;
+    border-left: 3px solid var(--primary);
+}
 
-        .chat-message {
-            padding: 10px 12px;
-            background: #f0f9ff;
-            border-radius: 8px;
-            border-left: 3px solid var(--primary);
-        }
+.chat-message.own {
+    background: var(--primary);
+    color: white;
+    border-left-color: var(--primary-dark);
+}
 
-        .chat-message.own {
-            background: #fef3c7;
-            border-left-color: var(--accent);
-            align-self: flex-end;
-            max-width: 85%;
-        }
+.chat-message.system {
+    background: var(--accent);
+    color: white;
+    border-left-color: var(--accent);
+}
 
-        .chat-message-header {
-            font-weight: 600;
-            font-size: 0.85rem;
-            color: var(--primary);
-            margin-bottom: 3px;
-        }
+.message-author {
+    font-weight: 600;
+    font-size: 0.85rem;
+    margin-bottom: 4px;
+    opacity: 0.9;
+}
 
-        .chat-message.own .chat-message-header {
-            color: #ca8a04;
-        }
+.message-content {
+    word-wrap: break-word;
+}
 
-        .chat-message-content {
-            font-size: 0.9rem;
-        }
+.chat-input {
+    display: flex;
+    gap: 8px;
+}
 
-        .chat-input-section {
-            padding: 15px;
-            border-top: 1px solid #e5e7eb;
-            display: flex;
-            gap: 10px;
-        }
+.chat-input input {
+    flex: 1;
+    border: 2px solid var(--border-color);
+    border-radius: 8px;
+    padding: 10px;
+    font-size: 0.9rem;
+}
 
-        .chat-input-section input {
-            flex: 1;
-            border: 1px solid #e5e7eb;
-            border-radius: 6px;
-            padding: 10px 12px;
-            font-size: 0.9rem;
-        }
+.chat-input input:focus {
+    outline: none;
+    border-color: var(--primary);
+}
 
-        .chat-input-section input:focus {
-            outline: none;
-            border-color: var(--primary);
-        }
+.chat-input button {
+    background: var(--primary);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    padding: 10px 16px;
+    font-weight: 600;
+    cursor: pointer;
+}
 
-        .chat-input-section button {
-            background: var(--primary);
-            color: white;
-            border: none;
-            border-radius: 6px;
-            padding: 10px 16px;
-            font-weight: 600;
-            cursor: pointer;
-            font-size: 0.9rem;
-        }
+.chat-input button:hover {
+    background: var(--primary-dark);
+}
 
-        .chat-input-section button:hover {
-            background: var(--primary-dark);
-        }
+.notification {
+    padding: 12px;
+    border-radius: 8px;
+    margin-bottom: 12px;
+    display: none;
+    font-weight: 600;
+}
 
-        .empty-chat {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            height: 100%;
-            color: var(--secondary-text);
-            text-align: center;
-            padding: 20px;
-        }
+.notification.show {
+    display: block;
+}
 
-        @media (max-width: 1024px) {
-            .game-layout {
-                grid-template-columns: 1fr;
-            }
-        }
-    </style>
-</head>
-<body>
-    <div class="game-container">
-        <a href="{% url 'games_hub' %}" class="back-button">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 20px; height: 20px;">
-                <path d="M19 12H5M12 19l-7-7 7-7"/>
-            </svg>
-            Back to Games
-        </a>
+.notification.success {
+    background: var(--success);
+    color: white;
+}
 
-        <div class="game-layout">
-            <!-- Left Panel: Letters -->
-            <div class="letter-panel">
+.notification.error {
+    background: var(--danger);
+    color: white;
+}
+
+@media (max-width: 1024px) {
+    .game-grid {
+        grid-template-columns: 1fr;
+    }
+}
+</style>
+
+<div class="game-container">
+    <div class="game-header">
+        <h1>🔤 Letter Set Game</h1>
+        <p>Form valid words from the given letters. Earn points and compete with other players!</p>
+    </div>
+
+    <div class="notification" id="notification"></div>
+
+    <div class="game-grid">
+        <!-- Left Panel: Game -->
+        <div>
+            <!-- Score -->
+            <div class="score-box">
+                <div class="score-number" id="scoreNumber">0</div>
+                <div class="score-label">Points</div>
+            </div>
+
+            <!-- Letters -->
+            <div class="game-panel">
                 <div class="panel-title">Your Letters</div>
-                <div class="score-display">
-                    <div class="score-number" id="scoreNumber">{{ game.score }}</div>
-                    <div class="score-label">Points</div>
-                </div>
-                <div class="letters-display" id="lettersDisplay">
-                    {% for letter in letters %}
-                    <div class="letter-box" data-letter="{{ letter }}" id="letter-{{ forloop.counter0 }}">{{ letter }}</div>
-                    {% endfor %}
-                </div>
-                <p style="font-size: 0.85rem; color: var(--secondary-text); text-align: center;">
-                    Form words using these letters
+                <div class="letters-grid" id="lettersGrid"></div>
+                <p style="font-size: 0.9rem; color: var(--secondary-text); margin: 0;">
+                    Form words using these letters. Green letters are already used in submitted words.
                 </p>
             </div>
 
-            <!-- Center Panel: Word Input & List -->
-            <div class="main-panel">
-                <div id="notification" class="notification"></div>
-
-                <div class="word-input-section">
-                    <h3>Submit a Word</h3>
-                    <div class="word-input-form">
-                        <input 
-                            type="text" 
-                            id="wordInput" 
-                            placeholder="Enter a word..." 
-                            autocomplete="off"
-                        >
-                        <button id="submitBtn">Submit</button>
-                    </div>
+            <!-- Word Input -->
+            <div class="game-panel">
+                <div class="panel-title">Submit Word</div>
+                <div class="input-section">
+                    <input type="text" id="wordInput" placeholder="Enter a word..." />
+                    <button id="submitBtn">Submit</button>
                 </div>
-
-                <div class="completed-words-section">
-                    <h3>Completed Words ({{ game.score }})</h3>
-                    {% if completed_words %}
-                        <div class="words-list" id="wordsList">
-                            {% for word in completed_words %}
-                            <div class="word-badge">{{ word }}</div>
-                            {% endfor %}
-                        </div>
-                    {% else %}
-                        <div class="empty-words">
-                            No words completed yet. Start submitting words!
-                        </div>
-                    {% endif %}
+                <div style="font-size: 0.9rem; color: var(--secondary-text);">
+                    Each valid word: <strong>10 points</strong>
                 </div>
             </div>
 
-            <!-- Right Panel: Chat -->
-            <div class="chat-panel">
-                <div class="panel-title" style="padding: 15px; margin-bottom: 0;">💬 Chat</div>
-                <div class="chat-messages" id="chatMessages">
-                    <div class="empty-chat">
-                        <p>Chat with other players while playing!</p>
-                    </div>
-                </div>
-                <div class="chat-input-section">
-                    <input 
-                        type="text" 
-                        id="chatInput" 
-                        placeholder="Say something..." 
-                        autocomplete="off"
-                    >
-                    <button id="chatSendBtn">Send</button>
-                </div>
+            <!-- Completed Words -->
+            <div class="game-panel">
+                <div class="panel-title">Completed Words</div>
+                <div class="words-list" id="wordsList"></div>
+            </div>
+        </div>
+
+        <!-- Right Panel: Chat -->
+        <div class="game-panel">
+            <div class="panel-title">💬 Game Chat</div>
+            <div class="chat-messages" id="chatMessages"></div>
+            <div class="chat-input">
+                <input type="text" id="chatInput" placeholder="Say something..." />
+                <button id="chatSendBtn">Send</button>
             </div>
         </div>
     </div>
+</div>
 
-    <script>
-        const CSRF_TOKEN = '{{ csrf_token }}';
-        const wordInput = document.getElementById('wordInput');
-        const submitBtn = document.getElementById('submitBtn');
-        const scoreNumber = document.getElementById('scoreNumber');
-        const notification = document.getElementById('notification');
-        const wordsList = document.getElementById('wordsList');
-        const chatInput = document.getElementById('chatInput');
-        const chatSendBtn = document.getElementById('chatSendBtn');
-        const chatMessages = document.getElementById('chatMessages');
-        
-        let gameLetters = '{{ game.letters }}';
-        let currentScore = {{ game.score }};
-        let completedWords = new Set();
-        let usedLetters = new Set();
-        
-        // Initialize completed words
-        {% for word in completed_words %}
-        completedWords.add('{{ word }}'.toLowerCase());
-        {% endfor %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const wordInput = document.getElementById('wordInput');
+    const submitBtn = document.getElementById('submitBtn');
+    const chatInput = document.getElementById('chatInput');
+    const chatSendBtn = document.getElementById('chatSendBtn');
+    const chatMessages = document.getElementById('chatMessages');
+    const notification = document.getElementById('notification');
+    const scoreNumber = document.getElementById('scoreNumber');
+    const lettersGrid = document.getElementById('lettersGrid');
+    const wordsList = document.getElementById('wordsList');
 
-        // Compute used letters from completed words and mark letters
-        function computeUsedLetters() {
-            usedLetters = new Set();
-            for (const w of completedWords) {
-                for (const ch of w.toUpperCase()) usedLetters.add(ch);
+    let socket = null;
+    let gameLetters = [];
+    let usedLetters = [];
+    let currentScore = 0;
+    let completedWords = [];
+
+    // Initialize WebSocket connection
+    function initWebSocket() {
+        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        const wsPath = `${protocol}//${window.location.host}/ws/game/letter-set/`;
+        
+        socket = new WebSocket(wsPath);
+        
+        socket.onopen = function() {
+            console.log('Connected to Letter Set game');
+        };
+        
+        socket.onmessage = function(event) {
+            try {
+                const data = JSON.parse(event.data);
+                handleMessage(data);
+            } catch (e) {
+                console.error('Error parsing message:', e);
             }
-            // Mark letter boxes
-            const boxes = document.querySelectorAll('#lettersDisplay .letter-box');
-            boxes.forEach(box => {
-                const ch = box.dataset.letter || box.textContent.trim();
-                if (usedLetters.has(ch.toUpperCase())) {
-                    box.style.background = '#10b981';
-                    box.style.color = '#fff';
-                    box.style.borderLeft = '3px solid #059669';
-                } else {
-                    box.style.background = 'linear-gradient(135deg, var(--primary), var(--primary-dark))';
-                    box.style.color = '#fff';
-                    box.style.borderLeft = '3px solid transparent';
-                }
-            });
+        };
+        
+        socket.onerror = function(error) {
+            console.error('WebSocket error:', error);
+            showNotification('Connection error', 'error');
+        };
+        
+        socket.onclose = function() {
+            console.log('Disconnected from game');
+            setTimeout(initWebSocket, 3000);
+        };
+    }
+
+    function handleMessage(data) {
+        const type = data.type;
+        
+        if (type === 'game_state') {
+            gameLetters = data.letters || [];
+            currentScore = data.score || 0;
+            completedWords = data.completed_words || [];
+            updateUI();
+        } else if (type === 'success' || type.includes('word_submitted')) {
+            currentScore = data.score || currentScore;
+            completedWords = data.completed_words || completedWords;
+            updateUI();
+            showNotification('Word submitted!', 'success');
+        } else if (type === 'word_submitted') {
+            showNotification(`${data.username} submitted: ${data.word}`, 'success');
+        } else if (type === 'chat_message') {
+            addChatMessage(data.author, data.content, false);
+        } else if (type === 'player_joined') {
+            addChatMessage('System', `${data.username} joined the game`, true);
+        } else if (type === 'error') {
+            showNotification(data.error || 'Error', 'error');
         }
+    }
 
-        function showNotification(message, type = 'success') {
-            notification.textContent = message;
-            notification.className = `notification ${type}`;
-            setTimeout(() => {
-                notification.className = 'notification';
-            }, 3000);
-        }
+    function updateUI() {
+        scoreNumber.textContent = currentScore;
+        updateLetters();
+        updateWordsList();
+    }
 
-        function submitWord() {
-            const word = wordInput.value.trim();
-            if (!word) return;
-
-            fetch('{% url "letter_set_submit_word" %}', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': CSRF_TOKEN
-                },
-                body: JSON.stringify({ word: word })
-            })
-            .then(res => res.json())
-            .then(data => {
-                if (data.success) {
-                    // Add to words list
-                    completedWords.add(word.toLowerCase());
-                    currentScore = data.score;
-                    scoreNumber.textContent = currentScore;
-                    
-                    // Add to display
-                    if (wordsList.querySelector('.empty-words')) {
-                        wordsList.innerHTML = '';
-                    }
-                    const badge = document.createElement('div');
-                    badge.className = 'word-badge';
-                    badge.textContent = word;
-                    wordsList.appendChild(badge);
-                    
-                    showNotification(data.message, 'success');
-                    // Update used letters UI
-                    if (data.used_letters) {
-                        // replace completedWords set with server state
-                        // server returns used_letters list (characters)
-                        // but we keep completedWords for list display; recompute used from server
-                        usedLetters = new Set(data.used_letters.map(c => c.toUpperCase()));
-                        // update letter boxes
-                        const boxes = document.querySelectorAll('#lettersDisplay .letter-box');
-                        boxes.forEach(box => {
-                            const ch = box.dataset.letter || box.textContent.trim();
-                            if (usedLetters.has(ch.toUpperCase())) {
-                                box.style.background = '#10b981';
-                                box.style.color = '#fff';
-                                box.style.borderLeft = '3px solid #059669';
-                            }
-                        });
-                    }
-                    wordInput.value = '';
-                    wordInput.focus();
-                    // handle bonus
-                    if (data.bonus_awarded) {
-                        // update letters display to new set
-                        if (data.new_letters) {
-                            gameLetters = data.new_letters;
-                            // rebuild letter boxes
-                            const lettersDisplay = document.getElementById('lettersDisplay');
-                            lettersDisplay.innerHTML = '';
-                            for (let i = 0; i < gameLetters.length; i++) {
-                                const ch = gameLetters[i];
-                                const div = document.createElement('div');
-                                div.className = 'letter-box';
-                                div.dataset.letter = ch;
-                                div.id = `letter-${i}`;
-                                div.textContent = ch;
-                                lettersDisplay.appendChild(div);
-                            }
-                            // reset completed words display
-                            if (wordsList) wordsList.innerHTML = '';
-                            completedWords.clear();
-                            computeUsedLetters();
-                        }
-                        showNotification(data.message || 'Bonus awarded!', 'success');
-                        scoreNumber.textContent = data.score;
-                    }
-                } else if (data.error === 'duplicate') {
-                    showNotification(data.message, 'error');
-                } else if (data.error === 'invalid_letters') {
-                    showNotification(data.message, 'error');
-                } else {
-                    showNotification(data.error || 'Error submitting word', 'error');
-                }
-            })
-            .catch(err => {
-                console.error('Error:', err);
-                showNotification('Failed to submit word', 'error');
-            });
-        }
-
-        function sendChatMessage() {
-            const message = chatInput.value.trim();
-            if (!message) return;
-
-            fetch('{% url "letter_set_chat" %}', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': CSRF_TOKEN
-                },
-                body: JSON.stringify({ content: message })
-            })
-            .then(res => res.json())
-            .then(data => {
-                if (data.success) {
-                    // Add message to chat
-                    if (chatMessages.querySelector('.empty-chat')) {
-                        chatMessages.innerHTML = '';
-                    }
-                    
-                    const messageEl = document.createElement('div');
-                    messageEl.className = 'chat-message own';
-                    const now = new Date();
-                    const time = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
-                    messageEl.innerHTML = `
-                        <div class="chat-message-header">You • ${time}</div>
-                        <div class="chat-message-content">${escapeHtml(message)}</div>
-                    `;
-                    chatMessages.appendChild(messageEl);
-                    chatMessages.scrollTop = chatMessages.scrollHeight;
-                    
-                    chatInput.value = '';
-                    chatInput.focus();
-                }
-            })
-            .catch(err => console.error('Error:', err));
-        }
-
-        function escapeHtml(text) {
-            const map = {
-                '&': '&amp;',
-                '<': '&lt;',
-                '>': '&gt;',
-                '"': '&quot;',
-                "'": '&#039;'
-            };
-            return text.replace(/[&<>"']/g, m => map[m]);
-        }
-
-        // Event listeners
-        submitBtn.addEventListener('click', submitWord);
-        wordInput.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') submitWord();
+    function updateLetters() {
+        lettersGrid.innerHTML = '';
+        gameLetters.forEach((letter, index) => {
+            const letterEl = document.createElement('div');
+            letterEl.className = 'letter-tile';
+            if (usedLetters.includes(letter)) {
+                letterEl.classList.add('used');
+            }
+            letterEl.textContent = letter;
+            lettersGrid.appendChild(letterEl);
         });
+    }
 
-        chatSendBtn.addEventListener('click', sendChatMessage);
-        chatInput.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') sendChatMessage();
+    function updateWordsList() {
+        wordsList.innerHTML = '';
+        completedWords.forEach(word => {
+            const badge = document.createElement('div');
+            badge.className = 'word-badge';
+            badge.textContent = word;
+            wordsList.appendChild(badge);
+            
+            // Mark used letters
+            for (let char of word.toUpperCase()) {
+                if (!usedLetters.includes(char)) {
+                    usedLetters.push(char);
+                }
+            }
         });
+        updateLetters();
+    }
 
-        // Focus word input on load
+    function submitWord() {
+        const word = wordInput.value.trim();
+        if (!word || !socket || socket.readyState !== WebSocket.OPEN) {
+            return;
+        }
+        
+        socket.send(JSON.stringify({
+            action: 'submit_word',
+            word: word
+        }));
+        
+        wordInput.value = '';
         wordInput.focus();
-    </script>
-</body>
-</html>
+    }
+
+    function sendChat() {
+        const message = chatInput.value.trim();
+        if (!message || !socket || socket.readyState !== WebSocket.OPEN) {
+            return;
+        }
+        
+        socket.send(JSON.stringify({
+            action: 'send_chat',
+            message: message
+        }));
+        
+        chatInput.value = '';
+        chatInput.focus();
+    }
+
+    function addChatMessage(author, content, isSystem) {
+        const messageEl = document.createElement('div');
+        messageEl.className = `chat-message ${isSystem ? 'system' : (author === '{{ user.username }}' ? 'own' : '')}`;
+        
+        if (!isSystem) {
+            messageEl.innerHTML = `
+                <div class="message-author">${author}</div>
+                <div class="message-content">${escapeHtml(content)}</div>
+            `;
+        } else {
+            messageEl.innerHTML = `<div class="message-content">${escapeHtml(content)}</div>`;
+        }
+        
+        chatMessages.appendChild(messageEl);
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+    }
+
+    function showNotification(message, type) {
+        notification.textContent = message;
+        notification.className = `notification show ${type}`;
+        setTimeout(() => {
+            notification.classList.remove('show');
+        }, 3000);
+    }
+
+    function escapeHtml(text) {
+        const map = {
+            '&': '&amp;',
+            '<': '&lt;',
+            '>': '&gt;',
+            '"': '&quot;',
+            "'": '&#039;'
+        };
+        return text.replace(/[&<>"']/g, m => map[m]);
+    }
+
+    // Event listeners
+    submitBtn.addEventListener('click', submitWord);
+    wordInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') submitWord();
+    });
+
+    chatSendBtn.addEventListener('click', sendChat);
+    chatInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') sendChat();
+    });
+
+    // Initialize
+    initWebSocket();
+    wordInput.focus();
+});
+</script>
+{% endblock %}

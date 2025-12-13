@@ -93,6 +93,11 @@ urlpatterns = [
         views.game_lobby_challenge_start_view,
         name="game_challenge_start",
     ),
+    path(
+        "api/game/challenge/save/",
+        views.game_lobby_challenge_save_view,
+        name="game_challenge_save",
+    ),
     # Creator / analytics
     path("creators/", views.creator_dashboard_view, name="creator_dashboard"),
     path(

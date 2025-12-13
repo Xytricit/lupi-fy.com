@@ -237,20 +237,26 @@ def save_user_interests(request):
         return JsonResponse({"error": str(e)}, status=400)
 
 
-@login_required
-@login_required
 def get_blog_recommendations(request):
     """Get personalized blog post recommendations based on tags."""
     user = request.user
-    cache_key = f"blog_recs:{user.id}"
+    # Build cache key safely for anonymous users
+    uid = getattr(user, 'id', 'anon') if user and getattr(user, 'is_authenticated', False) else 'anon'
+    cache_key = f"blog_recs:{uid}"
     cached = cache.get(cache_key)
     if cached:
         return JsonResponse({"results": cached})
 
-    try:
-        interests = UserInterests.objects.get(user=user)
-        blog_tags = interests.blog_tags
-    except UserInterests.DoesNotExist:
+    # Only attempt to fetch UserInterests when user is authenticated
+    if getattr(user, 'is_authenticated', False):
+        try:
+            interests = UserInterests.objects.get(user=user)
+            blog_tags = interests.blog_tags
+        except UserInterests.DoesNotExist:
+            blog_tags = []
+        except Exception:
+            blog_tags = []
+    else:
         blog_tags = []
 
     # Import blog models
@@ -264,13 +270,27 @@ def get_blog_recommendations(request):
     for post in all_posts:
         score = 0
         # Score by tag match (if blog posts have tags)
-        if hasattr(post, "tags") and post.tags:
-            post_tags = (
-                post.tags.split(",") if isinstance(post.tags, str) else post.tags
-            )
+        if hasattr(post, "tags"):
+            post_tags = []
+            try:
+                if isinstance(post.tags, str):
+                    post_tags = [t.strip() for t in post.tags.split(',') if t.strip()]
+                else:
+                    # ManyToManyField -> get names from related Tag objects
+                    try:
+                        post_tags = [getattr(t, 'name', str(t)) for t in post.tags.all()]
+                    except Exception:
+                        # Fallback: try to iterate directly
+                        post_tags = [str(t) for t in post.tags]
+            except Exception:
+                post_tags = []
+
             for tag in post_tags:
-                if tag.strip().lower() in [t.lower() for t in blog_tags]:
-                    score += 2.0
+                try:
+                    if tag and tag.strip().lower() in [t.lower() for t in blog_tags]:
+                        score += 2.0
+                except Exception:
+                    continue
 
         # Boost by recency
         from django.utils import timezone
@@ -360,6 +380,18 @@ def get_community_recommendations(request):
                 {
                     "id": post.id,
                     "title": post.title,
+                    "content": post.content[:240] if post.content else "",
+                    "image": post.image.url if post.image else None,
+                    "community_id": post.community.id,
+                    "community_name": post.community.name,
+                    "community_image": post.community.community_image.url if post.community.community_image else None,
+                    "author_id": post.author.id,
+                    "author_username": post.author.username,
+                    "author_avatar": post.author.avatar.url if post.author.avatar else None,
+                    "created_at": post.created_at.isoformat(),
+                    "likes_count": post.likes.count(),
+                    "dislikes_count": post.dislikes.count(),
+                    "comments_count": post.comments.count(),
                     "score": score,
                 }
             )

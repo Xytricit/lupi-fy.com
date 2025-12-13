@@ -23,6 +23,7 @@ urlpatterns = [
     path("blogs/", posts_list_view, name="blogs"),
     # Terms & Conditions
     path("terms-of-service", core_views.terms_of_service_view, name="terms_of_service"),
+    path("lupiforge-guide/", core_views.lupiforge_guide_view, name="lupiforge_guide"),
     # Use the correct communities view
     path("communities/", communities_views.communities_list, name="communities"),
     path(

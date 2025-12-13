@@ -18,26 +18,55 @@
         </div>
     </div>
 
+    {% if joined_communities %}
+    <div class="joined-communities-section">
+        <h3 class="joined-heading">Your Communities</h3>
+        <div class="joined-communities-wrapper">
+            <button id="comm-prev" class="comm-arrow comm-prev" aria-label="Previous community">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-chevron-left-icon lucide-chevron-left"><path d="m15 18-6-6 6-6"/></svg>
+            </button>
+
+            <div class="community-slider" id="community-slider">
+                {% for comm in joined_communities %}
+                <a href="{% url 'community_detail' comm.id %}" class="community-slide">
+                    {% if comm.community_image %}
+                    <img src="{{ comm.community_image.url }}" alt="{{ comm.name }}" class="community-slide-thumb">
+                    {% else %}
+                    <div class="community-slide-thumb placeholder"></div>
+                    {% endif %}
+                    <div class="community-slide-name">{{ comm.name }}</div>
+                    <div class="community-slide-meta">{{ comm.members.count }} members</div>
+                </a>
+                {% endfor %}
+            </div>
+
+            <button id="comm-next" class="comm-arrow comm-next" aria-label="Next community">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-chevron-right-icon lucide-chevron-right"><path d="m9 18 6-6-6-6"/></svg>
+            </button>
+        </div>
+    </div>
+    {% endif %}
+
     {% if subscribed_communities or subscribed_authors %}
     <div class="subscription-list">
         {% for sub in subs %}
-        <div class="subscription-card" data-type="{% if sub.community %}community{% elif sub.author %}author{% endif %}">
-            {% if sub.community %}
+        {% if sub.community %}
+            {% if sub.community not in joined_communities %}
+            <div class="subscription-card" data-type="community">
                 <h4>{{ sub.community.name }}</h4>
                 <p class="card-meta">{{ sub.community.members.count }} <span>members</span></p>
                 {% if sub.community.community_image %}<img src="{{ sub.community.community_image.url }}" alt="{{ sub.community.name }}" class="subscription-thumb">{% endif %}
-                {% if request.user in sub.community.members.all %}
-                    <a class="unsubscribe-btn" href="{% url 'toggle_join_community' sub.community.id %}">Leave</a>
-                {% else %}
-                    <a class="unsubscribe-btn" href="{% url 'toggle_subscription' sub.community.id %}">Unsubscribe</a>
-                {% endif %}
-            {% elif sub.author %}
+                <a class="unsubscribe-btn" href="{% url 'toggle_subscription' sub.community.id %}">Unsubscribe</a>
+            </div>
+            {% endif %}
+        {% elif sub.author %}
+            <div class="subscription-card" data-type="author">
                 <h4>{{ sub.author.username }}</h4>
                 <p class="card-meta">Author {% if sub.author.is_verified %}<span class="verified-badge">✓</span>{% endif %}</p>
                 {% if sub.author.avatar %}<img src="{{ sub.author.avatar.url }}" alt="{{ sub.author.username }}" class="subscription-thumb">{% endif %}
                 <a class="unsubscribe-btn" href="{% url 'toggle_subscription_author' sub.author.id %}">Unsubscribe</a>
-            {% endif %}
-        </div>
+            </div>
+        {% endif %}
         {% endfor %}
     </div>
 
@@ -47,7 +76,7 @@
         <div id="community-posts" class="tab-panel active">
             {% if community_posts %}
                 {% for post in community_posts %}
-                <article class="post-card full-bleed">
+                    <article class="unified-post-card full-bleed">
                     <div class="post-card-wrapper">
                         <div class="post-content">
                             <div class="author-line">
@@ -61,6 +90,10 @@
                                             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-thumbs-up-icon lucide-thumbs-up"><path d="M15 5.88 14 10h5.83a2 2 0 0 1 1.92 2.56l-2.33 8A2 2 0 0 1 17.5 22H4a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2h2.76a2 2 0 0 0 1.79-1.11L12 2a3.13 3.13 0 0 1 3 3.88Z"/><path d="M7 10v12"/></svg>
                                             <span class="like-count">{{ post.likes.count }}</span>
                                         </button>
+                                        <button class="dislike-btn" data-post-id="{{ post.id }}" data-post-type="community" style="border:none;background:none;cursor:pointer;padding:0;display:flex;align-items:center;gap:6px;color:var(--secondary-text);font-size:0.9rem;transition:color 0.2s;">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-thumbs-down-icon lucide-thumbs-down"><path d="M9 18.12 10 14H4.17a2 2 0 0 1-1.92-2.56l2.33-8A2 2 0 0 1 6.5 2H20a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-2.76a2 2 0 0 0-1.79 1.11L12 22a3.13 3.13 0 0 1-3-3.88Z"/><path d="M17 14V2"/></svg>
+                                            <span class="dislike-count">{{ post.dislikes.count }}</span>
+                                        </button>
                                         <button class="comment-btn" data-post-id="{{ post.id }}" data-post-type="community" style="border:none;background:none;cursor:pointer;padding:0;display:flex;align-items:center;gap:6px;color:var(--secondary-text);font-size:0.9rem;transition:color 0.2s;">
                                             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-message-square-icon lucide-message-square"><path d="M22 17a2 2 0 0 1-2 2H6.828a2 2 0 0 0-1.414.586l-2.202 2.202A.71.71 0 0 1 2 21.286V5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2z"/></svg>
                                             <span class="comment-count">{{ post.comments.count }}</span>
@@ -68,6 +101,17 @@
                                         <button class="bookmark-btn" data-post-id="{{ post.id }}" data-post-type="community" style="border:none;background:none;cursor:pointer;padding:0;display:flex;align-items:center;gap:6px;color:var(--secondary-text);font-size:0.9rem;transition:color 0.2s;">
                                             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-bookmark-check-icon lucide-bookmark-check"><path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2Z"/><path d="m9 10 2 2 4-4"/></svg>
                                         </button>
+                                        <div class="options-menu-wrapper" style="position:relative;">
+                                            <button class="options-menu-trigger" aria-expanded="false" style="border:none;background:none;cursor:pointer;padding:0;display:flex;align-items:center;gap:6px;color:var(--secondary-text);font-size:0.9rem;transition:color 0.2s;">
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-ellipsis-icon lucide-ellipsis"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg>
+                                            </button>
+                                            <div class="options-menu" aria-hidden="true" style="position:absolute;top:100%;right:0;background:var(--card-bg);border:1px solid var(--border-color);border-radius:8px;min-width:150px;z-index:10;display:none;flex-direction:column;">
+                                                <button class="menu-item report-btn" data-post-id="{{ post.id }}" data-post-type="community" style="border:none;background:none;cursor:pointer;padding:10px 12px;text-align:left;color:var(--text-dark);font-size:0.9rem;transition:background 0.2s;display:flex;align-items:center;gap:8px;width:100%;" onmouseover="this.style.background='#f5f5f5'" onmouseout="this.style.background='none'">
+                                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 24 24" style="display:inline;"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>
+                                                    Report
+                                                </button>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -104,6 +148,10 @@
                                             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-thumbs-up-icon lucide-thumbs-up"><path d="M15 5.88 14 10h5.83a2 2 0 0 1 1.92 2.56l-2.33 8A2 2 0 0 1 17.5 22H4a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2h2.76a2 2 0 0 0 1.79-1.11L12 2a3.13 3.13 0 0 1 3 3.88Z"/><path d="M7 10v12"/></svg>
                                             <span class="like-count">{{ blog.likes.count }}</span>
                                         </button>
+                                        <button class="dislike-btn" data-post-id="{{ blog.id }}" data-post-type="blog" style="border:none;background:none;cursor:pointer;padding:0;display:flex;align-items:center;gap:6px;color:var(--secondary-text);font-size:0.9rem;transition:color 0.2s;">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-thumbs-down-icon lucide-thumbs-down"><path d="M9 18.12 10 14H4.17a2 2 0 0 1-1.92-2.56l2.33-8A2 2 0 0 1 6.5 2H20a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-2.76a2 2 0 0 0-1.79 1.11L12 22a3.13 3.13 0 0 1-3-3.88Z"/><path d="M17 14V2"/></svg>
+                                            <span class="dislike-count">{{ blog.dislikes.count }}</span>
+                                        </button>
                                         <button class="comment-btn" data-post-id="{{ blog.id }}" data-post-type="blog" style="border:none;background:none;cursor:pointer;padding:0;display:flex;align-items:center;gap:6px;color:var(--secondary-text);font-size:0.9rem;transition:color 0.2s;">
                                             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-message-square-icon lucide-message-square"><path d="M22 17a2 2 0 0 1-2 2H6.828a2 2 0 0 0-1.414.586l-2.202 2.202A.71.71 0 0 1 2 21.286V5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2z"/></svg>
                                             <span class="comment-count">{{ blog.comments.count }}</span>
@@ -111,6 +159,17 @@
                                         <button class="bookmark-btn" data-post-id="{{ blog.id }}" data-post-type="blog" style="border:none;background:none;cursor:pointer;padding:0;display:flex;align-items:center;gap:6px;color:var(--secondary-text);font-size:0.9rem;transition:color 0.2s;">
                                             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-bookmark-check-icon lucide-bookmark-check"><path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2Z"/><path d="m9 10 2 2 4-4"/></svg>
                                         </button>
+                                        <div class="options-menu-wrapper" style="position:relative;">
+                                            <button class="options-menu-trigger" aria-expanded="false" style="border:none;background:none;cursor:pointer;padding:0;display:flex;align-items:center;gap:6px;color:var(--secondary-text);font-size:0.9rem;transition:color 0.2s;">
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-ellipsis-icon lucide-ellipsis"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg>
+                                            </button>
+                                            <div class="options-menu" aria-hidden="true" style="position:absolute;top:100%;right:0;background:var(--card-bg);border:1px solid var(--border-color);border-radius:8px;min-width:150px;z-index:10;display:none;flex-direction:column;">
+                                                <button class="menu-item report-btn" data-post-id="{{ blog.id }}" data-post-type="blog" style="border:none;background:none;cursor:pointer;padding:10px 12px;text-align:left;color:var(--text-dark);font-size:0.9rem;transition:background 0.2s;display:flex;align-items:center;gap:8px;width:100%;" onmouseover="this.style.background='#f5f5f5'" onmouseout="this.style.background='none'">
+                                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 24 24" style="display:inline;"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>
+                                                    Report
+                                                </button>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -136,7 +195,7 @@
                 <div class="bookmarks-section">
                     <h5 style="margin-bottom: 16px; color: var(--text-dark);">Community Posts</h5>
                     {% for post in user.bookmarked_community_posts.all %}
-                    <article class="post-card full-bleed">
+                    <article class="unified-post-card full-bleed">
                         <div class="post-card-wrapper">
                             <div class="post-content">
                                 <div class="author-line">
@@ -149,6 +208,10 @@
                                             <button class="like-btn" data-post-id="{{ post.id }}" data-post-type="community" style="border:none;background:none;cursor:pointer;padding:0;display:flex;align-items:center;gap:6px;color:var(--secondary-text);font-size:0.9rem;transition:color 0.2s;">
                                                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-thumbs-up-icon lucide-thumbs-up"><path d="M15 5.88 14 10h5.83a2 2 0 0 1 1.92 2.56l-2.33 8A2 2 0 0 1 17.5 22H4a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2h2.76a2 2 0 0 0 1.79-1.11L12 2a3.13 3.13 0 0 1 3 3.88Z"/><path d="M7 10v12"/></svg>
                                                 <span class="like-count">{{ post.likes.count }}</span>
+                                            </button>
+                                            <button class="dislike-btn" data-post-id="{{ post.id }}" data-post-type="community" style="border:none;background:none;cursor:pointer;padding:0;display:flex;align-items:center;gap:6px;color:var(--secondary-text);font-size:0.9rem;transition:color 0.2s;">
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-thumbs-down-icon lucide-thumbs-down"><path d="M9 18.12 10 14H4.17a2 2 0 0 1-1.92-2.56l2.33-8A2 2 0 0 1 6.5 2H20a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-2.76a2 2 0 0 0-1.79 1.11L12 22a3.13 3.13 0 0 1-3-3.88Z"/><path d="M17 14V2"/></svg>
+                                                <span class="dislike-count">{{ post.dislikes.count }}</span>
                                             </button>
                                             <button class="comment-btn" data-post-id="{{ post.id }}" data-post-type="community" style="border:none;background:none;cursor:pointer;padding:0;display:flex;align-items:center;gap:6px;color:var(--secondary-text);font-size:0.9rem;transition:color 0.2s;">
                                                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-message-square-icon lucide-message-square"><path d="M22 17a2 2 0 0 1-2 2H6.828a2 2 0 0 0-1.414.586l-2.202 2.202A.71.71 0 0 1 2 21.286V5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2z"/></svg>
@@ -185,6 +248,10 @@
                                             <button class="like-btn" data-post-id="{{ blog.id }}" data-post-type="blog" style="border:none;background:none;cursor:pointer;padding:0;display:flex;align-items:center;gap:6px;color:var(--secondary-text);font-size:0.9rem;transition:color 0.2s;">
                                                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-thumbs-up-icon lucide-thumbs-up"><path d="M15 5.88 14 10h5.83a2 2 0 0 1 1.92 2.56l-2.33 8A2 2 0 0 1 17.5 22H4a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2h2.76a2 2 0 0 0 1.79-1.11L12 2a3.13 3.13 0 0 1 3 3.88Z"/><path d="M7 10v12"/></svg>
                                                 <span class="like-count">{{ blog.likes.count }}</span>
+                                            </button>
+                                            <button class="dislike-btn" data-post-id="{{ blog.id }}" data-post-type="blog" style="border:none;background:none;cursor:pointer;padding:0;display:flex;align-items:center;gap:6px;color:var(--secondary-text);font-size:0.9rem;transition:color 0.2s;">
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-thumbs-down-icon lucide-thumbs-down"><path d="M9 18.12 10 14H4.17a2 2 0 0 1-1.92-2.56l2.33-8A2 2 0 0 1 6.5 2H20a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-2.76a2 2 0 0 0-1.79 1.11L12 22a3.13 3.13 0 0 1-3-3.88Z"/><path d="M17 14V2"/></svg>
+                                                <span class="dislike-count">{{ blog.dislikes.count }}</span>
                                             </button>
                                             <button class="comment-btn" data-post-id="{{ blog.id }}" data-post-type="blog" style="border:none;background:none;cursor:pointer;padding:0;display:flex;align-items:center;gap:6px;color:var(--secondary-text);font-size:0.9rem;transition:color 0.2s;">
                                                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-message-square-icon lucide-message-square"><path d="M22 17a2 2 0 0 1-2 2H6.828a2 2 0 0 0-1.414.586l-2.202 2.202A.71.71 0 0 1 2 21.286V5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2z"/></svg>
@@ -302,6 +369,16 @@
     margin-bottom: 1rem;
     border-radius: 12px;
 }
+.unified-post-card { 
+    background: var(--card-bg);
+    box-shadow: var(--card-shadow);
+    padding: 1rem 1.2rem;
+    margin-bottom: 1rem;
+    border-radius: 12px;
+}
+.unified-post-card h4 { margin-bottom: 0.5rem; }
+.unified-post-card p { color: var(--secondary-text); margin-bottom: 0.5rem; }
+.unified-post-card a { color: var(--primary); font-weight: 600; text-decoration: none; }
 .post-card-subscription { background: var(--card-bg); box-shadow: var(--card-shadow); padding: 1rem; border-radius: 12px; margin-bottom: 12px; }
 .post-card h4 { margin-bottom: 0.5rem; }
 .post-card p { color: var(--secondary-text); margin-bottom: 0.5rem; }
@@ -313,6 +390,99 @@
     text-align: center;
     margin-top: 1rem;
 }
+
+/* Dark mode text color for subscription bubbles */
+@media (prefers-color-scheme: dark) {
+    .tab-btn {
+        color: #fff;
+    }
+    
+    .tab-btn:not(.active) {
+        color: var(--text-light);
+        background: var(--card-bg);
+        border-color: var(--border-color);
+    }
+}
+
+/* Fallback for dark mode using dark class or data attribute */
+body.dark .tab-btn,
+body[data-theme="dark"] .tab-btn,
+:root[data-theme="dark"] .tab-btn {
+    color: #fff;
+}
+
+body.dark .tab-btn:not(.active),
+body[data-theme="dark"] .tab-btn:not(.active),
+:root[data-theme="dark"] .tab-btn:not(.active) {
+    color: #fff;
+    background: var(--card-bg);
+    border-color: var(--border-color);
+}
+
+/* Joined communities horizontal slider */
+.community-slider {
+    display: flex;
+    gap: 12px;
+    overflow-x: auto;
+    padding: 8px 2px 16px 2px;
+    margin-bottom: 12px;
+}
+.community-slide {
+    min-width: 180px;
+    background: var(--card-bg);
+    box-shadow: var(--card-shadow);
+    border-radius: 10px;
+    padding: 10px;
+    text-decoration: none;
+    color: inherit;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    align-items: flex-start;
+}
+.community-slide-thumb { width: 100%; height: 80px; object-fit: cover; border-radius: 8px; }
+.community-slide-thumb.placeholder { background: linear-gradient(135deg,#f3f4f6,#e5e7eb); width:100%; height:80px; border-radius:8px; }
+.community-slide-name { font-weight:700; font-size:0.95rem; }
+.community-slide-meta { color: var(--secondary-text); font-size:0.85rem; }
+
+/* Hide native scrollbar */
+.community-slider {
+    -ms-overflow-style: none;  /* IE and Edge */
+    scrollbar-width: none;  /* Firefox */
+}
+.community-slider::-webkit-scrollbar { display: none; }
+
+/* Arrow controls */
+.joined-communities-wrapper { display:flex; align-items:center; gap:12px; }
+.comm-arrow {
+    width:40px; height:40px; border-radius:50%; border:none; background:var(--card-bg); box-shadow:var(--card-shadow); display:flex; align-items:center; justify-content:center; cursor:pointer; transition:transform 0.15s, background 0.15s; color:var(--text-dark);
+}
+.comm-arrow:hover { transform: scale(1.05); }
+.comm-arrow:active { transform: scale(0.98); }
+.comm-arrow.hidden { display:none; }
+
+/* Larger slides and hover/touch scale */
+.community-slide { min-width: 220px; padding:14px; }
+.community-slide-thumb { height: 100px; }
+.community-slide { transition: transform 0.18s, box-shadow 0.18s; }
+.community-slide:hover, .community-slide:active { transform: scale(1.04); box-shadow: 0 18px 40px rgba(2,6,23,0.12); }
+
+/* Like/Dislike fill styles (only visually applied within community posts panel) */
+#community-posts .like-btn.liked svg,
+#community-posts .like-btn.liked {
+    color: var(--primary);
+}
+#community-posts .like-btn.liked svg { stroke: currentColor; fill: currentColor; }
+
+#community-posts .dislike-btn.disliked svg,
+#community-posts .dislike-btn.disliked {
+    color: #e11d48;
+}
+#community-posts .dislike-btn.disliked svg { stroke: currentColor; fill: currentColor; }
+
+#community-posts .bookmark-btn.bookmarked svg,
+#community-posts .bookmark-btn.bookmarked { color: var(--primary); }
+#community-posts .bookmark-btn.bookmarked svg { stroke: currentColor; fill: currentColor; }
 </style>
 </style>
 
@@ -331,6 +501,45 @@ tabs.forEach(tab => {
         });
     });
 });
+
+// Show/hide community slider arrows depending on active tab
+const commPrev = document.getElementById('comm-prev');
+const commNext = document.getElementById('comm-next');
+const commSlider = document.getElementById('community-slider');
+
+function updateCommArrows(activePanelId) {
+    const show = activePanelId === 'community-posts';
+    if (commPrev) commPrev.classList.toggle('hidden', !show);
+    if (commNext) commNext.classList.toggle('hidden', !show);
+}
+
+// Initialize arrows visibility
+updateCommArrows(document.querySelector('.tab-btn.active')?.dataset.target || '');
+
+tabs.forEach(tab => {
+    tab.addEventListener('click', () => {
+        updateCommArrows(tab.dataset.target);
+        // show/hide joined-communities-section based on active tab
+        const joinedSect = document.querySelector('.joined-communities-section');
+        if (joinedSect) joinedSect.style.display = (tab.dataset.target === 'community-posts') ? 'block' : 'none';
+    });
+});
+
+if (commPrev && commNext && commSlider) {
+    commPrev.addEventListener('click', () => {
+        commSlider.scrollBy({ left: -260, behavior: 'smooth' });
+    });
+    commNext.addEventListener('click', () => {
+        commSlider.scrollBy({ left: 260, behavior: 'smooth' });
+    });
+    // Optional: hide arrows when slider is at start/end
+    commSlider.addEventListener('scroll', () => {
+        const atStart = commSlider.scrollLeft <= 10;
+        const atEnd = commSlider.scrollWidth - commSlider.clientWidth - commSlider.scrollLeft <= 10;
+        commPrev.style.opacity = atStart ? '0.5' : '1';
+        commNext.style.opacity = atEnd ? '0.5' : '1';
+    });
+}
 
 // AJAX Action Handlers
 function getCSRFToken() {
@@ -351,8 +560,8 @@ document.querySelectorAll('.like-btn').forEach(btn => {
         e.preventDefault();
         const postId = btn.dataset.postId;
         const postType = btn.dataset.postType;
-        const endpoint = postType === 'blog' ? `/posts/${postId}/like/` : `/communities/post/${postId}/like/`;
-        
+        const endpoint = postType === 'blog' ? `/posts/post/${postId}/like/` : `/communities/api/post/${postId}/like/`;
+
         try {
             const res = await fetch(endpoint, {
                 method: 'POST',
@@ -364,11 +573,71 @@ document.querySelectorAll('.like-btn').forEach(btn => {
             if (res.ok) {
                 const data = await res.json();
                 const countEl = btn.querySelector('.like-count');
-                if (countEl) countEl.textContent = data.like_count || 0;
-                btn.style.color = data.is_liked ? 'var(--primary)' : 'var(--secondary-text)';
+                if (countEl) countEl.textContent = data.likes_count ?? 0;
+                // Visual state: prefer CSS class for community posts so fill appears only there
+                if (postType === 'community') {
+                    btn.classList.toggle('liked', !!data.liked);
+                } else {
+                    btn.style.color = data.liked ? 'var(--primary)' : 'var(--secondary-text)';
+                }
+                // Unset dislike if user liked
+                if (data.liked) {
+                    const dislikeBtn = btn.closest('.engage-controls')?.querySelector('.dislike-btn');
+                    if (dislikeBtn) {
+                        dislikeBtn.classList.remove('disliked');
+                        if (postType === 'community') {
+                            dislikeBtn.classList.remove('disliked');
+                        } else {
+                            dislikeBtn.style.color = 'var(--secondary-text)';
+                        }
+                        const dislikeCount = dislikeBtn.querySelector('.dislike-count');
+                        if (dislikeCount) dislikeCount.textContent = data.dislikes_count ?? 0;
+                    }
+                }
             }
         } catch (err) {
             console.error('Like failed:', err);
+        }
+    });
+});
+
+document.querySelectorAll('.dislike-btn').forEach(btn => {
+    btn.addEventListener('click', async (e) => {
+        e.preventDefault();
+        const postId = btn.dataset.postId;
+        const postType = btn.dataset.postType;
+        const endpoint = postType === 'blog' ? `/posts/post/${postId}/dislike/` : `/communities/api/post/${postId}/dislike/`;
+
+        try {
+            const res = await fetch(endpoint, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': getCSRFToken(),
+                    'Content-Type': 'application/json'
+                }
+            });
+            if (res.ok) {
+                const data = await res.json();
+                const countEl = btn.querySelector('.dislike-count');
+                if (countEl) countEl.textContent = data.dislikes_count ?? 0;
+                if (postType === 'community') {
+                    btn.classList.toggle('disliked', !!data.disliked);
+                } else {
+                    btn.style.color = data.disliked ? '#e11d48' : 'var(--secondary-text)';
+                }
+                // Unset like if user disliked
+                if (data.disliked) {
+                    const likeBtn = btn.closest('.engage-controls')?.querySelector('.like-btn');
+                    if (likeBtn) {
+                        likeBtn.classList.remove('liked');
+                        if (postType !== 'community') likeBtn.style.color = 'var(--secondary-text)';
+                        const likeCount = likeBtn.querySelector('.like-count');
+                        if (likeCount) likeCount.textContent = data.likes_count ?? 0;
+                    }
+                }
+            }
+        } catch (err) {
+            console.error('Dislike failed:', err);
         }
     });
 });
@@ -378,8 +647,8 @@ document.querySelectorAll('.bookmark-btn').forEach(btn => {
         e.preventDefault();
         const postId = btn.dataset.postId;
         const postType = btn.dataset.postType;
-        const endpoint = postType === 'blog' ? `/posts/${postId}/bookmark/` : `/communities/post/${postId}/bookmark/`;
-        
+        const endpoint = postType === 'blog' ? `/posts/post/${postId}/bookmark/` : `/communities/api/post/${postId}/bookmark/`;
+
         try {
             const res = await fetch(endpoint, {
                 method: 'POST',
@@ -391,12 +660,20 @@ document.querySelectorAll('.bookmark-btn').forEach(btn => {
             if (res.ok) {
                 const data = await res.json();
                 const svg = btn.querySelector('svg');
-                if (data.is_bookmarked) {
-                    btn.style.color = 'var(--primary)';
-                    svg.setAttribute('class', 'lucide lucide-bookmark-check-icon lucide-bookmark-check');
+                if (data.bookmarked) {
+                    if (postType === 'community') {
+                        btn.classList.add('bookmarked');
+                    } else {
+                        btn.style.color = 'var(--primary)';
+                    }
+                    if (svg) svg.setAttribute('class', 'lucide lucide-bookmark-check-icon lucide-bookmark-check');
                 } else {
-                    btn.style.color = 'var(--secondary-text)';
-                    svg.setAttribute('class', 'lucide lucide-bookmark-icon lucide-bookmark');
+                    if (postType === 'community') {
+                        btn.classList.remove('bookmarked');
+                    } else {
+                        btn.style.color = 'var(--secondary-text)';
+                    }
+                    if (svg) svg.setAttribute('class', 'lucide lucide-bookmark-icon lucide-bookmark');
                 }
             }
         } catch (err) {
@@ -414,6 +691,68 @@ document.querySelectorAll('.comment-btn').forEach(btn => {
             window.location.href = `/posts/${postId}/#comments`;
         } else {
             window.location.href = `/communities/post/${postId}/#comments`;
+        }
+    });
+});
+
+// Ellipsis menu toggle
+document.querySelectorAll('.options-menu-trigger').forEach(trigger => {
+    trigger.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const menu = trigger.nextElementSibling;
+        const isHidden = menu.getAttribute('aria-hidden') === 'true';
+        document.querySelectorAll('.options-menu').forEach(m => {
+            m.setAttribute('aria-hidden', 'true');
+            m.style.display = 'none';
+        });
+        if (isHidden) {
+            menu.setAttribute('aria-hidden', 'false');
+            menu.style.display = 'flex';
+        }
+    });
+});
+
+document.addEventListener('click', () => {
+    document.querySelectorAll('.options-menu').forEach(m => {
+        m.setAttribute('aria-hidden', 'true');
+        m.style.display = 'none';
+    });
+});
+
+// Report button handler - prompt user for reason, then submit JSON
+document.querySelectorAll('.report-btn').forEach(btn => {
+    btn.addEventListener('click', async (e) => {
+        e.preventDefault();
+        const postId = btn.dataset.postId;
+        const postType = btn.dataset.postType || 'blog';
+        const endpoint = postType === 'blog' ? `/posts/post/${postId}/report/` : `/communities/api/post/${postId}/report/`;
+
+        // Ask user for a reason (simple prompt for now)
+        const reason = window.prompt('Please enter a reason for reporting (spam, harassment, other):');
+        if (!reason) {
+            // user cancelled or empty
+            return;
+        }
+
+        try {
+            const res = await fetch(endpoint, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': getCSRFToken(),
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ reason })
+            });
+            if (res.ok) {
+                const data = await res.json().catch(() => ({}));
+                alert(data.message || 'Report submitted successfully');
+            } else {
+                const err = await res.json().catch(() => ({}));
+                alert(err.message || 'Failed to submit report');
+            }
+        } catch (err) {
+            console.error('Report failed:', err);
+            alert('Report failed');
         }
     });
 });

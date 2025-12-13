@@ -15,11 +15,6 @@
 
     <!-- Horizontal Category Bubble Scroller (Ellipses) -->
     <div class="community-bubble-scroll" style="margin-bottom:15px;">
-        <!-- For You bubble first -->
-        <div class="community-bubble" data-filter="for_you">
-            <div class="bubble-ellipse">For You</div>
-        </div>
-
         <!-- ALL first -->
         <div class="community-bubble" data-filter="all">
             <div class="bubble-ellipse">All</div>
@@ -33,16 +28,7 @@
         {% endfor %}
     </div>
 
-    <!-- Community For You Section (hidden by default) -->
-    <div id="communityForYouSection" style="margin-top:14px; display:none;">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
-            <h4 style="margin:0;font-size:1rem;color:var(--text-dark);">Recommended for you</h4>
-            <div style="display:flex;gap:8px;align-items:center;">
-                <div style="font-size:0.9rem;color:var(--secondary-text);">Personalized posts based on your interests</div>
-            </div>
-        </div>
-        <div id="communityPageForYouContainer" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px;"></div>
-    </div>
+    <!-- Community For You Section (removed) -->
 
     <!-- Category Blocks -->
     {% for code, name in categories %}
@@ -175,36 +161,6 @@
 </style>
 
 <script>
-// Function to fetch community recommendations and render into the For You container
-async function fetchCommunityForYou() {
-    const container = document.getElementById('communityPageForYouContainer');
-    if (!container) return;
-    try {
-        const res = await fetch('/recommend/community-recommendations/');
-        const data = await res.json();
-        container.innerHTML = '';
-        if (!data.results || data.results.length === 0) {
-            container.innerHTML = '<div style="padding:16px;color:var(--secondary-text);">No personalized community posts yet. Select some interests first.</div>';
-            return;
-        }
-        data.results.forEach(rec => {
-            const card = document.createElement('div');
-            card.className = 'community-card';
-            card.style.padding = '12px';
-            card.innerHTML = `
-                <a href="/communities/post/${rec.id}/" style="text-decoration:none;color:inherit;display:block;">
-                    <div style="font-weight:700;margin-bottom:6px;">${rec.title}</div>
-                    <div style="color:var(--secondary-text);font-size:0.95rem;">${rec.excerpt || ''}</div>
-                </a>
-            `;
-            container.appendChild(card);
-        });
-    } catch (err) {
-        console.error('Failed to load community recommendations:', err);
-        container.innerHTML = '<div style="padding:16px;color:var(--secondary-text);">Failed to load recommendations.</div>';
-    }
-}
-
 document.querySelectorAll('.community-bubble').forEach(bubble => {
     bubble.addEventListener('click', async () => {
         // Remove active from all
@@ -213,17 +169,6 @@ document.querySelectorAll('.community-bubble').forEach(bubble => {
         bubble.querySelector('.bubble-ellipse').classList.add('active');
 
         const filter = bubble.dataset.filter;
-        if (filter === 'for_you') {
-            // hide regular category blocks and show For You section
-            document.querySelectorAll('.community-category-block').forEach(block => block.style.display = 'none');
-            document.getElementById('communityForYouSection').style.display = 'block';
-            await fetchCommunityForYou();
-            return;
-        }
-
-        // Hide For You section when switching to other filters
-        const fy = document.getElementById('communityForYouSection');
-        if (fy) fy.style.display = 'none';
 
         document.querySelectorAll('.community-category-block').forEach(block => {
             block.style.display = (filter === 'all' || block.dataset.category === filter) ? 'block' : 'none';
@@ -233,54 +178,5 @@ document.querySelectorAll('.community-bubble').forEach(bubble => {
 
 // Activate "All" category by default
 document.querySelector('.community-bubble[data-filter="all"] .bubble-ellipse').classList.add('active');
-
-// Community For You: fetch and show personalized community posts
-document.addEventListener('DOMContentLoaded', () => {
-    const toggle = document.getElementById('communityForYouToggle');
-    const section = document.getElementById('communityForYouSection');
-    const container = document.getElementById('communityPageForYouContainer');
-    const refresh = document.getElementById('refreshCommunityForYou');
-
-    async function fetchCommunityForYou() {
-        try {
-            const res = await fetch('/recommend/community-recommendations/');
-            const data = await res.json();
-            container.innerHTML = '';
-            if (!data.results || data.results.length === 0) {
-                container.innerHTML = '<div style="padding:16px;color:var(--secondary-text);">No personalized community posts yet. Select some interests first.</div>';
-                return;
-            }
-            data.results.forEach(rec => {
-                const card = document.createElement('div');
-                card.className = 'community-card';
-                card.style.padding = '12px';
-                card.innerHTML = `
-                    <a href="/communities/post/${rec.id}/" style="text-decoration:none;color:inherit;display:block;">
-                        <div style="font-weight:700;margin-bottom:6px;">${rec.title}</div>
-                        <div style="color:var(--secondary-text);font-size:0.95rem;">${rec.excerpt || ''}</div>
-                    </a>
-                `;
-                container.appendChild(card);
-            });
-        } catch (err) {
-            console.error('Failed to load community recommendations:', err);
-            container.innerHTML = '<div style="padding:16px;color:var(--secondary-text);">Failed to load recommendations.</div>';
-        }
-    }
-
-    toggle.addEventListener('click', async () => {
-        const isActive = toggle.classList.contains('active');
-        if (isActive) return window.location.reload();
-        // deactivate category bubbles
-        document.querySelectorAll('.bubble-ellipse').forEach(el => el.classList.remove('active'));
-        toggle.classList.add('active');
-        // hide category blocks
-        document.querySelectorAll('.community-category-block').forEach(block => block.style.display = 'none');
-        section.style.display = 'block';
-        await fetchCommunityForYou();
-    });
-
-    refresh.addEventListener('click', async () => await fetchCommunityForYou());
-});
 </script>
 {% endblock %}

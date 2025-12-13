@@ -1,0 +1,269 @@
+<!doctype html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Multiplayer - Lupi-fy</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .session-card { @apply bg-white rounded-lg shadow p-4 border-l-4 border-blue-500 cursor-pointer hover:shadow-lg transition; }
+        .player-badge { @apply inline-block bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs mr-1 mb-1; }
+        .status-badge { @apply inline-block px-2 py-1 rounded text-xs font-semibold; }
+        .status-badge.waiting { @apply bg-yellow-100 text-yellow-800; }
+        .status-badge.playing { @apply bg-green-100 text-green-800; }
+    </style>
+</head>
+<body class="bg-gray-100">
+    <!-- Header -->
+    <header class="bg-white shadow">
+        <div class="container mx-auto px-4 py-4 flex justify-between items-center">
+            <div>
+                <h1 class="text-2xl font-bold">Multiplayer Games</h1>
+                <p class="text-gray-600 text-sm mt-1">Play with friends in real-time</p>
+            </div>
+            <button onclick="createSession()" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">+ Create Session</button>
+        </div>
+    </header>
+
+    <main class="container mx-auto px-4 py-6">
+        <!-- Available Sessions -->
+        <section class="mb-8">
+            <h2 class="text-xl font-bold mb-4">Available Games</h2>
+            <div id="sessions-list" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <p class="text-gray-500">Loading sessions...</p>
+            </div>
+        </section>
+
+        <!-- Active Session Panel -->
+        <section id="active-session" class="hidden bg-white rounded-lg shadow p-6">
+            <h2 class="text-xl font-bold mb-4">Current Session: <span id="session-title">Game Name</span></h2>
+            
+            <div class="grid grid-cols-3 gap-6">
+                <!-- Game Canvas -->
+                <div class="col-span-2">
+                    <div id="game-canvas" style="width: 100%; height: 400px; background: #87CEEB; border: 2px solid #ddd; border-radius: 8px; display: flex; align-items: center; justify-content: center;">
+                        <p class="text-gray-600">Multiplayer Game Canvas (WebSocket connected)</p>
+                    </div>
+                    <div class="mt-4 flex gap-2">
+                        <button onclick="readyUp()" class="flex-1 px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700">✓ Ready</button>
+                        <button onclick="leaveSession()" class="flex-1 px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700">Leave Game</button>
+                    </div>
+                </div>
+
+                <!-- Players & Chat -->
+                <div class="space-y-4">
+                    <!-- Players List -->
+                    <div class="bg-gray-50 rounded-lg p-4">
+                        <h3 class="font-semibold mb-3">Players (<span id="player-count">1</span>)</h3>
+                        <div id="players-list" class="space-y-2">
+                            <div class="player-badge">You (Host)</div>
+                        </div>
+                    </div>
+
+                    <!-- Chat -->
+                    <div class="bg-gray-50 rounded-lg p-4 flex flex-col h-64">
+                        <h3 class="font-semibold mb-2">Chat</h3>
+                        <div id="chat-messages" class="flex-1 overflow-auto mb-2 space-y-2 text-sm">
+                            <p class="text-gray-500">Chat connected...</p>
+                        </div>
+                        <div class="flex gap-2">
+                            <input type="text" id="chat-input" placeholder="Say something..." class="flex-1 border rounded px-2 py-1 text-sm">
+                            <button onclick="sendChat()" class="px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700 text-sm">Send</button>
+                        </div>
+                    </div>
+
+                    <!-- Game Stats -->
+                    <div class="bg-gray-50 rounded-lg p-4">
+                        <h3 class="font-semibold mb-2">Scores</h3>
+                        <div id="scores-list" class="text-sm space-y-1">
+                            <div class="flex justify-between">
+                                <span>You</span>
+                                <span class="font-bold">0</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Create Session Modal -->
+        <div id="create-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div class="bg-white rounded-lg shadow-lg p-6 max-w-md w-full mx-4">
+                <h3 class="text-lg font-semibold mb-4">Create Multiplayer Session</h3>
+                <div class="space-y-3">
+                    <div>
+                        <label class="block text-sm font-medium mb-1">Game</label>
+                        <select id="game-select" class="w-full border rounded px-3 py-2 text-sm">
+                            <option>Select your game...</option>
+                            <option>Jump Quest</option>
+                            <option>Space Shooter</option>
+                            <option>Puzzle Master</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-1">Max Players</label>
+                        <input type="number" id="max-players" value="4" min="2" max="8" class="w-full border rounded px-3 py-2 text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-1">Session Name</label>
+                        <input type="text" id="session-name" placeholder="My Game Night" class="w-full border rounded px-3 py-2 text-sm">
+                    </div>
+                    <div class="flex gap-2">
+                        <button onclick="startSession()" class="flex-1 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 text-sm">Create</button>
+                        <button onclick="closeCreateModal()" class="flex-1 px-4 py-2 bg-gray-300 text-gray-800 rounded hover:bg-gray-400 text-sm">Cancel</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        let currentSession = null;
+        let ws = null;
+
+        document.addEventListener('DOMContentLoaded', loadSessions);
+
+        async function loadSessions() {
+            try {
+                const resp = await fetch('/games/api/multiplayer/active-sessions/');
+                const data = await resp.json();
+                const html = data.sessions.map(s => `
+                    <div class="session-card" onclick="joinSession('${s.id}')">
+                        <h3 class="font-semibold">${s.game_title}</h3>
+                        <p class="text-sm text-gray-600 mb-2">by ${s.creator}</p>
+                        <div class="flex justify-between items-center">
+                            <span class="status-badge ${s.status}">${s.status}</span>
+                            <span class="text-sm">👥 ${s.players_count}/${s.max_players}</span>
+                        </div>
+                    </div>
+                `).join('');
+                document.getElementById('sessions-list').innerHTML = html || '<p class="text-gray-500">No active sessions. Create one!</p>';
+            } catch (e) {
+                console.error('Failed to load sessions:', e);
+            }
+        }
+
+        function createSession() {
+            document.getElementById('create-modal').classList.remove('hidden');
+        }
+
+        function closeCreateModal() {
+            document.getElementById('create-modal').classList.add('hidden');
+        }
+
+        async function startSession() {
+            const gameTitle = document.getElementById('game-select').value;
+            const maxPlayers = document.getElementById('max-players').value;
+            const sessionName = document.getElementById('session-name').value;
+
+            if (!sessionName || gameTitle === 'Select your game...') {
+                alert('Please fill in all fields');
+                return;
+            }
+
+            try {
+                const resp = await fetch('/games/api/multiplayer/create-session/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken') },
+                    body: JSON.stringify({ game_id: '1', max_players: maxPlayers })
+                });
+                const data = await resp.json();
+                closeCreateModal();
+                connectToSession(data.session_id, gameTitle);
+            } catch (e) {
+                alert('Error creating session: ' + e.message);
+            }
+        }
+
+        async function joinSession(sessionId) {
+            try {
+                const resp = await fetch('/games/api/multiplayer/join-session/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken') },
+                    body: JSON.stringify({ session_id: sessionId })
+                });
+                const data = await resp.json();
+                connectToSession(data.session_id, 'Game Name');
+            } catch (e) {
+                alert('Error joining session: ' + e.message);
+            }
+        }
+
+        function connectToSession(sessionId, gameName) {
+            currentSession = sessionId;
+            document.getElementById('session-title').textContent = gameName;
+            document.getElementById('active-session').classList.remove('hidden');
+            document.getElementById('sessions-list').parentElement.classList.add('hidden');
+
+            // Connect WebSocket (in production)
+            const wsUrl = `ws://localhost:8000/ws/game/${sessionId}/`;
+            console.log('WebSocket URL (would connect to):', wsUrl);
+            
+            // Simulate player joining
+            addPlayerToSession('You', true);
+            updatePlayersList();
+        }
+
+        function addPlayerToSession(name, isYou = false) {
+            const list = document.getElementById('players-list');
+            if (!list.textContent.includes(name)) {
+                const badge = document.createElement('div');
+                badge.className = 'player-badge';
+                badge.textContent = name + (isYou ? ' (You)' : '');
+                list.appendChild(badge);
+            }
+        }
+
+        function updatePlayersList() {
+            document.getElementById('player-count').textContent = document.querySelectorAll('#players-list .player-badge').length;
+        }
+
+        function sendChat() {
+            const input = document.getElementById('chat-input');
+            const message = input.value.trim();
+            if (!message) return;
+
+            const messages = document.getElementById('chat-messages');
+            const msgDiv = document.createElement('div');
+            msgDiv.innerHTML = `<p><strong>You:</strong> ${message}</p>`;
+            messages.appendChild(msgDiv);
+            messages.scrollTop = messages.scrollHeight;
+            input.value = '';
+
+            // In production: send via WebSocket
+        }
+
+        function readyUp() {
+            alert('✓ You are ready! Waiting for other players...');
+            // Simulate game start
+            setTimeout(() => {
+                document.getElementById('game-canvas').innerHTML = '<p class="text-white text-center">Game Started! 🎮</p>';
+            }, 2000);
+        }
+
+        function leaveSession() {
+            if (confirm('Leave this session?')) {
+                currentSession = null;
+                document.getElementById('active-session').classList.add('hidden');
+                document.getElementById('sessions-list').parentElement.classList.remove('hidden');
+                loadSessions();
+            }
+        }
+
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let cookie of cookies) {
+                    cookie = cookie.trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,161 @@
+<!doctype html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Lupi-fy Moderation Panel</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100">
+    <header class="p-4 bg-white shadow">
+        <div class="container mx-auto flex justify-between items-center">
+            <h1 class="text-2xl font-semibold">Moderation Panel</h1>
+            <span class="text-sm">Logged in as: <strong>{{ user.username }}</strong> ({{ user.profile.role }})</span>
+        </div>
+    </header>
+    <main class="container mx-auto p-6">
+        {% if user.profile.role != 'admin' and user.profile.role != 'moderator' %}
+            <div class="bg-red-100 text-red-800 p-4 rounded-lg">
+                <strong>Access Denied:</strong> Only admins and moderators can view this page.
+            </div>
+        {% else %}
+            <div class="space-y-6">
+                <!-- Pending Games -->
+                <section class="bg-white rounded-lg shadow p-6">
+                    <h2 class="text-xl font-semibold mb-4">Pending Reviews</h2>
+                    <div id="pending-games" class="space-y-3">
+                        <p class="text-gray-500">Loading...</p>
+                    </div>
+                </section>
+
+                <!-- Approved Games -->
+                <section class="bg-white rounded-lg shadow p-6">
+                    <h2 class="text-xl font-semibold mb-4">Approved Games</h2>
+                    <div id="approved-games" class="space-y-3">
+                        <p class="text-gray-500">Loading...</p>
+                    </div>
+                </section>
+
+                <!-- Stats -->
+                <section class="bg-blue-50 rounded-lg shadow p-6">
+                    <h2 class="text-xl font-semibold mb-4">Stats</h2>
+                    <div class="grid grid-cols-3 gap-4">
+                        <div class="bg-white p-4 rounded text-center">
+                            <div class="text-2xl font-bold" id="stat-pending">0</div>
+                            <p class="text-gray-600 text-sm">Pending</p>
+                        </div>
+                        <div class="bg-white p-4 rounded text-center">
+                            <div class="text-2xl font-bold" id="stat-approved">0</div>
+                            <p class="text-gray-600 text-sm">Approved</p>
+                        </div>
+                        <div class="bg-white p-4 rounded text-center">
+                            <div class="text-2xl font-bold" id="stat-total">0</div>
+                            <p class="text-gray-600 text-sm">Total Games</p>
+                        </div>
+                    </div>
+                </section>
+            </div>
+        {% endif %}
+    </main>
+
+    <script>
+        async function loadGames() {
+            try {
+                const resp = await fetch('/games/api/games-list/');
+                const data = await resp.json();
+                
+                const pending = data.games.filter(g => g.visibility === 'pending');
+                const approved = data.games.filter(g => g.visibility === 'public');
+                
+                // Update stats
+                document.getElementById('stat-pending').textContent = pending.length;
+                document.getElementById('stat-approved').textContent = approved.length;
+                document.getElementById('stat-total').textContent = data.games.length;
+                
+                // Render pending games
+                const pendingDiv = document.getElementById('pending-games');
+                if (pending.length === 0) {
+                    pendingDiv.innerHTML = '<p class="text-gray-500">No pending reviews.</p>';
+                } else {
+                    pendingDiv.innerHTML = pending.map(g => `
+                        <div class="border p-4 rounded bg-yellow-50">
+                            <h3 class="font-semibold">${g.title}</h3>
+                            <p class="text-sm text-gray-600 mb-2">${g.description}</p>
+                            <div class="flex space-x-2">
+                                <button onclick="approveGame('${g.id}')" class="px-3 py-1 bg-green-600 text-white rounded text-sm hover:bg-green-700">
+                                    Approve
+                                </button>
+                                <button onclick="rejectGame('${g.id}')" class="px-3 py-1 bg-red-600 text-white rounded text-sm hover:bg-red-700">
+                                    Reject
+                                </button>
+                            </div>
+                        </div>
+                    `).join('');
+                }
+                
+                // Render approved games
+                const approvedDiv = document.getElementById('approved-games');
+                if (approved.length === 0) {
+                    approvedDiv.innerHTML = '<p class="text-gray-500">No approved games yet.</p>';
+                } else {
+                    approvedDiv.innerHTML = approved.map(g => `
+                        <div class="border p-4 rounded bg-green-50">
+                            <h3 class="font-semibold">${g.title}</h3>
+                            <p class="text-sm text-gray-600">By: ${g.owner}</p>
+                        </div>
+                    `).join('');
+                }
+            } catch (e) {
+                console.error('Load failed:', e);
+            }
+        }
+
+        async function approveGame(gameId) {
+            try {
+                const resp = await fetch(`/games/api/approve/?game_id=${gameId}`, {
+                    method: 'POST',
+                    headers: { 'X-CSRFToken': getCookie('csrftoken') }
+                });
+                const data = await resp.json();
+                alert('Game approved!');
+                loadGames();
+            } catch (e) {
+                alert('Error: ' + e.message);
+            }
+        }
+
+        async function rejectGame(gameId) {
+            if (!confirm('Reject this game? (Cannot be undone)')) return;
+            try {
+                const resp = await fetch(`/games/api/reject/?game_id=${gameId}`, {
+                    method: 'POST',
+                    headers: { 'X-CSRFToken': getCookie('csrftoken') }
+                });
+                const data = await resp.json();
+                alert('Game rejected.');
+                loadGames();
+            } catch (e) {
+                alert('Error: ' + e.message);
+            }
+        }
+
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let cookie of cookies) {
+                    cookie = cookie.trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+
+        // Load games on page load
+        loadGames();
+    </script>
+</body>
+</html>

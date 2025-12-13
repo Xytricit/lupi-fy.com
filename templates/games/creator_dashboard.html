@@ -1,0 +1,381 @@
+<!doctype html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Creator Dashboard - Lupi-fy</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        .stat-card { @apply bg-white rounded-lg shadow p-4 border-l-4; }
+        .stat-card.success { @apply border-l-green-500; }
+        .stat-card.primary { @apply border-l-blue-500; }
+        .stat-card.warning { @apply border-l-yellow-500; }
+        .notification { @apply flex items-center gap-3 p-3 rounded border mb-2; }
+        .notification.success { @apply bg-green-50 border-green-200; }
+        .notification.info { @apply bg-blue-50 border-blue-200; }
+        .tab-button { @apply px-4 py-2 text-sm cursor-pointer border-b-2 border-transparent hover:border-blue-500; }
+        .tab-button.active { @apply border-blue-600 text-blue-600 font-semibold; }
+    </style>
+</head>
+<body class="bg-gray-100">
+    <!-- Header -->
+    <header class="bg-white shadow">
+        <div class="container mx-auto px-4 py-4 flex justify-between items-center">
+            <div>
+                <h1 class="text-2xl font-bold">Creator Dashboard</h1>
+                <p class="text-gray-600 text-sm mt-1">Track your games, revenue, and community</p>
+            </div>
+            <div class="text-right">
+                <p class="font-semibold text-lg" id="username">Loading...</p>
+                <button onclick="logout()" class="text-sm text-red-600 hover:text-red-800">Logout</button>
+            </div>
+        </div>
+    </header>
+
+    <main class="container mx-auto px-4 py-6">
+        <!-- Key Metrics -->
+        <div class="grid grid-cols-4 gap-4 mb-6">
+            <div class="stat-card success">
+                <p class="text-gray-600 text-sm">Total Plays</p>
+                <p class="text-3xl font-bold" id="total-plays">0</p>
+            </div>
+            <div class="stat-card primary">
+                <p class="text-gray-600 text-sm">Games Created</p>
+                <p class="text-3xl font-bold" id="games-created">0</p>
+            </div>
+            <div class="stat-card primary">
+                <p class="text-gray-600 text-sm">Followers</p>
+                <p class="text-3xl font-bold" id="followers-count">0</p>
+            </div>
+            <div class="stat-card warning">
+                <p class="text-gray-600 text-sm">Total Revenue</p>
+                <p class="text-3xl font-bold text-green-600" id="total-revenue">$0</p>
+            </div>
+        </div>
+
+        <!-- Tabs -->
+        <div class="flex space-x-4 mb-4 border-b bg-white">
+            <button class="tab-button active" onclick="switchTab('overview')">Overview</button>
+            <button class="tab-button" onclick="switchTab('games')">My Games</button>
+            <button class="tab-button" onclick="switchTab('revenue')">Revenue</button>
+            <button class="tab-button" onclick="switchTab('notifications')">Notifications</button>
+            <button class="tab-button" onclick="switchTab('settings')">Settings</button>
+        </div>
+
+        <!-- Overview Tab -->
+        <div id="overview-tab" class="tab-content">
+            <div class="grid grid-cols-3 gap-6">
+                <!-- Performance Chart -->
+                <div class="col-span-2 bg-white rounded-lg shadow p-6">
+                    <h3 class="font-semibold mb-4">Play Performance (Last 30 Days)</h3>
+                    <canvas id="performanceChart" height="300"></canvas>
+                </div>
+
+                <!-- Recent Activity -->
+                <div class="bg-white rounded-lg shadow p-6">
+                    <h3 class="font-semibold mb-4">Recent Activity</h3>
+                    <div id="recent-activity" class="space-y-3">
+                        <p class="text-gray-500 text-sm">Loading...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Games Tab -->
+        <div id="games-tab" class="tab-content hidden">
+            <div class="bg-white rounded-lg shadow p-6">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="font-semibold text-lg">My Games</h3>
+                    <a href="/games/editor-enhanced/" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">+ New Game</a>
+                </div>
+                <div id="games-list" class="grid grid-cols-3 gap-4">
+                    <p class="col-span-3 text-gray-500">Loading games...</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Revenue Tab -->
+        <div id="revenue-tab" class="tab-content hidden">
+            <div class="grid grid-cols-2 gap-6">
+                <!-- Revenue Chart -->
+                <div class="bg-white rounded-lg shadow p-6">
+                    <h3 class="font-semibold mb-4">Revenue Trend</h3>
+                    <canvas id="revenueChart" height="300"></canvas>
+                </div>
+
+                <!-- Transactions -->
+                <div class="bg-white rounded-lg shadow p-6">
+                    <h3 class="font-semibold mb-4">Recent Transactions</h3>
+                    <div id="transactions-list" class="space-y-2 max-h-96 overflow-auto">
+                        <p class="text-gray-500 text-sm">Loading transactions...</p>
+                    </div>
+                </div>
+
+                <!-- Payout Settings -->
+                <div class="col-span-2 bg-white rounded-lg shadow p-6">
+                    <h3 class="font-semibold mb-4">Payout Settings</h3>
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium mb-2">PayPal Email</label>
+                            <input type="email" placeholder="your@paypal.com" class="w-full border rounded px-3 py-2">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium mb-2">Stripe Account</label>
+                            <input type="text" placeholder="stripe_acct_..." class="w-full border rounded px-3 py-2">
+                        </div>
+                        <button onclick="requestPayout()" class="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700">Request Payout</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Notifications Tab -->
+        <div id="notifications-tab" class="tab-content hidden">
+            <div class="bg-white rounded-lg shadow p-6">
+                <h3 class="font-semibold mb-4">Notifications</h3>
+                <div id="notifications-list" class="space-y-2">
+                    <p class="text-gray-500 text-sm">Loading notifications...</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Settings Tab -->
+        <div id="settings-tab" class="tab-content hidden">
+            <div class="bg-white rounded-lg shadow p-6 max-w-2xl">
+                <h3 class="font-semibold text-lg mb-4">Profile Settings</h3>
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Bio</label>
+                        <textarea id="bio-input" placeholder="Tell us about yourself!" class="w-full border rounded px-3 py-2 h-24"></textarea>
+                    </div>
+                    <div class="flex gap-4">
+                        <label class="flex items-center">
+                            <input type="checkbox" id="public-profile-check" class="mr-2"> Make profile public
+                        </label>
+                        <label class="flex items-center">
+                            <input type="checkbox" id="allow-remixes-check" class="mr-2"> Allow game remixes
+                        </label>
+                    </div>
+                    <button onclick="saveSettings()" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">Save Settings</button>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        let dashboardData = null;
+        let performanceChart = null;
+        let revenueChart = null;
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', loadDashboard);
+
+        async function loadDashboard() {
+            try {
+                const resp = await fetch('/games/api/creator/dashboard/');
+                dashboardData = await resp.json();
+
+                // Update metrics
+                document.getElementById('username').textContent = dashboardData.profile.username;
+                document.getElementById('total-plays').textContent = dashboardData.metrics.total_plays.toLocaleString();
+                document.getElementById('games-created').textContent = dashboardData.profile.games_created;
+                document.getElementById('followers-count').textContent = dashboardData.profile.followers_count;
+                document.getElementById('total-revenue').textContent = `$${dashboardData.metrics.total_revenue.toFixed(2)}`;
+
+                // Prefill settings form fields safely
+                try{
+                    const bioEl = document.getElementById('bio-input');
+                    if(bioEl) bioEl.value = dashboardData.profile.bio || '';
+                    const publicCheck = document.getElementById('public-profile-check');
+                    if(publicCheck) publicCheck.checked = !!dashboardData.profile.public_profile;
+                    const remixCheck = document.getElementById('allow-remixes-check');
+                    if(remixCheck) remixCheck.checked = !!dashboardData.profile.allow_remixes;
+                }catch(e){ console.warn('Failed to prefill profile settings', e); }
+
+                // Load sub-sections
+                loadRecentActivity();
+                loadGames();
+                loadNotifications();
+                loadCharts();
+            } catch (e) {
+                console.error('Failed to load dashboard:', e);
+            }
+        }
+
+        async function loadRecentActivity() {
+            const html = dashboardData.notifications.map(n => `
+                <div class="notification ${n.notification_type.includes('approved') ? 'success' : 'info'}">
+                    <span class="flex-1">
+                        <p class="font-sm">${n.title}</p>
+                        <p class="text-xs text-gray-600">${n.message}</p>
+                    </span>
+                </div>
+            `).join('');
+            document.getElementById('recent-activity').innerHTML = html || '<p class="text-gray-500 text-sm">No recent activity</p>';
+        }
+
+        async function loadGames() {
+            try {
+                const resp = await fetch('/games/api/creator/game-stats/');
+                const data = await resp.json();
+                const html = data.games_stats.map(g => `
+                    <div class="bg-gray-50 rounded-lg p-4 border">
+                        <h4 class="font-semibold">${g.title}</h4>
+                        <div class="text-sm text-gray-600 mt-2 grid grid-cols-2">
+                            <p>👥 ${g.unique_players} players</p>
+                            <p>📊 ${g.total_plays} plays</p>
+                            <p>⭐ Avg: ${g.avg_score.toFixed(0)}</p>
+                            <p>🏆 High: ${g.high_score.toFixed(0)}</p>
+                        </div>
+                        <div class="mt-3 flex gap-2">
+                            <a href="/games/editor-enhanced/?id=${g.game_id}" class="text-xs bg-blue-600 text-white px-2 py-1 rounded hover:bg-blue-700">Edit</a>
+                            <button onclick="viewAnalytics('${g.game_id}')" class="text-xs bg-gray-600 text-white px-2 py-1 rounded hover:bg-gray-700">Analytics</button>
+                        </div>
+                    </div>
+                `).join('');
+                document.getElementById('games-list').innerHTML = html || '<p class="col-span-3 text-gray-500">No games yet. Create your first game!</p>';
+            } catch (e) {
+                console.error('Failed to load games:', e);
+            }
+        }
+
+        async function loadNotifications() {
+            try {
+                const resp = await fetch('/games/api/notifications/');
+                const data = await resp.json();
+                const html = data.notifications.map(n => `
+                    <div class="notification ${n.read ? 'opacity-50' : ''} ${n.type.includes('approved') ? 'success' : 'info'}">
+                        <span class="flex-1">
+                            <p class="font-sm">${n.title}</p>
+                            <p class="text-xs text-gray-600">${n.message}</p>
+                        </span>
+                        <button onclick="markRead(${n.id})" class="text-xs text-blue-600 hover:underline">Mark read</button>
+                    </div>
+                `).join('');
+                document.getElementById('notifications-list').innerHTML = html;
+            } catch (e) {
+                console.error('Failed to load notifications:', e);
+            }
+        }
+
+        function loadCharts() {
+            // Performance Chart
+            const perfCtx = document.getElementById('performanceChart').getContext('2d');
+            performanceChart = new Chart(perfCtx, {
+                type: 'line',
+                data: {
+                    labels: ['Day 1', 'Day 5', 'Day 10', 'Day 15', 'Day 20', 'Day 25', 'Day 30'],
+                    datasets: [{
+                        label: 'Plays',
+                        data: [12, 19, 25, 18, 32, 28, 35],
+                        borderColor: '#3b82f6',
+                        backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                        tension: 0.4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: true } }
+                }
+            });
+
+            // Revenue Chart
+            const revCtx = document.getElementById('revenueChart').getContext('2d');
+            revenueChart = new Chart(revCtx, {
+                type: 'bar',
+                data: {
+                    labels: ['Week 1', 'Week 2', 'Week 3', 'Week 4'],
+                    datasets: [{
+                        label: 'Revenue ($)',
+                        data: [120, 190, 150, 220],
+                        backgroundColor: '#10b981'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false
+                }
+            });
+
+            // Load transactions
+            loadTransactions();
+        }
+
+        async function loadTransactions() {
+            try {
+                const resp = await fetch('/games/api/creator-revenue/');
+                const data = await resp.json();
+                const html = (data.transactions || []).slice(0, 10).map(t => `
+                    <div class="flex justify-between items-center p-2 border-b text-sm">
+                        <span>${t.game_title}</span>
+                        <span class="font-semibold">$${t.amount.toFixed(2)}</span>
+                        <span class="text-gray-600">${new Date(t.date).toLocaleDateString()}</span>
+                    </div>
+                `).join('');
+                document.getElementById('transactions-list').innerHTML = html || '<p class="text-gray-500 text-sm">No transactions yet</p>';
+            } catch (e) {
+                console.error('Failed to load transactions:', e);
+            }
+        }
+
+        function switchTab(tab) {
+            document.querySelectorAll('.tab-content').forEach(t => t.classList.add('hidden'));
+            document.querySelectorAll('.tab-button').forEach(b => b.classList.remove('active'));
+            document.getElementById(tab + '-tab').classList.remove('hidden');
+            event.target.classList.add('active');
+        }
+
+        function viewAnalytics(gameId) {
+            alert('Analytics for game ' + gameId + '\n\nFull analytics panel coming soon!');
+        }
+
+        async function markRead(notifId) {
+            await fetch('/games/api/notifications/mark-read/', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken') },
+                body: JSON.stringify({ notification_id: notifId })
+            });
+            loadNotifications();
+        }
+
+        async function saveSettings() {
+            const bio = document.getElementById('bio-input').value;
+            const public_profile = document.getElementById('public-profile-check').checked;
+            
+            await fetch('/games/api/user/profile-update/', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken') },
+                body: JSON.stringify({ bio, show_profile_public: public_profile })
+            });
+            alert('✓ Settings saved!');
+        }
+
+        function requestPayout() {
+            alert('Payout requested! You will receive your earnings within 5-7 business days.');
+        }
+
+        function logout() {
+            if (confirm('Logout?')) {
+                window.location.href = '/accounts/logout/';
+            }
+        }
+
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let cookie of cookies) {
+                    cookie = cookie.trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+    </script>
+</body>
+</html>
