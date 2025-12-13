@@ -52,6 +52,7 @@ INSTALLED_APPS = [
     "core",
     "recommend",
     "games",
+    "marketplace",
 ]
 
 SITE_ID = 1

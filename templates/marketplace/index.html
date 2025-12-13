@@ -1,0 +1,137 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Lupify Marketplace{% endblock %}</title>
+    
+    <!-- Meta -->
+    <meta name="description" content="Sell and discover amazing projects, tools, and templates on Lupify Marketplace.">
+    <meta name="keywords" content="marketplace, projects, tools, templates, buy, sell, creators">
+    
+    <!-- Favicon -->
+    <link rel="icon" href="{% static 'favicon.ico' %}" type="image/x-icon">
+    
+    <!-- Stylesheets -->
+    <link rel="stylesheet" href="{% static 'style.css' %}">
+    
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .navbar {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        .btn-primary:hover {
+            opacity: 0.9;
+        }
+        .accent-gradient {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        .accent-text {
+            color: #667eea;
+        }
+        .card {
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 10px 25px rgba(102, 126, 234, 0.15);
+        }
+    </style>
+    
+    {% block extra_css %}{% endblock %}
+</head>
+
+<body>
+    <!-- Navigation -->
+    <nav class="navbar text-white py-4 sticky top-0 z-50 shadow-lg">
+        <div class="container mx-auto px-4 flex justify-between items-center">
+            <div class="flex items-center gap-8">
+                <a href="{% url 'marketplace:home' %}" class="text-2xl font-bold">🛍️ Lupify Marketplace</a>
+                <div class="hidden md:flex gap-6">
+                    <a href="{% url 'marketplace:home' %}" class="hover:opacity-80">Browse</a>
+                    {% if request.user.is_authenticated %}
+                        <a href="{% url 'marketplace:upload' %}" class="hover:opacity-80">Sell</a>
+                        <a href="{% url 'marketplace:library' %}" class="hover:opacity-80">My Library</a>
+                        <a href="{% url 'marketplace:creator_dashboard' %}" class="hover:opacity-80">Dashboard</a>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <div class="flex items-center gap-4">
+                {% if request.user.is_authenticated %}
+                    <span class="text-sm">{{ request.user.username }}</span>
+                    <a href="{% url 'dashboard_home' %}" class="px-4 py-2 bg-white text-purple-600 rounded font-semibold hover:opacity-90">Profile</a>
+                    <a href="{% url 'logout' %}" class="px-4 py-2 border border-white rounded hover:bg-white hover:text-purple-600">Logout</a>
+                {% else %}
+                    <a href="{% url 'login' %}" class="px-4 py-2 border border-white rounded hover:bg-white hover:text-purple-600">Login</a>
+                    <a href="{% url 'register' %}" class="px-4 py-2 bg-white text-purple-600 rounded font-semibold hover:opacity-90">Sign Up</a>
+                {% endif %}
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="min-h-screen bg-gray-50">
+        {% block content %}
+        <!-- Page content goes here -->
+        {% endblock %}
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-gray-900 text-gray-300 py-12 mt-16">
+        <div class="container mx-auto px-4">
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
+                <div>
+                    <h3 class="font-bold text-white mb-4">Lupify Marketplace</h3>
+                    <p class="text-sm">Buy and sell amazing projects, tools, templates, and more from creators worldwide.</p>
+                </div>
+                <div>
+                    <h4 class="font-bold text-white mb-4">Browse</h4>
+                    <ul class="text-sm space-y-2">
+                        <li><a href="{% url 'marketplace:home' %}" class="hover:text-white">All Projects</a></li>
+                        <li><a href="{% url 'marketplace:home' %}?category=template" class="hover:text-white">Templates</a></li>
+                        <li><a href="{% url 'marketplace:home' %}?category=tool" class="hover:text-white">Tools</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h4 class="font-bold text-white mb-4">For Creators</h4>
+                    <ul class="text-sm space-y-2">
+                        {% if request.user.is_authenticated %}
+                            <li><a href="{% url 'marketplace:upload' %}" class="hover:text-white">Upload Project</a></li>
+                            <li><a href="{% url 'marketplace:creator_dashboard' %}" class="hover:text-white">Dashboard</a></li>
+                        {% else %}
+                            <li><a href="{% url 'register' %}" class="hover:text-white">Start Selling</a></li>
+                        {% endif %}
+                    </ul>
+                </div>
+                <div>
+                    <h4 class="font-bold text-white mb-4">Legal</h4>
+                    <ul class="text-sm space-y-2">
+                        <li><a href="{% url 'terms_of_service' %}" class="hover:text-white">Terms</a></li>
+                        <li><a href="#" class="hover:text-white">Privacy</a></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="border-t border-gray-800 pt-8 text-center text-sm">
+                <p>&copy; 2025 Lupify Marketplace. All rights reserved.</p>
+            </div>
+        </div>
+    </footer>
+
+    <script src="{% static 'script.js' %}"></script>
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

@@ -1,0 +1,260 @@
+{% extends "marketplace/index.html" %}
+{% load static %}
+
+{% block title %}Upload Project - Marketplace{% endblock %}
+
+{% block content %}
+<div class="upload-project py-8">
+  <form id="uploadForm" method="POST" enctype="multipart/form-data" class="max-w-4xl mx-auto p-6 space-y-6">
+    {% csrf_token %}
+    
+    <h1 class="text-3xl font-bold mb-6">Upload Project to Marketplace</h1>
+
+    <!-- Title -->
+    <div>
+      <label class="block text-sm font-medium mb-2">Project Title *</label>
+      <input
+        type="text"
+        name="title"
+        required
+        class="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500"
+        placeholder="My Awesome Project"
+      />
+    </div>
+
+    <!-- Short description -->
+    <div>
+      <label class="block text-sm font-medium mb-2">Short Description *</label>
+      <input
+        type="text"
+        name="short_description"
+        required
+        maxlength="300"
+        class="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500"
+        placeholder="Brief description (max 300 characters)"
+      />
+      <p class="text-sm text-gray-500 mt-1" id="charCount">0/300 characters</p>
+    </div>
+
+    <!-- Full description -->
+    <div>
+      <label class="block text-sm font-medium mb-2">Full Description *</label>
+      <textarea
+        name="description"
+        required
+        rows="8"
+        class="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500"
+        placeholder="Detailed description of your project..."
+      ></textarea>
+    </div>
+
+    <!-- Category and Price row -->
+    <div class="grid grid-cols-2 gap-4">
+      <div>
+        <label class="block text-sm font-medium mb-2">Category *</label>
+        <select
+          name="category"
+          required
+          class="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500"
+        >
+          <option value="">-- Select Category --</option>
+          {% for value, label in categories %}
+          <option value="{{ value }}">{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div>
+        <label class="block text-sm font-medium mb-2">Price (USD) *</label>
+        <input
+          type="number"
+          name="price"
+          value="0"
+          min="0"
+          step="0.01"
+          required
+          class="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500"
+          placeholder="0.00"
+        />
+        <p class="text-sm text-gray-500 mt-1">Set to 0 for free projects</p>
+      </div>
+    </div>
+
+    <!-- Thumbnail upload -->
+    <div>
+      <label class="block text-sm font-medium mb-2">Thumbnail Image *</label>
+      <div class="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
+        <div id="thumbnailPreview" style="display: none;">
+          <img id="thumbnailImg" src="" alt="Preview" class="mx-auto max-h-48 rounded mb-3" />
+          <button type="button" onclick="removeThumbnail()" class="text-sm text-red-600 hover:text-red-800">
+            Remove
+          </button>
+        </div>
+        <div id="thumbnailInput">
+          <svg class="w-12 h-12 mx-auto mb-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+          </svg>
+          <label class="cursor-pointer">
+            <span class="text-blue-600 hover:text-blue-800">Choose file</span>
+            <input
+              type="file"
+              name="thumbnail"
+              accept="image/*"
+              required
+              onchange="previewThumbnail(event)"
+              class="hidden"
+            />
+          </label>
+          <p class="text-sm text-gray-500 mt-1">PNG, JPG, WEBP (max 5MB)</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Project file upload -->
+    <div>
+      <label class="block text-sm font-medium mb-2">Project File (ZIP) *</label>
+      <div class="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
+        <div id="projectFileInfo" style="display: none;">
+          <svg class="w-12 h-12 mx-auto text-green-600 mb-2" fill="currentColor" viewBox="0 0 20 20">
+            <path fill-rule="evenodd" d="M8 16.5a1 1 0 01-1-1V8a1 1 0 112 0v7.5a1 1 0 01-1 1zm7-7a1 1 0 11-2 0V8a1 1 0 112 0v0.5z" clip-rule="evenodd"></path>
+          </svg>
+          <p id="projectFileName" class="font-medium mb-2"></p>
+          <p id="projectFileSize" class="text-sm text-gray-500 mb-3"></p>
+          <button
+            type="button"
+            onclick="removeProjectFile()"
+            class="text-sm text-red-600 hover:text-red-800"
+          >
+            Remove
+          </button>
+        </div>
+        <div id="projectFileInput">
+          <svg class="w-12 h-12 mx-auto mb-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+          </svg>
+          <label class="cursor-pointer">
+            <span class="text-blue-600 hover:text-blue-800">Choose ZIP file</span>
+            <input
+              type="file"
+              name="project_file"
+              accept=".zip"
+              required
+              onchange="previewProjectFile(event)"
+              class="hidden"
+            />
+          </label>
+          <p class="text-sm text-gray-500 mt-1">ZIP archive containing your project (max 100MB)</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Project ID (hidden, for linking to existing content) -->
+    <input type="hidden" name="project_id" id="projectId" value="{{ project_data.project_id }}" />
+
+    <!-- Submit button -->
+    <div class="flex gap-4">
+      <button
+        type="submit"
+        id="submitBtn"
+        class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg transition-colors"
+      >
+        Submit for Review
+      </button>
+      
+      <button
+        type="button"
+        onclick="window.history.back()"
+        class="px-6 py-3 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+      >
+        Cancel
+      </button>
+    </div>
+
+    <p class="text-sm text-gray-600 text-center">
+      Your project will be reviewed by our team before appearing in the marketplace.
+    </p>
+  </form>
+</div>
+
+<script>
+function previewThumbnail(event) {
+  const file = event.target.files[0];
+  if (file) {
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      document.getElementById('thumbnailImg').src = e.target.result;
+      document.getElementById('thumbnailPreview').style.display = 'block';
+      document.getElementById('thumbnailInput').style.display = 'none';
+    };
+    reader.readAsDataURL(file);
+  }
+}
+
+function removeThumbnail() {
+  document.querySelector('input[name="thumbnail"]').value = '';
+  document.getElementById('thumbnailPreview').style.display = 'none';
+  document.getElementById('thumbnailInput').style.display = 'block';
+}
+
+function previewProjectFile(event) {
+  const file = event.target.files[0];
+  if (file) {
+    document.getElementById('projectFileName').textContent = file.name;
+    document.getElementById('projectFileSize').textContent = (file.size / 1024 / 1024).toFixed(2) + ' MB';
+    document.getElementById('projectFileInfo').style.display = 'block';
+    document.getElementById('projectFileInput').style.display = 'none';
+  }
+}
+
+function removeProjectFile() {
+  document.querySelector('input[name="project_file"]').value = '';
+  document.getElementById('projectFileInfo').style.display = 'none';
+  document.getElementById('projectFileInput').style.display = 'block';
+}
+
+// Update character count
+document.querySelector('input[name="short_description"]').addEventListener('input', function(e) {
+  document.getElementById('charCount').textContent = e.target.value.length + '/300 characters';
+});
+
+// Handle form submission
+document.getElementById('uploadForm').addEventListener('submit', async function(e) {
+  e.preventDefault();
+  
+  const submitBtn = document.getElementById('submitBtn');
+  submitBtn.disabled = true;
+  submitBtn.textContent = 'Uploading...';
+  
+  const formData = new FormData(this);
+  
+  try {
+    const response = await fetch('/marketplace/upload/', {
+      method: 'POST',
+      body: formData,
+      headers: {
+        'X-CSRFToken': getCsrfToken()
+      }
+    });
+    
+    const data = await response.json();
+    
+    if (data.success) {
+      alert(data.message);
+      window.location.href = data.redirect;
+    } else {
+      alert('Upload failed: ' + (data.error || 'Unknown error'));
+    }
+  } catch (error) {
+    console.error('Upload error:', error);
+    alert('An error occurred during upload.');
+  } finally {
+    submitBtn.disabled = false;
+    submitBtn.textContent = 'Submit for Review';
+  }
+});
+
+function getCsrfToken() {
+  return document.querySelector('[name=csrfmiddlewaretoken]')?.value || '';
+}
+</script>
+{% endblock %}

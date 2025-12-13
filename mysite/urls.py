@@ -13,6 +13,7 @@ urlpatterns = [
     path("games/", include("games.urls")),
     path("recommend/", include("recommend.urls")),
     path("chatbot/", include("chatbot.urls")),
+    path("marketplace/", include("marketplace.urls")),
 ]
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

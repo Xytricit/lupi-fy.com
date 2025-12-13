@@ -1,0 +1,175 @@
+{% extends "marketplace/index.html" %}
+{% load static %}
+
+{% block title %}{{ project.title }} - Marketplace{% endblock %}
+
+{% block content %}
+<div class="project-detail py-8">
+  <div class="container mx-auto px-4">
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      <!-- Left column: Project info -->
+      <div class="lg:col-span-2 space-y-6">
+        <!-- Main image -->
+        <div class="rounded-lg overflow-hidden shadow-lg">
+          <img src="{{ project.thumbnail.url }}" alt="{{ project.title }}" class="w-full">
+        </div>
+
+        <!-- Description -->
+        <div class="bg-white rounded-lg shadow p-6">
+          <h2 class="text-2xl font-bold mb-4">About This Project</h2>
+          <div class="prose max-w-none">
+            {{ project.description|linebreaks }}
+          </div>
+        </div>
+
+        <!-- Reviews -->
+        <div class="bg-white rounded-lg shadow p-6">
+          <h2 class="text-2xl font-bold mb-4">Reviews</h2>
+          
+          {% if reviews %}
+          <div class="space-y-4">
+            {% for review in reviews %}
+            <div class="border-b pb-4">
+              <div class="flex items-center gap-2 mb-2">
+                <img src="{{ review.reviewer.avatar.url|default:'/static/default-avatar.png' }}" 
+                     alt="{{ review.reviewer.username }}" 
+                     class="w-10 h-10 rounded-full">
+                <div>
+                  <div class="font-semibold">{{ review.reviewer.username }}</div>
+                  <div class="text-yellow-500">
+                    {% for i in "12345" %}
+                    {% if forloop.counter <= review.rating %}★{% else %}☆{% endif %}
+                    {% endfor %}
+                  </div>
+                </div>
+              </div>
+              <h4 class="font-semibold mb-1">{{ review.title }}</h4>
+              <p class="text-gray-600">{{ review.content }}</p>
+            </div>
+            {% endfor %}
+          </div>
+          {% else %}
+          <p class="text-gray-600">No reviews yet. Be the first to review!</p>
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- Right column: Purchase card -->
+      <div class="lg:col-span-1">
+        <div class="bg-white rounded-lg shadow-lg p-6 sticky top-4">
+          <h1 class="text-2xl font-bold mb-2">{{ project.title }}</h1>
+          <p class="text-gray-600 mb-4">{{ project.short_description }}</p>
+
+          <!-- Price -->
+          <div class="text-3xl font-bold text-blue-600 mb-4">
+            {% if project.is_free %}
+            FREE
+            {% else %}
+            ${{ project.price }}
+            {% endif %}
+          </div>
+
+          <!-- Stats -->
+          <div class="grid grid-cols-2 gap-4 mb-6 text-sm">
+            <div>
+              <div class="text-gray-500">Rating</div>
+              <div class="font-semibold">★ {{ project.rating_average }} ({{ project.rating_count }})</div>
+            </div>
+            <div>
+              <div class="text-gray-500">Sales</div>
+              <div class="font-semibold">{{ project.sales_count }}</div>
+            </div>
+            <div>
+              <div class="text-gray-500">Category</div>
+              <div class="font-semibold">{{ project.get_category_display }}</div>
+            </div>
+            <div>
+              <div class="text-gray-500">File Size</div>
+              <div class="font-semibold">
+                {% if project.file_size %}
+                  {{ project.file_size|filesizeformat }}
+                {% else %}
+                  —
+                {% endif %}
+              </div>
+            </div>
+          </div>
+
+          <!-- Purchase/Download button -->
+          {% if user_has_access %}
+          <a href="{% url 'marketplace:download' project.id %}" 
+             class="block w-full bg-green-600 hover:bg-green-700 text-white text-center font-bold py-3 rounded-lg mb-4">
+            Download Project
+          </a>
+          {% else %}
+          <button onclick="purchaseProject('{{ project.id }}')" 
+                  class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-lg mb-4">
+            {% if project.is_free %}Get for Free{% else %}Buy Now - ${{ project.price }}{% endif %}
+          </button>
+          {% endif %}
+
+          <!-- Wishlist button -->
+          <button onclick="toggleWishlist('{{ project.id }}')" 
+                  class="w-full border-2 border-gray-300 hover:border-red-500 text-gray-700 font-semibold py-2 rounded-lg">
+            ♡ Add to Wishlist
+          </button>
+
+          <!-- Creator info -->
+          <div class="mt-6 pt-6 border-t">
+            <div class="text-sm text-gray-500 mb-2">Created by</div>
+            <div class="flex items-center gap-3">
+              <img src="{{ project.creator.avatar.url|default:'/static/default-avatar.png' }}" 
+                   alt="{{ project.creator.username }}" 
+                   class="w-12 h-12 rounded-full">
+              <div>
+                <div class="font-semibold">{{ project.creator.username }}</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+function purchaseProject(projectId) {
+  fetch(`/marketplace/api/purchase/${projectId}/`, {
+    method: 'POST',
+    headers: {
+      'X-CSRFToken': getCsrfToken()
+    }
+  })
+  .then(r => r.json())
+  .then(data => {
+    if (data.success) {
+      if (data.payment_url) {
+        window.location.href = data.payment_url;
+      } else {
+        window.location.reload();
+      }
+    } else {
+      alert(data.error || 'Purchase failed');
+    }
+  })
+  .catch(err => {
+    console.error('Purchase error:', err);
+    alert('An error occurred');
+  });
+}
+
+function toggleWishlist(projectId) {
+  fetch(`/marketplace/api/wishlist/add/${projectId}/`, {
+    method: 'POST',
+    headers: {'X-CSRFToken': getCsrfToken()}
+  })
+  .then(r => r.json())
+  .then(data => alert(data.message));
+}
+
+function getCsrfToken() {
+  return document.querySelector('[name=csrfmiddlewaretoken]')?.value || 
+         document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+}
+</script>
+{% endblock %}

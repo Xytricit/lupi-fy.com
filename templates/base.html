@@ -1,0 +1,105 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Lupify{% endblock %}</title>
+    
+    <!-- Meta -->
+    <meta name="description" content="A modern blogging, gaming, and community platform for creators and readers.">
+    <meta name="keywords" content="community, blog, posts, categories, forum, articles, games">
+    <meta name="author" content="Lupify">
+    
+    <!-- Favicon -->
+    <link rel="icon" href="{% static 'favicon.ico' %}" type="image/x-icon">
+    
+    <!-- Stylesheets -->
+    <link rel="stylesheet" href="{% static 'style.css' %}">
+    <script src="{% static 'script.js' %}" defer></script>
+    
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <script>
+        // Initialize theme
+        (function(){
+          const serverPref = "{{ request.user.theme_preference|default:'' }}";
+          let pref = serverPref || null;
+          try { const local = localStorage.getItem('theme_pref'); if(!pref && local) pref = local; }catch(e){}
+          if(!pref) pref = 'system';
+          document.documentElement.setAttribute('data-theme', pref);
+        })();
+    </script>
+    
+    {% block extra_css %}{% endblock %}
+</head>
+
+<body class="layout">
+    <!-- Header -->
+    <header class="site-header bg-white shadow">
+        <div class="container mx-auto px-4 py-4 flex justify-between items-center">
+            <h1 class="logo text-2xl font-bold"><a href="/">Lupify</a></h1>
+            
+            <nav class="navbar flex gap-6">
+                <ul class="nav-links flex gap-6">
+                    <li class="nav-item"><a href="/" class="hover:text-blue-600">Home</a></li>
+                    <li class="nav-item"><a href="{% url 'blogs' %}" class="hover:text-blue-600">Blogs</a></li>
+                    <li class="nav-item"><a href="{% url 'communities' %}" class="hover:text-blue-600">Communities</a></li>
+                    <li class="nav-item"><a href="{% url 'marketplace:home' %}" class="hover:text-blue-600">Marketplace</a></li>
+                    {% if request.user.is_authenticated %}
+                        <li class="nav-item"><a href="{% url 'marketplace:library' %}" class="hover:text-blue-600">My Library</a></li>
+                        <li class="nav-item"><a href="{% url 'marketplace:creator_dashboard' %}" class="hover:text-blue-600">Dashboard</a></li>
+                        <li class="nav-item"><a href="{% url 'dashboard_home' %}" class="hover:text-blue-600">Profile</a></li>
+                    {% else %}
+                        <li class="nav-item"><a href="{% url 'login' %}" class="hover:text-blue-600">Login</a></li>
+                    {% endif %}
+                </ul>
+            </nav>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        {% block content %}
+        <!-- Default content goes here -->
+        {% endblock %}
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-gray-800 text-white py-8 mt-12">
+        <div class="container mx-auto px-4">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-8 mb-8">
+                <div>
+                    <h3 class="font-bold mb-4">Lupify</h3>
+                    <p class="text-gray-400">A platform for creators, readers, and gamers.</p>
+                </div>
+                <div>
+                    <h4 class="font-bold mb-4">Links</h4>
+                    <ul class="text-gray-400 space-y-2">
+                        <li><a href="/" class="hover:text-white">Home</a></li>
+                        <li><a href="{% url 'blogs' %}" class="hover:text-white">Blogs</a></li>
+                        <li><a href="{% url 'marketplace:home' %}" class="hover:text-white">Marketplace</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h4 class="font-bold mb-4">Legal</h4>
+                    <ul class="text-gray-400 space-y-2">
+                        <li><a href="{% url 'terms_of_service' %}" class="hover:text-white">Terms of Service</a></li>
+                        <li><a href="#" class="hover:text-white">Privacy Policy</a></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="border-t border-gray-700 pt-8 text-center text-gray-400">
+                <p>&copy; 2025 Lupify. All rights reserved.</p>
+            </div>
+        </div>
+    </footer>
+
+    {% block extra_js %}{% endblock %}
+</body>
+</html>
