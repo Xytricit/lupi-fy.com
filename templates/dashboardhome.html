@@ -101,6 +101,14 @@
                     <div style="font-size:12px;color:var(--secondary-text);">{{ user.email }}</div>
                 </div>
                 <ul style="list-style:none;padding:8px 0;margin:0;">
+                    <li><a href="/accounts/user/{{ user.id }}/public-profile/" style="display:block;padding:10px 16px;color:var(--text-dark);text-decoration:none;transition:background 0.2s;font-size:14px;" onmouseover="this.style.background='var(--bg)'" onmouseout="this.style.background='transparent'">
+                        <svg style="width:16px;height:16px;display:inline-block;margin-right:8px;vertical-align:middle;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="7" r="4"/><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/></svg>
+                        View Profile
+                    </a></li>
+                    <li><a href="/accounts/chat/{{ user.id }}/" style="display:block;padding:10px 16px;color:var(--text-dark);text-decoration:none;transition:background 0.2s;font-size:14px;" onmouseover="this.style.background='var(--bg)'" onmouseout="this.style.background='transparent'">
+                        <svg style="width:16px;height:16px;display:inline-block;margin-right:8px;vertical-align:middle;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a4 4 0 0 1-4 4H7l-4 4V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4z"/></svg>
+                        Chat
+                    </a></li>
                     <li><a href="{% url 'account_dashboard' %}" style="display:block;padding:10px 16px;color:var(--text-dark);text-decoration:none;transition:background 0.2s;font-size:14px;" onmouseover="this.style.background='var(--bg)'" onmouseout="this.style.background='transparent'">
                         <svg style="width:16px;height:16px;display:inline-block;margin-right:8px;vertical-align:middle;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
                         Profile
@@ -117,7 +125,7 @@
                         <svg style="width:16px;height:16px;display:inline-block;margin-right:8px;vertical-align:middle;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><polyline points="13 2 13 9 20 9"/></svg>
                         Creator
                     </a></li>
-                       <li><a href="{% url 'marketplace:home' %}" style="display:block;padding:10px 16px;color:var(--text-dark);text-decoration:none;transition:background 0.2s;font-size:14px;" onmouseover="this.style.background='var(--bg)'" onmouseout="this.style.background='transparent'">
+                       <li><a href="{% url 'marketplace:creator_dashboard' %}" style="display:block;padding:10px 16px;color:var(--text-dark);text-decoration:none;transition:background 0.2s;font-size:14px;" onmouseover="this.style.background='var(--bg)'" onmouseout="this.style.background='transparent'">
                            <svg style="width:16px;height:16px;display:inline-block;margin-right:8px;vertical-align:middle;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>
                            Marketplace
                        </a></li>
@@ -253,29 +261,9 @@
             </div>
         </section>
 
-        <!-- For You recommendations containers (shown by default) -->
-        <section id="forYouSection" style="display:block;margin-bottom:16px;padding-bottom:0;">
-            <!-- For You filter bubbles -->
-            <div style="display:flex;gap:12px;margin-bottom:16px;flex-wrap:wrap;align-items:center;">
-                <h3 style="margin:0;font-size:1rem;font-weight:700;">For You</h3>
-                <div style="display:flex;gap:8px;flex-wrap:wrap;">
-                    <button class="for-you-filter-btn" data-sort="latest" style="padding:8px 14px;border-radius:20px;border:1px solid var(--primary,#1f9cee);background:var(--primary,#1f9cee);color:white;font-weight:600;cursor:pointer;transition:0.2s;font-size:0.85rem;">
-                        Latest
-                    </button>
-                    <button class="for-you-filter-btn" data-sort="most-liked" style="padding:8px 14px;border-radius:20px;border:1px solid var(--border-color,#ddd);background:transparent;color:var(--text-dark);font-weight:600;cursor:pointer;transition:0.2s;font-size:0.85rem;">
-                        Most Liked
-                    </button>
-                </div>
-            </div>
-            <!-- Blog recommendations (grid layout) -->
-            <div id="blogForYouContainer" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px;margin-bottom:12px;"><!-- blogs will render here --></div>
-            <!-- Community For You posts (grid layout matching blog) -->
-            <div id="communityForYouContainer" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px;"><!-- community posts will render here --></div>
-        </section>
-
         <!-- Community posts feed (Latest/Most liked/etc - centered column) -->
         <div class="posts-center">
-            <section id="community-feed" style="display:none;flex-direction:column;gap:14px;margin-top:8px;">
+            <section id="community-feed" style="display:flex;flex-direction:column;gap:14px;margin-top:8px;">
                 <!-- posts will be appended here by JS -->
             </section>
 
@@ -749,13 +737,9 @@ async function loadForYouRecommendations() {
             // Render with current sort mode
             renderForYouCards();
 
-            // Show blog/community sections if they have content
+            // For You section now consolidated into main feed (always hidden)
             const forYouSectionEl = document.getElementById('forYouSection');
-            if ((window.forYouData.blog.length > 0) || (window.forYouData.community.length > 0)) {
-                if (forYouSectionEl) forYouSectionEl.style.display = 'block';
-            } else {
-                if (forYouSectionEl) forYouSectionEl.style.display = 'none';
-            }
+            if (forYouSectionEl) forYouSectionEl.style.display = 'none';
         }
     } catch (err) {
         console.error('Failed to load recommendations:', err);
@@ -923,7 +907,7 @@ async function loadCommunityRecommendations() {
                 imgWrapper.style.justifyContent = 'center';
                 imgWrapper.style.overflow = 'hidden';
 
-                if (rec.image) {
+                if (rec.image && rec.image.trim()) {
                     const img = document.createElement('img');
                     img.src = rec.image;
                     img.alt = rec.title || '';
@@ -941,7 +925,6 @@ async function loadCommunityRecommendations() {
                         fallback.style.display = 'flex';
                         fallback.style.alignItems = 'center';
                         fallback.style.justifyContent = 'center';
-                        fallback.textContent = 'Image not found';
                         fallback.style.color = '#64748b';
                         fallback.style.fontSize = '14px';
                         imgWrapper.appendChild(fallback);
@@ -954,7 +937,6 @@ async function loadCommunityRecommendations() {
                     fallback.style.display = 'flex';
                     fallback.style.alignItems = 'center';
                     fallback.style.justifyContent = 'center';
-                    fallback.textContent = 'No image';
                     fallback.style.color = '#64748b';
                     fallback.style.fontSize = '14px';
                     imgWrapper.appendChild(fallback);
@@ -1081,14 +1063,14 @@ async function loadCommunityRecommendations() {
                 // Dislike button (create first so like button can reference it)
                 const dislikeBtn = document.createElement('button');
                 dislikeBtn.className = 'foryou-action-btn';
-                dislikeBtn.style.cssText = 'background:none;border:none;cursor:pointer;padding:0;display:flex;align-items:center;gap:6px;color:var(--secondary-text);font-size:0.9rem;transition:color 0.2s;';
-                dislikeBtn.innerHTML = `<svg xmlns='http://www.w3.org/2000/svg' width='18' height='18' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2'><path d='M17 14V2'/><path d='M9 18.12 10 14H4.17a2 2 0 0 1-1.92-2.56l2.33-8A2 2 0 0 1 6.5 2H20a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-2.76a2 2 0 0 0-1.79 1.11L12 22a3.13 3.13 0 0 1-3-3.88Z'/></svg><span class='dislike-count'>${rec.dislikes_count||0}</span>`;
+                dislikeBtn.style.cssText = 'background:none;border:none;cursor:pointer;padding:2px;display:flex;align-items:center;gap:4px;color:var(--secondary-text);font-size:0.85rem;transition:color 0.2s;min-width:auto;';
+                dislikeBtn.innerHTML = `<svg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2'><path d='M17 14V2'/><path d='M9 18.12 10 14H4.17a2 2 0 0 1-1.92-2.56l2.33-8A2 2 0 0 1 6.5 2H20a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-2.76a2 2 0 0 0-1.79 1.11L12 22a3.13 3.13 0 0 1-3-3.88Z'/></svg><span class='dislike-count'>${rec.dislikes_count||0}</span>`;
 
                 // Like button
                 const likeBtn = document.createElement('button');
                 likeBtn.className = 'foryou-action-btn';
-                likeBtn.style.cssText = 'background:none;border:none;cursor:pointer;padding:0;display:flex;align-items:center;gap:6px;color:var(--secondary-text);font-size:0.9rem;transition:color 0.2s;';
-                likeBtn.innerHTML = `<svg xmlns='http://www.w3.org/2000/svg' width='18' height='18' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2'><path d='M7 10v12'/><path d='M15 5.88 14 10h5.83a2 2 0 0 1 1.92 2.56l-2.33 8A2 2 0 0 1 17.5 22H4a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2h2.76a2 2 0 0 0 1.79-1.11L12 2a3.13 3.13 0 0 1 3 3.88Z'/></svg><span class='like-count'>${rec.likes_count||0}</span>`;
+                likeBtn.style.cssText = 'background:none;border:none;cursor:pointer;padding:2px;display:flex;align-items:center;gap:4px;color:var(--secondary-text);font-size:0.85rem;transition:color 0.2s;min-width:auto;';
+                likeBtn.innerHTML = `<svg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2'><path d='M7 10v12'/><path d='M15 5.88 14 10h5.83a2 2 0 0 1 1.92 2.56l-2.33 8A2 2 0 0 1 17.5 22H4a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2h2.76a2 2 0 0 0 1.79-1.11L12 2a3.13 3.13 0 0 1 3 3.88Z'/></svg><span class='like-count'>${rec.likes_count||0}</span>`;
                 
                 likeBtn.addEventListener('click', async (e) => { e.stopPropagation(); 
                     try { 
@@ -1119,8 +1101,8 @@ async function loadCommunityRecommendations() {
                 // Comment button
                 const commentBtn = document.createElement('a');
                 commentBtn.href = `/communities/post/${rec.id}/`;
-                commentBtn.style.cssText = 'display:flex;align-items:center;gap:6px;color:var(--secondary-text);text-decoration:none;font-size:0.9rem;transition:color 0.2s;';
-                commentBtn.innerHTML = `<svg xmlns='http://www.w3.org/2000/svg' width='18' height='18' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2'><path d='M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z'/></svg><span>${rec.comments_count||0}</span>`;
+                commentBtn.style.cssText = 'display:flex;align-items:center;gap:4px;color:var(--secondary-text);text-decoration:none;font-size:0.85rem;transition:color 0.2s;padding:2px;';
+                commentBtn.innerHTML = `<svg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2'><path d='M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z'/></svg><span>${rec.comments_count||0}</span>`;
                 commentBtn.onmouseover = () => commentBtn.style.color = 'var(--primary)';
                 commentBtn.onmouseout = () => commentBtn.style.color = 'var(--secondary-text)';
                 actions.appendChild(commentBtn);
@@ -1128,8 +1110,8 @@ async function loadCommunityRecommendations() {
                 // Bookmark button
                 const bookmarkBtn = document.createElement('button');
                 bookmarkBtn.className = 'foryou-action-btn';
-                bookmarkBtn.style.cssText = 'background:none;border:none;cursor:pointer;padding:0;display:flex;align-items:center;gap:6px;color:var(--secondary-text);font-size:0.9rem;transition:color 0.2s;margin-left:auto;';
-                bookmarkBtn.innerHTML = rec.user_bookmarked ? `<svg width='18' height='18' fill='currentColor' viewBox='0 0 24 24'><path d='m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2Z'/></svg>` : `<svg width='18' height='18' fill='none' stroke='currentColor' stroke-width='2' viewBox='0 0 24 24'><path d='m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z'/></svg>`;
+                bookmarkBtn.style.cssText = 'background:none;border:none;cursor:pointer;padding:2px;display:flex;align-items:center;gap:4px;color:var(--secondary-text);font-size:0.85rem;transition:color 0.2s;margin-left:auto;';
+                bookmarkBtn.innerHTML = rec.user_bookmarked ? `<svg width='16' height='16' fill='currentColor' viewBox='0 0 24 24'><path d='m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2Z'/></svg>` : `<svg width='16' height='16' fill='none' stroke='currentColor' stroke-width='2' viewBox='0 0 24 24'><path d='m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z'/></svg>`;
                 if (rec.user_bookmarked) bookmarkBtn.style.color = 'var(--primary)';
                 
                 bookmarkBtn.addEventListener('click', async (e) => { e.stopPropagation(); 
@@ -1138,7 +1120,7 @@ async function loadCommunityRecommendations() {
                         if(!r.ok) throw new Error('Network'); 
                         const j = await r.json(); 
                         bookmarkBtn.style.color = j.bookmarked ? 'var(--primary)' : 'var(--secondary-text)'; 
-                        bookmarkBtn.innerHTML = j.bookmarked ? `<svg width='18' height='18' fill='currentColor' viewBox='0 0 24 24'><path d='m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2Z'/></svg>` : `<svg width='18' height='18' fill='none' stroke='currentColor' stroke-width='2' viewBox='0 0 24 24'><path d='m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z'/></svg>`; 
+                        bookmarkBtn.innerHTML = j.bookmarked ? `<svg width='16' height='16' fill='currentColor' viewBox='0 0 24 24'><path d='m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2Z'/></svg>` : `<svg width='16' height='16' fill='none' stroke='currentColor' stroke-width='2' viewBox='0 0 24 24'><path d='m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z'/></svg>`; 
                     } catch(err){console.error(err);} 
                 });
                 actions.appendChild(bookmarkBtn);
@@ -1151,8 +1133,8 @@ async function loadCommunityRecommendations() {
                 
                 const menuBtn = document.createElement('button');
                 menuBtn.className = 'foryou-action-btn';
-                menuBtn.style.cssText = 'background:none;border:none;cursor:pointer;padding:0;display:flex;align-items:center;gap:6px;color:var(--secondary-text);font-size:0.9rem;transition:color 0.2s;';
-                menuBtn.innerHTML = `<svg xmlns='http://www.w3.org/2000/svg' width='18' height='18' viewBox='0 0 24 24' fill='currentColor'><circle cx='5' cy='12' r='2'/><circle cx='12' cy='12' r='2'/><circle cx='19' cy='12' r='2'/></svg>`;
+                menuBtn.style.cssText = 'background:none;border:none;cursor:pointer;padding:2px;display:flex;align-items:center;gap:4px;color:var(--secondary-text);font-size:0.85rem;transition:color 0.2s;';
+                menuBtn.innerHTML = `<svg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='currentColor'><circle cx='5' cy='12' r='2'/><circle cx='12' cy='12' r='2'/><circle cx='19' cy='12' r='2'/></svg>`;
                 
                 // Dropdown menu
                 const dropdown = document.createElement('div');
@@ -1461,60 +1443,147 @@ window.addEventListener('resize', () => {
 <script src="{% static 'script.js' %}" defer></script>
 
 <script>
-// Ensure filter-bubble active state is robust and updates feed (FIXED: bubble sort now reorders posts correctly)
-    (function(){
-        try{
-            // Skip this handler if we're on the blog page - let blog_list.html handle bubbles
-            if (document.getElementById('blogForYouSection')) {
-                return;
-            }
-            const bubbles = document.querySelectorAll('.filter-bubble');
-            const forYouSection = document.getElementById('forYouSection');
+// Consolidated For You Feed - render recommendations as post cards in main feed
+async function loadForYouFeedConsolidated() {
+    const feed = document.getElementById('community-feed');
+    if (!feed) return;
+
+    try {
+        feed.innerHTML = '<div style="text-align:center;padding:60px 20px;"><div class="spinner" style="margin-bottom:16px;"></div><p style="margin:0;color:var(--secondary-text);font-size:14px;">Loading personalized recommendations...</p></div>';
+
+        const response = await fetch(`/recommend/for-you/?t=${Date.now()}`);
+        if (!response.ok) throw new Error('Failed to fetch recommendations');
+
+        const data = await response.json();
+        
+        if (!data.results || data.results.length === 0) {
+            feed.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;width:100%;min-height:300px;"><div style="text-align:center;max-width:400px;"><svg xmlns="http://www.w3.org/2000/svg" width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="opacity:0.3;margin-bottom:20px;"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 9h.01M15 9h.01M9 15h6"/></svg><h3 style="margin:0 0 8px;font-size:18px;color:var(--text-dark);font-weight:600;">No posts yet</h3><p style="margin:0;color:var(--secondary-text);font-size:14px;line-height:1.6;">Posts will appear here once available. Try following more communities!</p></div></div>';
+            return;
+        }
+
+        feed.innerHTML = '';
+        const seenIds = new Set();
+        
+        data.results.forEach(item => {
+            if (seenIds.has(item.id)) return;
+            if (!item.title || !item.title.trim()) return;
+            if (!item.excerpt && !item.content_preview) return;
+            seenIds.add(item.id);
+
+            const card = document.createElement('div');
+            card.className = 'post-card';
+            card.style.cssText = 'background:var(--card-bg);border-radius:12px;padding:16px;box-shadow:var(--card-shadow);border:1px solid var(--border);width:100%;max-width:700px;box-sizing:border-box;';
             
-            bubbles.forEach(b => {
-                if (b.dataset.managed === 'true') return;
-                b.dataset.managed = 'true';
+            const isComm = item.type === 'community' || item.community_id;
+            const url = isComm ? `/communities/post/${item.id}/` : `/posts/${item.id}/`;
+            const title = item.title;
+            const excerpt = item.excerpt || item.content_preview || '';
+            
+            card.innerHTML = `<div style="display:flex;gap:12px;margin-bottom:12px;align-items:center;"><div style="width:40px;height:40px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;color:var(--text-dark);font-weight:600;font-size:0.9rem;flex-shrink:0;">${title.charAt(0).toUpperCase()}</div><div style="flex:1;"><div style="font-weight:600;color:var(--text-dark);">${title}</div><div style="font-size:0.85rem;color:var(--secondary-text);">${item.created_at || 'Just now'}</div></div></div><h3 style="margin:0 0 8px;font-size:1.1rem;color:var(--text-dark);">${title}</h3><p style="color:var(--secondary-text);margin:0 0 12px;line-height:1.4;">${excerpt}</p><div style="display:flex;gap:16px;align-items:center;"><a href="${url}" style="color:var(--primary);text-decoration:none;font-weight:500;font-size:0.9rem;transition:opacity 0.2s;" onmouseover="this.style.opacity='0.8'" onmouseout="this.style.opacity='1'">View post →</a></div>`;
+            feed.appendChild(card);
+        });
+
+    } catch (error) {
+        console.error('Error loading For You feed:', error);
+        feed.innerHTML = '<div style="text-align:center;padding:60px 20px;color:var(--secondary-text);"><p>Failed to load recommendations. Please try again.</p></div>';
+    }
+}
+
+function initForYouBubbles(){
+    try{
+        if (document.getElementById('blogForYouSection')) {
+            return;
+        }
+        const bubbles = document.querySelectorAll('.filter-bubble');
+        const forYouSection = document.getElementById('forYouSection');
+        
+        bubbles.forEach(b => {
+            if (b.dataset.managed === 'true') return;
+            b.dataset.managed = 'true';
+            
+            b.addEventListener('click', async (e) => {
+                const newSort = b.dataset.sort;
+                if (!newSort) return;
+
+                document.querySelectorAll('.filter-bubble').forEach(x => x.classList.remove('active'));
+                b.classList.add('active');
+
+                const feed = document.getElementById('community-feed');
                 
-                b.addEventListener('click', async (e) => {
-                    const newSort = b.dataset.sort;
-                    if (!newSort) return;
-
-                    // Update visual state: remove active from all, add to clicked
-                    document.querySelectorAll('.filter-bubble').forEach(x => x.classList.remove('active'));
-                    b.classList.add('active');
-
-                    // Special case: For You should load recommendation widgets
-                    if (newSort === 'for_you') {
-                        // Hide community feed, show For You section
-                        if (forYouSection) forYouSection.style.display = 'block';
-                        const feed = document.getElementById('community-feed'); if (feed) feed.style.display = 'none';
-                        // Clear containers to ensure fresh content loads
-                        const bc = document.getElementById('blogForYouContainer'); if (bc) bc.innerHTML = '';
-                        const cc = document.getElementById('communityForYouContainer'); if (cc) cc.innerHTML = '';
-                        const fc = document.getElementById('forYouContainer'); if (fc) fc.innerHTML = '';
-                        // Reset offset for infinite scroll
-                        if (window.communityPostOffset !== undefined) window.communityPostOffset = 0;
-                        if (window.communityPostEndReached !== undefined) window.communityPostEndReached = false;
-                        // load recommendations (blog + community + games) and wait for them to finish
-                        try { if (typeof loadAllRecommendations === 'function') await loadAllRecommendations(); } catch(e){ console.warn('loadAllRecommendations failed', e); }
-                        return;
+                if (newSort === 'for_you') {
+                    if (feed) {
+                        feed.style.display = 'flex';
+                        feed.style.flexDirection = 'column';
+                        feed.style.gap = '8px';
+                        feed.style.alignItems = 'center';
+                        feed.innerHTML = '<div style="text-align:center;padding:60px 20px;"><div class="spinner" style="margin-bottom:16px;"></div><p style="margin:0;color:var(--secondary-text);font-size:14px;">Loading personalized recommendations...</p></div>';
                     }
-
-                    // Regular bubbles: hide For You section and show community feed with new sort
                     if (forYouSection) forYouSection.style.display = 'none';
-                    const feed = document.getElementById('community-feed'); if (feed) feed.style.display = 'flex';
                     
-                    // Reset infinite scroll state and clear existing posts
                     if (window.communityPostOffset !== undefined) window.communityPostOffset = 0;
                     if (window.communityPostEndReached !== undefined) window.communityPostEndReached = false;
-                    if (feed) feed.innerHTML = ''; // FIXED: clear feed before loading new posts
                     
-                    // Dispatch custom event to reset the feed with new sort
-                    window.dispatchEvent(new CustomEvent('sortChange', { detail: { sort: newSort } }));
-                });
+                    try { 
+                        const res = await fetch(`/recommend/for-you/?t=${Date.now()}`);
+                        if (!res.ok) throw new Error('API error');
+                        const data = await res.json();
+                        if (!data.results || data.results.length === 0) {
+                            if (feed) feed.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;width:100%;min-height:300px;"><div style="text-align:center;max-width:400px;"><svg xmlns="http://www.w3.org/2000/svg" width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="opacity:0.3;margin-bottom:20px;"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 9h.01M15 9h.01M9 15h6"/></svg><h3 style="margin:0 0 8px;font-size:18px;color:var(--text-dark);font-weight:600;">No posts yet</h3><p style="margin:0;color:var(--secondary-text);font-size:14px;line-height:1.6;">Posts will appear here once available. Try following more communities!</p></div></div>';
+                            return;
+                        }
+                        
+                        if (feed) feed.innerHTML = '';
+                        const seenIds = new Set();
+                        
+                        data.results.forEach(item => {
+                            if (seenIds.has(item.id)) return;
+                            if (!item.title || !item.title.trim()) return;
+                            if (!item.excerpt && !item.content_preview) return;
+                            seenIds.add(item.id);
+
+                            const card = document.createElement('div');
+                            card.className = 'post-card unified-post-card';
+                            card.style.cssText = 'background:var(--card-bg);border-radius:12px;padding:16px;box-shadow:var(--card-shadow);border:1px solid var(--border);width:100%;max-width:700px;box-sizing:border-box;cursor:pointer;';
+                            
+                            const isComm = item.type === 'community' || item.community_id;
+                            const url = isComm ? `/communities/post/${item.id}/` : `/posts/${item.id}/`;
+                            const title = item.title;
+                            const excerpt = item.excerpt || item.content_preview || '';
+                            
+                            card.innerHTML = `<div style="display:flex;gap:12px;margin-bottom:12px;align-items:center;"><div style="width:40px;height:40px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;color:var(--text-dark);font-weight:600;font-size:0.9rem;flex-shrink:0;">${title.charAt(0).toUpperCase()}</div><div style="flex:1;"><div style="font-weight:600;color:var(--text-dark);">${title}</div><div style="font-size:0.85rem;color:var(--secondary-text);">${item.created_at || 'Just now'}</div></div></div><h3 style="margin:0 0 8px;font-size:1.1rem;color:var(--text-dark);">${title}</h3><p style="color:var(--secondary-text);margin:0 0 12px;line-height:1.4;">${excerpt}</p><div style="display:flex;gap:16px;align-items:center;"><a href="${url}" style="color:var(--primary);text-decoration:none;font-weight:500;font-size:0.9rem;transition:opacity 0.2s;" onmouseover="this.style.opacity='0.8'" onmouseout="this.style.opacity='1'">View post →</a></div>`;
+                            card.onclick = () => window.location.href = url;
+                            if (feed) feed.appendChild(card);
+                        });
+                    } catch(e){ 
+                        console.error('For You feed failed:', e); 
+                        if (feed) feed.innerHTML = '<div style="text-align:center;padding:60px 20px;color:var(--secondary-text);"><p>Failed to load recommendations. Please try again.</p></div>';
+                    }
+                    return;
+                }
+
+                if (forYouSection) forYouSection.style.display = 'none';
+                if (feed) feed.style.display = 'flex';
+                
+                if (window.communityPostOffset !== undefined) window.communityPostOffset = 0;
+                if (window.communityPostEndReached !== undefined) window.communityPostEndReached = false;
+                if (feed) feed.innerHTML = '';
+                
+                window.dispatchEvent(new CustomEvent('sortChange', { detail: { sort: newSort } }));
             });
-        }catch(err){ console.warn('filter-bubble manager init failed', err); }
-    })();
+        });
+        
+        const activeForYou = document.querySelector('.filter-bubble.active[data-sort="for_you"]');
+        if (activeForYou) {
+            setTimeout(() => activeForYou.click(), 100);
+        }
+    }catch(err){ console.warn('filter-bubble manager init failed', err); }
+}
+
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initForYouBubbles);
+} else {
+    initForYouBubbles();
+}
 
 // Community posts infinite scroll
 (() => {
@@ -1728,42 +1797,29 @@ window.addEventListener('resize', () => {
         titleEl.textContent = p.title;
         card.appendChild(titleEl);
 
-        // Post media (square responsive wrapper - desktop keeps aesthetic padding)
-        const mediaWrap = document.createElement('div');
-        mediaWrap.className = 'post-media';
-        mediaWrap.style.width = '100%';
-        mediaWrap.style.maxWidth = '';
-        mediaWrap.style.margin = '0';
-        mediaWrap.style.borderRadius = '10px';
-        mediaWrap.style.overflow = 'hidden';
-        // prefer modern aspect-ratio; remove absolute positioning so CSS controls sizing
-        mediaWrap.style.position = '';
-        mediaWrap.style.paddingTop = '';
-        mediaWrap.style.aspectRatio = '1 / 1';
+        // Post media (FIXED: only show if image exists)
+        if (p.image && p.image.trim()) {
+            const mediaWrap = document.createElement('div');
+            mediaWrap.className = 'post-media';
+            mediaWrap.style.cssText = 'width:100%;aspect-ratio:1/1;border-radius:10px;overflow:hidden;position:relative;background:#f0f0f0;';
 
-        if (p.image) {
             const imgEl = document.createElement('img');
             imgEl.src = p.image;
-            // Set background image so the blurred gradient can use it
+            imgEl.alt = p.title || 'Post image';
+            imgEl.style.cssText = 'width:100%;height:100%;object-fit:cover;display:block;';
+            
+            imgEl.onerror = () => {
+                console.warn('Image failed to load:', p.image);
+                mediaWrap.innerHTML = '';
+            };
+            
             mediaWrap.style.backgroundImage = `url(${p.image})`;
+            mediaWrap.style.backgroundSize = 'cover';
+            mediaWrap.style.backgroundPosition = 'center';
+            
             mediaWrap.appendChild(imgEl);
-        } else {
-            // No image: set fallback gradient
-            mediaWrap.style.backgroundImage = 'linear-gradient(135deg, #1f9cee15, #fec76f15)';
-            const imgFallback = document.createElement('div');
-            imgFallback.style.width = '100%';
-            imgFallback.style.height = '100%';
-            imgFallback.style.display = 'flex';
-            imgFallback.style.alignItems = 'center';
-            imgFallback.style.justifyContent = 'center';
-            imgFallback.style.color = 'var(--secondary-text)';
-            imgFallback.style.position = 'relative';
-            imgFallback.style.zIndex = '2';
-            imgFallback.textContent = '📸 No image';
-            mediaWrap.appendChild(imgFallback);
+            card.appendChild(mediaWrap);
         }
-
-        card.appendChild(mediaWrap);
 
         // Content (clamped so posts fit in viewport)
         const contentEl = document.createElement('p');
@@ -1784,27 +1840,26 @@ window.addEventListener('resize', () => {
         actions.style.zIndex = '10';
         actions.style.overflow = 'visible';
 
-        // Like button - full width blue
+        // Like button - no background, SVG only
         const likeBtn = document.createElement('button');
         likeBtn.className = p.user_liked ? 'post-like-btn liked' : 'post-like-btn';
-        likeBtn.style.background = '#1f9cee';
+        likeBtn.style.background = 'none';
         likeBtn.style.border = 'none';
         likeBtn.style.cursor = 'pointer';
-        likeBtn.style.padding = '8px 12px';
-        likeBtn.style.fontSize = '0.9rem';
-        likeBtn.style.color = 'white';
+        likeBtn.style.padding = '4px 6px';
+        likeBtn.style.fontSize = '0.8rem';
+        likeBtn.style.color = 'var(--secondary-text)';
         likeBtn.style.display = 'flex';
         likeBtn.style.alignItems = 'center';
         likeBtn.style.justifyContent = 'center';
-        likeBtn.style.gap = '6px';
-        likeBtn.style.transition = 'all 0.2s';
+        likeBtn.style.gap = '4px';
+        likeBtn.style.transition = 'color 0.2s';
         likeBtn.style.position = 'relative';
         likeBtn.style.zIndex = '260';
         likeBtn.style.overflow = 'visible';
         likeBtn.style.whiteSpace = 'nowrap';
-        likeBtn.style.flex = '1';
-        likeBtn.style.borderRadius = '6px';
-        likeBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24" style="flex-shrink:0;"><path d="M7 10v12"/><path d="M15 5.88 14 10h5.83a2 2 0 0 1 1.92 2.56l-2.33 8A2 2 0 0 1 17.5 22H4a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2h2.76a2 2 0 0 0 1.79-1.11L12 2a3.13 3.13 0 0 1 3 3.88Z"/></svg><span class="like-count">${p.likes_count}</span>`;
+        likeBtn.style.borderRadius = '4px';
+        likeBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24" style="flex-shrink:0;"><path d="M7 10v12"/><path d="M15 5.88 14 10h5.83a2 2 0 0 1 1.92 2.56l-2.33 8A2 2 0 0 1 17.5 22H4a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2h2.76a2 2 0 0 0 1.79-1.11L12 2a3.13 3.13 0 0 1 3 3.88Z"/></svg><span class="like-count">${p.likes_count}</span>`;
         likeBtn.onclick = async (e) => {
             e.stopPropagation();
             e.preventDefault();
@@ -1823,16 +1878,19 @@ window.addEventListener('resize', () => {
                 dislikeBtn.querySelector('.dislike-count').textContent = d.dislikes_count;
                 if (d.liked) {
                     likeBtn.classList.add('liked');
+                    likeBtn.style.color = 'var(--primary)';
                     dislikeBtn.classList.remove('disliked');
+                    dislikeBtn.style.color = 'var(--secondary-text)';
                 } else {
                     likeBtn.classList.remove('liked');
+                    likeBtn.style.color = 'var(--secondary-text)';
                 }
             } catch (err) {
                 console.error('Like error:', err);
             }
         };
-        likeBtn.onmouseover = () => likeBtn.style.background = '#1678c2';
-        likeBtn.onmouseout = () => likeBtn.style.background = '#1f9cee';
+        likeBtn.onmouseover = () => likeBtn.style.color = 'var(--primary)';
+        likeBtn.onmouseout = () => likeBtn.style.color = p.user_liked ? 'var(--primary)' : 'var(--secondary-text)';
 
         // Dislike button
         const dislikeBtn = document.createElement('button');
@@ -2395,7 +2453,7 @@ window.addEventListener('resize', () => {
 
 /* Center the feed column and force single-column layout (FIXED: increased card width and max-width) */
 .posts-center { display:flex; justify-content:center; }
-#community-feed { display:flex; flex-direction:column; gap:20px; align-items:center; width:100%; }
+#community-feed { display:flex; flex-direction:column; gap:8px; align-items:center; width:100%; }
 /* FIXED: Increased max-width from 100% to larger values for better visibility */
 #community-feed .unified-post-card { width: min(95vw, 700px); max-width: 700px; }
 .unified-post-card .post-media { width:100%; height:auto; aspect-ratio:1/1; }
@@ -2416,6 +2474,27 @@ window.addEventListener('resize', () => {
 .unified-post-card .post-dislike-btn.disliked { color: #e74c3c; }
 .unified-post-card .post-bookmark-btn.bookmarked { color: var(--primary); }
 .unified-post-card .creator-pfp { width:32px; height:32px; border-radius:50%; object-fit:cover; }
+
+.post-like-btn svg,
+.post-dislike-btn svg,
+.post-bookmark-btn svg {
+    width: 16px !important;
+    height: 16px !important;
+    flex-shrink: 0;
+}
+
+.post-like-btn,
+.post-dislike-btn,
+.post-bookmark-btn {
+    padding: 4px 6px !important;
+    min-width: auto !important;
+}
+
+.post-like-btn .like-count,
+.post-dislike-btn .dislike-count {
+    font-size: 0.8rem;
+    line-height: 1;
+}
 </style>
 
 <script>

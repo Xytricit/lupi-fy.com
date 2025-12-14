@@ -54,12 +54,26 @@ def smart_cache(cache_key_prefix, ttl=300, user_specific=True):
 
 @login_required
 def for_you_recommendations(request):
-    """Get top recommendations for logged-in user (cached)."""
+    """Get top recommendations for logged-in user (YouTube-like)."""
+    from recommend.utils import compute_recommendations_for_user
+    
     user = request.user
     cache_key = f"for_you:{user.id}"
+    
+    # Check cache first
     data = cache.get(cache_key)
     if data is not None:
         return JsonResponse({"results": data})
+    
+    # Compute recommendations using YouTube-like engine
+    try:
+        compute_recommendations_for_user(user, content_type='mixed', limit=24)
+    except Exception as e:
+        print(f"Error computing recommendations: {e}")
+        import traceback
+        traceback.print_exc()
+    
+    # Fetch from DB
     recs = Recommendation.objects.filter(user=user).select_related("content_type")[:24]
     results = []
     for r in recs:
@@ -155,6 +169,51 @@ def for_you_recommendations(request):
             results.append(
                 {"type": "unknown", "object_id": r.object_id, "score": r.score}
             )
+
+    # Fallback: if no recommendations, show recent posts
+    if not results:
+        try:
+            from blog.models import Post
+            from communities.models import CommunityPost
+            from django.utils.html import strip_tags
+            
+            recent_posts = list(Post.objects.all().order_by('-created')[:12])
+            recent_community = list(CommunityPost.objects.all().order_by('-created_at')[:12])
+            
+            for post in recent_posts:
+                try:
+                    excerpt = strip_tags(post.content)[:220] if hasattr(post, "content") else ""
+                    img = None
+                    if hasattr(post, "images"):
+                        first = post.images.all().first()
+                        if first and hasattr(first, "image"):
+                            img = first.image.url
+                    results.append({
+                        "type": "blog",
+                        "id": post.id,
+                        "title": post.title,
+                        "excerpt": excerpt,
+                        "image": img,
+                        "score": 0.5,
+                    })
+                except Exception:
+                    pass
+            
+            for post in recent_community:
+                try:
+                    excerpt = strip_tags(post.content)[:220] if post.content else ""
+                    results.append({
+                        "type": "community",
+                        "id": post.id,
+                        "title": post.title or "Community Post",
+                        "excerpt": excerpt,
+                        "image": post.image.url if post.image else None,
+                        "score": 0.5,
+                    })
+                except Exception:
+                    pass
+        except Exception as e:
+            print(f"Error generating fallback: {e}")
 
     cache.set(cache_key, results, 60)
     return JsonResponse({"results": results})
@@ -376,11 +435,14 @@ def get_community_recommendations(request):
         score += recency_boost
 
         if score > 0 or not community_tags:  # Show all if no tags selected
+            from django.utils.html import strip_tags
+            excerpt = strip_tags(post.content)[:220] if post.content else ""
             scored_posts.append(
                 {
                     "id": post.id,
                     "title": post.title,
                     "content": post.content[:240] if post.content else "",
+                    "excerpt": excerpt,
                     "image": post.image.url if post.image else None,
                     "community_id": post.community.id,
                     "community_name": post.community.name,

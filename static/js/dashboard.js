@@ -480,30 +480,22 @@ async function loadForYouRecommendations() {
                 if (rec.type === 'blog') {
                     if (!blogContainer) return;
                     const card = document.createElement('div');
-                    card.className = 'for-you-card';
+                    card.className = 'unified-post-card';
                     card.style.cursor = 'pointer';
                     card.onclick = () => window.location.href = `/posts/${rec.id}/`;
-                    card.innerHTML = `
-                        <div style="width:100%;height:140px;display:flex;align-items:center;justify-content:center;background:var(--muted-bg, #f3f4f6);border-radius:8px;overflow:hidden;">
-                            ${rec.image ? `<img src="${rec.image}" alt="${rec.title}" style="max-width:100%;max-height:100%;object-fit:contain;"/>` : `<div style=\"width:60%;height:60%;background:linear-gradient(135deg,#eaeef9,#f7f5f0);border-radius:6px;\"></div>`}
-                        </div>
-                        <div style="margin-top:8px;font-weight:700;color:var(--text-dark);">${rec.title}</div>
-                        ${rec.excerpt ? `<div style="color:var(--secondary-text);font-size:0.95rem;margin-top:6px;">${rec.excerpt}</div>` : ''}
-                    `;
+                    const img = rec.image ? `<img src="${rec.image}" alt="${rec.title}" style="width:100%;height:100%;object-fit:cover;object-position:center;"/>` : `<div style="width:100%;height:100%;background:linear-gradient(135deg,#eaeef9,#f7f5f0);"></div>`;
+                    const excerpt = rec.excerpt ? `<div class="excerpt">${rec.excerpt}</div>` : '';
+                    card.innerHTML = `<div class="post-media">${img}</div><h3>${rec.title}</h3>${excerpt}`;
                     blogContainer.appendChild(card);
                 } else if (rec.type === 'community') {
                     if (!communityContainer) return;
                     const card = document.createElement('div');
-                    card.className = 'for-you-card';
+                    card.className = 'unified-post-card';
                     card.style.cursor = 'pointer';
                     card.onclick = () => { window.location.href = `/communities/post/${rec.id}/`; };
-                    card.innerHTML = `
-                        <div style="width:100%;height:140px;display:flex;align-items:center;justify-content:center;background:var(--muted-bg, #f3f4f6);border-radius:8px;overflow:hidden;">
-                            ${rec.image ? `<img src="${rec.image}" alt="${rec.title}" style="max-width:100%;max-height:100%;object-fit:contain;"/>` : `<div style=\"width:60%;height:60%;background:linear-gradient(135deg,#f0f4f8,#f7f5f0);border-radius:6px;\"></div>`}
-                        </div>
-                        <div style="margin-top:8px;font-weight:700;color:var(--text-dark);">${rec.title}</div>
-                        ${rec.excerpt ? `<div style="color:var(--secondary-text);font-size:0.95rem;margin-top:6px;">${rec.excerpt}</div>` : ''}
-                    `;
+                    const img = rec.image ? `<img src="${rec.image}" alt="${rec.title}" style="width:100%;height:100%;object-fit:cover;object-position:center;"/>` : `<div style="width:100%;height:100%;background:linear-gradient(135deg,#f0f4f8,#f7f5f0);"></div>`;
+                    const excerpt = rec.excerpt ? `<div class="excerpt">${rec.excerpt}</div>` : '';
+                    card.innerHTML = `<div class="post-media">${img}</div><h3>${rec.title}</h3>${excerpt}`;
                     communityContainer.appendChild(card);
                 } else if (rec.type === 'game') {
                     gamesForYou.push(rec);
@@ -539,16 +531,12 @@ async function loadBlogRecommendations() {
                 container.innerHTML = '';
                 data.results.forEach(rec => {
                     const card = document.createElement('div');
-                    card.className = 'for-you-card';
+                    card.className = 'unified-post-card';
                     card.style.cursor = 'pointer';
                     card.onclick = () => window.location.href = `/posts/${rec.id}/`;
-                    card.innerHTML = `
-                        <div style="width:100%;height:140px;display:flex;align-items:center;justify-content:center;background:#f3f4f6;border-radius:8px;overflow:hidden;">
-                            ${rec.image ? `<img src="${rec.image}" alt="${rec.title}" style="max-width:100%;max-height:100%;object-fit:contain;"/>` : `<div style=\"width:60%;height:60%;background:linear-gradient(135deg,#eaeef9,#f7f5f0);border-radius:6px;\"></div>`}
-                        </div>
-                        <div style="margin-top:8px;font-weight:700;color:var(--text-dark);">${rec.title}</div>
-                        ${rec.excerpt ? `<div style="color:var(--secondary-text);font-size:0.95rem;margin-top:6px;">${rec.excerpt}</div>` : ''}
-                    `;
+                    const img = rec.image ? `<img src="${rec.image}" alt="${rec.title}" style="width:100%;height:100%;object-fit:cover;object-position:center;"/>` : `<div style="width:100%;height:100%;background:linear-gradient(135deg,#eaeef9,#f7f5f0);"></div>`;
+                    const excerpt = rec.excerpt ? `<div class="excerpt">${rec.excerpt}</div>` : '';
+                    card.innerHTML = `<div class="post-media">${img}</div><h3>${rec.title}</h3>${excerpt}`;
                     container.appendChild(card);
                 });
             }
@@ -570,7 +558,7 @@ async function loadCommunityRecommendations() {
 
             data.results.forEach(rec => {
                 const card = document.createElement('div');
-                card.className = 'for-you-post-card';
+                card.className = 'unified-post-card';
                 card.style.background = 'var(--card-bg)';
                 card.style.border = '1px solid var(--border-color)';
                 card.style.borderRadius = '12px';
@@ -751,14 +739,14 @@ async function loadCommunityRecommendations() {
                 // Dislike button (create first so like button can reference it)
                 const dislikeBtn = document.createElement('button');
                 dislikeBtn.className = 'foryou-action-btn';
-                dislikeBtn.style.cssText = 'background:none;border:none;cursor:pointer;padding:0;display:flex;align-items:center;gap:6px;color:var(--secondary-text);font-size:0.9rem;transition:color 0.2s;';
-                dislikeBtn.innerHTML = `<svg xmlns='http://www.w3.org/2000/svg' width='18' height='18' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2'><path d='M17 14V2'/><path d='M9 18.12 10 14H4.17a2 2 0 0 1-1.92-2.56l2.33-8A2 2 0 0 1 6.5 2H20a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-2.76a2 2 0 0 0-1.79 1.11L12 22a3.13 3.13 0 0 1-3-3.88Z'/></svg><span class='dislike-count'>${rec.dislikes_count||0}</span>`;
+                dislikeBtn.style.cssText = 'background:none;border:none;cursor:pointer;padding:2px;display:flex;align-items:center;gap:4px;color:var(--secondary-text);font-size:0.85rem;transition:color 0.2s;min-width:auto;';
+                dislikeBtn.innerHTML = `<svg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2'><path d='M17 14V2'/><path d='M9 18.12 10 14H4.17a2 2 0 0 1-1.92-2.56l2.33-8A2 2 0 0 1 6.5 2H20a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-2.76a2 2 0 0 0-1.79 1.11L12 22a3.13 3.13 0 0 1-3-3.88Z'/></svg><span class='dislike-count'>${rec.dislikes_count||0}</span>`;
 
                 // Like button
                 const likeBtn = document.createElement('button');
                 likeBtn.className = 'foryou-action-btn';
-                likeBtn.style.cssText = 'background:none;border:none;cursor:pointer;padding:0;display:flex;align-items:center;gap:6px;color:var(--secondary-text);font-size:0.9rem;transition:color 0.2s;';
-                likeBtn.innerHTML = `<svg xmlns='http://www.w3.org/2000/svg' width='18' height='18' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2'><path d='M7 10v12'/><path d='M15 5.88 14 10h5.83a2 2 0 0 1 1.92 2.56l-2.33 8A2 2 0 0 1 17.5 22H4a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2h2.76a2 2 0 0 0 1.79-1.11L12 2a3.13 3.13 0 0 1 3 3.88Z'/></svg><span class='like-count'>${rec.likes_count||0}</span>`;
+                likeBtn.style.cssText = 'background:none;border:none;cursor:pointer;padding:4px 6px;display:flex;align-items:center;gap:4px;color:var(--secondary-text);font-size:0.8rem;transition:color 0.2s;min-width:auto;border-radius:4px;';
+                likeBtn.innerHTML = `<svg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2'><path d='M7 10v12'/><path d='M15 5.88 14 10h5.83a2 2 0 0 1 1.92 2.56l-2.33 8A2 2 0 0 1 17.5 22H4a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2h2.76a2 2 0 0 0 1.79-1.11L12 2a3.13 3.13 0 0 1 3 3.88Z'/></svg><span class='like-count'>${rec.likes_count||0}</span>`;
                 
                 likeBtn.addEventListener('click', async (e) => { e.stopPropagation(); 
                     try { 
@@ -789,8 +777,8 @@ async function loadCommunityRecommendations() {
                 // Comment button
                 const commentBtn = document.createElement('a');
                 commentBtn.href = `/communities/post/${rec.id}/`;
-                commentBtn.style.cssText = 'display:flex;align-items:center;gap:6px;color:var(--secondary-text);text-decoration:none;font-size:0.9rem;transition:color 0.2s;';
-                commentBtn.innerHTML = `<svg xmlns='http://www.w3.org/2000/svg' width='18' height='18' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2'><path d='M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z'/></svg><span>${rec.comments_count||0}</span>`;
+                commentBtn.style.cssText = 'display:flex;align-items:center;gap:4px;color:var(--secondary-text);text-decoration:none;font-size:0.85rem;transition:color 0.2s;padding:2px;';
+                commentBtn.innerHTML = `<svg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2'><path d='M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z'/></svg><span>${rec.comments_count||0}</span>`;
                 commentBtn.onmouseover = () => commentBtn.style.color = 'var(--primary)';
                 commentBtn.onmouseout = () => commentBtn.style.color = 'var(--secondary-text)';
                 actions.appendChild(commentBtn);
@@ -798,8 +786,8 @@ async function loadCommunityRecommendations() {
                 // Bookmark button
                 const bookmarkBtn = document.createElement('button');
                 bookmarkBtn.className = 'foryou-action-btn';
-                bookmarkBtn.style.cssText = 'background:none;border:none;cursor:pointer;padding:0;display:flex;align-items:center;gap:6px;color:var(--secondary-text);font-size:0.9rem;transition:color 0.2s;margin-left:auto;';
-                bookmarkBtn.innerHTML = rec.user_bookmarked ? `<svg width='18' height='18' fill='currentColor' viewBox='0 0 24 24'><path d='m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2Z'/></svg>` : `<svg width='18' height='18' fill='none' stroke='currentColor' stroke-width='2' viewBox='0 0 24 24'><path d='m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z'/></svg>`;
+                bookmarkBtn.style.cssText = 'background:none;border:none;cursor:pointer;padding:2px;display:flex;align-items:center;gap:4px;color:var(--secondary-text);font-size:0.85rem;transition:color 0.2s;margin-left:auto;';
+                bookmarkBtn.innerHTML = rec.user_bookmarked ? `<svg width='16' height='16' fill='currentColor' viewBox='0 0 24 24'><path d='m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2Z'/></svg>` : `<svg width='16' height='16' fill='none' stroke='currentColor' stroke-width='2' viewBox='0 0 24 24'><path d='m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z'/></svg>`;
                 if (rec.user_bookmarked) bookmarkBtn.style.color = 'var(--primary)';
                 
                 bookmarkBtn.addEventListener('click', async (e) => { e.stopPropagation(); 
@@ -808,7 +796,7 @@ async function loadCommunityRecommendations() {
                         if(!r.ok) throw new Error('Network'); 
                         const j = await r.json(); 
                         bookmarkBtn.style.color = j.bookmarked ? 'var(--primary)' : 'var(--secondary-text)'; 
-                        bookmarkBtn.innerHTML = j.bookmarked ? `<svg width='18' height='18' fill='currentColor' viewBox='0 0 24 24'><path d='m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2Z'/></svg>` : `<svg width='18' height='18' fill='none' stroke='currentColor' stroke-width='2' viewBox='0 0 24 24'><path d='m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z'/></svg>`; 
+                        bookmarkBtn.innerHTML = j.bookmarked ? `<svg width='16' height='16' fill='currentColor' viewBox='0 0 24 24'><path d='m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2Z'/></svg>` : `<svg width='16' height='16' fill='none' stroke='currentColor' stroke-width='2' viewBox='0 0 24 24'><path d='m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z'/></svg>`; 
                     } catch(err){console.error(err);} 
                 });
                 actions.appendChild(bookmarkBtn);
@@ -821,8 +809,8 @@ async function loadCommunityRecommendations() {
                 
                 const menuBtn = document.createElement('button');
                 menuBtn.className = 'foryou-action-btn';
-                menuBtn.style.cssText = 'background:none;border:none;cursor:pointer;padding:0;display:flex;align-items:center;gap:6px;color:var(--secondary-text);font-size:0.9rem;transition:color 0.2s;';
-                menuBtn.innerHTML = `<svg xmlns='http://www.w3.org/2000/svg' width='18' height='18' viewBox='0 0 24 24' fill='currentColor'><circle cx='5' cy='12' r='2'/><circle cx='12' cy='12' r='2'/><circle cx='19' cy='12' r='2'/></svg>`;
+                menuBtn.style.cssText = 'background:none;border:none;cursor:pointer;padding:2px;display:flex;align-items:center;gap:4px;color:var(--secondary-text);font-size:0.85rem;transition:color 0.2s;';
+                menuBtn.innerHTML = `<svg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='currentColor'><circle cx='5' cy='12' r='2'/><circle cx='12' cy='12' r='2'/><circle cx='19' cy='12' r='2'/></svg>`;
                 
                 // Dropdown menu
                 const dropdown = document.createElement('div');

@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Create Post - Lupify</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.css">
 <style>
 /* ===================== Wrapper ===================== */
 .post-wrapper {
@@ -15,6 +16,7 @@
     border-radius: 12px;
     box-shadow: 0 10px 30px rgba(0,0,0,0.08);
     box-sizing: border-box;
+    text-align: center;
 }
 
 /* ===================== Back Button ===================== */
@@ -22,6 +24,7 @@
     display: flex;
     align-items: center;
     margin-bottom: 25px;
+    justify-content: flex-start;
 }
 
 .back-button {
@@ -53,6 +56,7 @@
     margin-bottom: 25px;
     font-weight: 700;
     font-size: 1.8rem;
+    text-align: center;
 }
 
 /* ===================== Inputs ===================== */
@@ -61,6 +65,7 @@
     margin-top: 15px;
     margin-bottom: 5px;
     font-weight: 600;
+    text-align: left;
 }
 
 .post-wrapper input,
@@ -74,6 +79,7 @@
     font-size: 1rem;
     font-family: inherit;
     box-sizing: border-box;
+    text-align: left;
 }
 
 .post-wrapper textarea {
@@ -114,9 +120,17 @@
     background: #f8f9fa;
 }
 
-.link-preview img {
-    max-width: 100%;
+.link-preview .media {
+    width: 100%;
+    aspect-ratio: 16/9;
     border-radius: 8px;
+    overflow: hidden;
+    background: #e5e7eb;
+}
+.link-preview .media img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
 }
 
 .link-preview button {
@@ -265,6 +279,11 @@
     <!-- Popup message -->
     <div class="popup" id="popupMessage">Only images are allowed!</div>
 
+    <!-- Drag & Drop Zone -->
+    <div id="dropZone" style="border:2px dashed var(--border-color,#e5e7eb); border-radius:10px; padding:16px; text-align:center; color:var(--secondary-text,#6b7280); margin-bottom:16px;">
+        Drag & drop images here or click "Add Image"
+    </div>
+
     <form method="POST" enctype="multipart/form-data">
         {% csrf_token %}
         {{ form.non_field_errors }}
@@ -292,7 +311,7 @@
 
         <!-- Hidden file input for multiple images -->
         {{ form.images.errors }}
-        <input type="file" name="images" id="imageInput" accept="image/*" multiple style="display:none">
+        <input type="file" name="images" id="imageInput" accept="image/*" multiple required style="display:none">
 
         <!-- Add Image Button -->
         <button type="button" id="addImageBtn" class="btn-primary">Add Image</button>
@@ -317,42 +336,137 @@ const warningBox = document.getElementById('warningBox');
 const form = document.querySelector('form');
 const bannedWordsList = JSON.parse(document.getElementById('bannedWordsJSON').textContent);
 const textarea = document.getElementById("id_content");
-const descriptionField = form.querySelector('[name="description"]');
+const descriptionField = form.querySelector('[name=\"description\"]');
+const dropZone = document.getElementById('dropZone');
+let selectedFiles = [];
 
 // ===================== Allowed Extensions =====================
 const allowedExtensions = ['jpg','jpeg','png','gif','webp'];
 
-// ===================== Show File Selector =====================
-addImageBtn.addEventListener('click', () => {
-    imageInput.click();
-});
+addImageBtn.addEventListener('click', () => { imageInput.click(); });
 
-// ===================== Handle File Selection =====================
-imageInput.addEventListener('change', () => {
-    Array.from(imageInput.files).forEach(file => {
-        const extension = file.name.split('.').pop().toLowerCase();
-        if (!allowedExtensions.includes(extension)) {
-            showPopup();
-            return;
-        }
-
+function addFiles(files) {
+    Array.from(files).forEach(file => {
+        const extension = (file.name.split('.').pop() || '').toLowerCase();
+        if (!allowedExtensions.includes(extension)) { showPopup(); return; }
+        const maxSize = 5 * 1024 * 1024;
+        if (file.size > maxSize) { showPopup(); return; }
+        selectedFiles.push(file);
+    });
+    renderPreviews();
+}
+function renderPreviews() {
+    previewContainer.innerHTML = '';
+    selectedFiles.forEach((file, idx) => {
         const div = document.createElement('div');
-        div.classList.add('link-preview');
-
+        div.className = 'link-preview';
+        const media = document.createElement('div');
+        media.className = 'media';
         const img = document.createElement('img');
         img.src = URL.createObjectURL(file);
-        div.appendChild(img);
-
+        img.style.maxWidth = '100%';
+        media.appendChild(img);
+        div.appendChild(media);
+        
+        const btnContainer = document.createElement('div');
+        btnContainer.style.display = 'flex';
+        btnContainer.style.gap = '8px';
+        
+        const cropBtn = document.createElement('button');
+        cropBtn.textContent = '✂️ Crop';
+        cropBtn.type = 'button';
+        cropBtn.addEventListener('click', () => {
+            showCropperModal(img, file, idx);
+        });
+        cropBtn.style.flex = '1';
+        cropBtn.style.padding = '8px';
+        cropBtn.style.background = '#1f9cee';
+        cropBtn.style.color = 'white';
+        cropBtn.style.border = 'none';
+        cropBtn.style.borderRadius = '4px';
+        cropBtn.style.cursor = 'pointer';
+        
         const removeBtn = document.createElement('button');
-        removeBtn.textContent = 'Remove';
-        removeBtn.addEventListener('click', () => div.remove());
-        div.appendChild(removeBtn);
-
+        removeBtn.textContent = '✕ Remove';
+        removeBtn.type = 'button';
+        removeBtn.addEventListener('click', () => {
+            selectedFiles.splice(idx, 1);
+            renderPreviews();
+        });
+        removeBtn.style.flex = '1';
+        removeBtn.style.padding = '8px';
+        removeBtn.style.background = '#e74c3c';
+        removeBtn.style.color = 'white';
+        removeBtn.style.border = 'none';
+        removeBtn.style.borderRadius = '4px';
+        removeBtn.style.cursor = 'pointer';
+        
+        btnContainer.appendChild(cropBtn);
+        btnContainer.appendChild(removeBtn);
+        div.appendChild(btnContainer);
         previewContainer.appendChild(div);
     });
+}
 
-    imageInput.value = '';
-});
+function showCropperModal(imgEl, file, idx) {
+    const modal = document.createElement('div');
+    modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.8);display:flex;align-items:center;justify-content:center;z-index:10000;';
+    
+    const container = document.createElement('div');
+    container.style.cssText = 'background:white;border-radius:8px;padding:20px;max-width:600px;width:90%;max-height:80vh;overflow:auto;';
+    
+    const title = document.createElement('h3');
+    title.textContent = 'Crop Image';
+    title.style.marginTop = '0';
+    container.appendChild(title);
+    
+    const cropImg = document.createElement('img');
+    cropImg.src = imgEl.src;
+    cropImg.style.maxWidth = '100%';
+    container.appendChild(cropImg);
+    
+    let cropper;
+    setTimeout(() => {
+        cropper = new Cropper(cropImg, {
+            aspectRatio: 16 / 9,
+            autoCropArea: 0.8,
+            responsive: true,
+            guides: true,
+            viewMode: 1
+        });
+    }, 100);
+    
+    const btnContainer = document.createElement('div');
+    btnContainer.style.cssText = 'margin-top:20px;display:flex;gap:10px;justify-content:flex-end;';
+    
+    const cancelBtn = document.createElement('button');
+    cancelBtn.textContent = 'Cancel';
+    cancelBtn.style.cssText = 'padding:10px 16px;background:#ccc;border:none;border-radius:4px;cursor:pointer;';
+    cancelBtn.onclick = () => modal.remove();
+    
+    const saveBtn = document.createElement('button');
+    saveBtn.textContent = 'Crop & Save';
+    saveBtn.style.cssText = 'padding:10px 16px;background:#1f9cee;color:white;border:none;border-radius:4px;cursor:pointer;';
+    saveBtn.onclick = async () => {
+        const canvas = cropper.getCroppedCanvas();
+        canvas.toBlob((blob) => {
+            const cropped = new File([blob], file.name, { type: 'image/jpeg' });
+            selectedFiles[idx] = cropped;
+            renderPreviews();
+            modal.remove();
+        }, 'image/jpeg', 0.9);
+    };
+    
+    btnContainer.appendChild(cancelBtn);
+    btnContainer.appendChild(saveBtn);
+    container.appendChild(btnContainer);
+    modal.appendChild(container);
+    document.body.appendChild(modal);
+}
+imageInput.addEventListener('change', () => { addFiles(imageInput.files); imageInput.value=''; });
+dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.style.background='rgba(0,0,0,0.03)'; });
+dropZone.addEventListener('dragleave', () => { dropZone.style.background='transparent'; });
+dropZone.addEventListener('drop', e => { e.preventDefault(); dropZone.style.background='transparent'; addFiles(e.dataTransfer.files); });
 
 // ===================== Popup Function =====================
 function showPopup() {
@@ -389,6 +503,15 @@ form.addEventListener('submit', (e) => {
         textarea,
         form.querySelector('#id_tags') || form.querySelector('[name="tags"]')
     ];
+
+    // Check if images are selected (required for blog posts)
+    if (selectedFiles.length === 0) {
+        e.preventDefault();
+        warningBox.innerHTML = "Please add at least one image to your post.";
+        warningBox.style.display = "block";
+        warningBox.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        return;
+    }
 
     // Check banned words
     fields.forEach(field => {
@@ -433,9 +556,13 @@ form.addEventListener('submit', (e) => {
     } else {
         warningBox.style.display = 'none';
     }
+    const dt = new DataTransfer();
+    selectedFiles.forEach(f => dt.items.add(f));
+    imageInput.files = dt.files;
 });
 </script>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.js"></script>
 
 </body>
 </html>

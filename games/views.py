@@ -14,22 +14,22 @@ def editor_debug_view(request):
     return render(request, "games/editor_enhanced.html", {})
 
 
+@login_required
 def editor_public_view(request):
-    """Serve the enhanced editor without requiring authentication (guest/public)."""
-    # Allow guest/editor to accept a `game_id` GET param so the editor
+    """Serve the enhanced editor for authenticated users to create and edit games."""
+    # Allow editor to accept a `game_id` GET param so the editor
     # can load a specific game for viewing/editing when the link includes it.
     game_id = request.GET.get('game_id')
     context = {}
     if game_id:
         context['game_id'] = game_id
-    # If a user is authenticated, provide minimal profile info to the editor
-    if request.user.is_authenticated:
-        user = request.user
-        context['current_user'] = {
-            'id': user.id,
-            'username': user.username,
-            'avatar_url': getattr(user, 'avatar.url', None) if getattr(user, 'avatar', None) else None,
-        }
+    # Provide user info to the editor
+    user = request.user
+    context['current_user'] = {
+        'id': user.id,
+        'username': user.username,
+        'avatar_url': getattr(user, 'avatar.url', None) if getattr(user, 'avatar', None) else None,
+    }
     return render(request, "games/editor_enhanced.html", context)
 
 

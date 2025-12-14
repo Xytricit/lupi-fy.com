@@ -13,7 +13,7 @@
             <button class="filter-bubble" type="button" data-sort="latest">Latest</button>
             <button class="filter-bubble" type="button" data-sort="most_liked">Most liked</button>
         </div>
-        <div id="blogForYouSection" style="margin-top:12px; display:block;">
+        <div id="blogForYouSection" style="margin-top:12px; display:none;">
                 <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
                 <h4 style="margin:0;font-size:1rem;color:var(--text-dark);">Recommended for you</h4>
             </div>
@@ -325,6 +325,7 @@ body { -webkit-font-smoothing:antialiased; -moz-osx-font-smoothing:grayscale; }
     font-weight: 500;
     cursor: pointer;
     transition: all 0.2s ease;
+    text-align: center;
 }
 
 .filter-bubble:hover {
@@ -351,11 +352,18 @@ document.addEventListener('DOMContentLoaded', async () => {
     const toggle = document.getElementById('blogForYouToggle');
     const section = document.getElementById('blogForYouSection');
     const container = document.getElementById('blogPageForYouContainer');
-    const feedEl = document.getElementById('blogFeed') || document.querySelector('.feed > div:not(.post-card-intro)');
+    let feedContainer = null;
     
     if (!toggle || !section) {
         console.warn('Blog For You toggle or section not found');
         return;
+    }
+
+    async function getFeedContainer() {
+        if (!feedContainer) {
+            feedContainer = document.getElementById('blogFeed');
+        }
+        return feedContainer;
     }
 
     async function fetchBlogForYou() {
@@ -370,7 +378,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 return;
             }
             if (!data.results || data.results.length === 0) {
-                container.innerHTML = '<div style="padding:16px;color:var(--secondary-text);">No personalized articles yet. Try selecting more interests.</div>';
+                container.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;padding:40px 16px;"><div style="text-align:center;"><p style="margin:0;color:var(--secondary-text);font-size:14px;">No recommendations yet. Try following more communities!</p></div></div>';
                 return;
             }
             // Render blog recommendations using a card layout consistent with community posts
@@ -391,7 +399,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             });
         } catch (err) {
             console.error('Failed to load blog recommendations:', err);
-            container.innerHTML = '<div style="padding:16px;color:var(--secondary-text);">Failed to load recommendations. Please try again.</div>';
+            container.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;padding:40px 16px;"><div style="text-align:center;"><p style="margin:0;color:var(--secondary-text);font-size:14px;">Failed to load recommendations.</p></div></div>';
         }
     }
 
@@ -429,11 +437,13 @@ document.addEventListener('DOMContentLoaded', async () => {
             // Clear on first load, append on pagination
             if (offset === 0) {
                 feedContainer.innerHTML = '';
+                feedContainer.style.display = 'flex';
+                section.style.display = 'none';
             }
             
             if (!data.posts || data.posts.length === 0) {
                 if (offset === 0) {
-                    feedContainer.innerHTML = '<div style="text-align: center; padding: 40px 20px; color: var(--secondary-text);"><p>No blog posts found.</p></div>';
+                    feedContainer.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;min-height:200px;"><div style="text-align:center;max-width:400px;"><h3 style="margin:0 0 8px;font-size:18px;color:var(--text-dark);font-weight:600;">No posts yet</h3><p style="margin:0;color:var(--secondary-text);font-size:14px;line-height:1.6;">Be the first to create a blog post!</p></div></div>';
                 }
                 return;
             }
@@ -516,7 +526,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Load initial For You recommendations on page load
     await fetchBlogForYou();
 
-    // Handle toggle for For You
+    // Handle toggle for For You - shows ML-recommended posts
     toggle.addEventListener('click', async (e) => {
         e.preventDefault();
         const isActive = toggle.classList.contains('active');
@@ -526,14 +536,18 @@ document.addEventListener('DOMContentLoaded', async () => {
             document.querySelectorAll('.filter-bubble').forEach(b => b.classList.remove('active'));
             document.querySelector('.filter-bubble[data-sort="latest"]')?.classList.add('active');
             if (section) section.style.display = 'none';
+            const fc = await getFeedContainer();
+            if (fc) fc.style.display = 'flex';
             await fetchAndRenderBlogPosts('latest', 0);
             return;
         }
-        // Activate For You
+        // Activate For You - show recommended posts
         document.querySelectorAll('.filter-bubble').forEach(b => b.classList.remove('active'));
         toggle.classList.add('active');
-        if (section) section.style.display = 'block';
-        await fetchBlogForYou();
+        if (section) section.style.display = 'none';
+        const fc = await getFeedContainer();
+        if (fc) fc.style.display = 'flex';
+        await fetchAndRenderBlogPosts('for_you', 0);
     });
 
     // Setup filter bubble click handlers for Latest and Most liked buttons

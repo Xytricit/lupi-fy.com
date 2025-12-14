@@ -10,9 +10,13 @@ from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
+from django.core.files.base import ContentFile
+from io import BytesIO
+from PIL import Image
+import os
 
 from .forms import CommentForm, PostForm
-from .models import Comment, ModerationReport, Post, PostImage
+from .models import Comment, ModerationReport, Post, PostImage, Category, Tag
 
 # -------------------- Banned words --------------------
 banned_words = [
@@ -151,6 +155,8 @@ def create_post_view(request):
         form = PostForm(request.POST, request.FILES)
         post_content = request.POST.get("content", "").lower()
         banned_found = [w for w in banned_words if w in post_content]
+        description_value = request.POST.get("description", "").strip()
+        category_input = request.POST.get("category", "").strip()
 
         # moderation system
         if banned_found:
@@ -188,12 +194,61 @@ def create_post_view(request):
 
             post = form.save(commit=False)
             post.author = request.user
+            if description_value:
+                post.description = description_value
+            if category_input:
+                cat_name = category_input.lstrip("#").strip()
+                if cat_name:
+                    cat_obj, _ = Category.objects.get_or_create(name=cat_name.title())
+                    post.category = cat_obj
             post.save()
             form.save_m2m()
 
+            max_w, max_h = 1600, 900
+            target_ratio = 16 / 9
             for img in images:
-                post_image = PostImage.objects.create(image=img)
-                post.images.add(post_image)
+                try:
+                    im = Image.open(img)
+                    im = im.convert("RGB")
+                    w, h = im.size
+                    current_ratio = w / h if h else 1
+                    if current_ratio > target_ratio:
+                        new_w = int(h * target_ratio)
+                        left = (w - new_w) // 2
+                        box = (left, 0, left + new_w, h)
+                    else:
+                        new_h = int(w / target_ratio)
+                        top = (h - new_h) // 2
+                        box = (0, top, w, top + new_h)
+                    im = im.crop(box)
+                    im.thumbnail((max_w, max_h), Image.LANCZOS)
+                    out = BytesIO()
+                    im.save(out, format="JPEG", quality=85)
+                    out.seek(0)
+                    base = os.path.splitext(getattr(img, "name", "image"))[0]
+                    filename = f"{base}_cropped.jpg"
+                    content = ContentFile(out.read())
+                    post_image = PostImage()
+                    post_image.image.save(filename, content, save=True)
+                    post.images.add(post_image)
+                except Exception:
+                    post_image = PostImage.objects.create(image=img)
+                    post.images.add(post_image)
+
+            source_texts = [
+                request.POST.get("title", ""),
+                request.POST.get("content", ""),
+                description_value or "",
+            ]
+            tags_seen = set()
+            for txt in source_texts:
+                for token in txt.split():
+                    if token.startswith("#") and len(token) > 1:
+                        slug = token[1:].strip().lower().rstrip(".,!?;:")
+                        if slug and slug not in tags_seen:
+                            tags_seen.add(slug)
+                            t_obj, _ = Tag.objects.get_or_create(name=slug.title())
+                            post.tags.add(t_obj)
 
             messages.success(request, f"Post '{post.title}' created successfully!")
             return redirect("blogs")

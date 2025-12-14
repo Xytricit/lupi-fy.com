@@ -16,7 +16,9 @@
   <main>
     <div id="games-grid" style="display:grid;gap:16px;grid-template-columns:repeat(auto-fill,minmax(220px,1fr))" aria-live="polite"></div>
     <div id="empty" style="display:none;padding:48px;background:linear-gradient(180deg,#fff, #fbfdff);border-radius:12px;text-align:center;color:#6b7280">
-      No released & approved games found.
+      <p style="margin:0 0 16px;font-size:16px;font-weight:600;">No games yet</p>
+      <p style="margin:0 0 20px;font-size:14px;">Start developing one today!</p>
+      <a href="/games/editor/" style="display:inline-block;background:#1f9cee;color:white;padding:10px 24px;border-radius:8px;text-decoration:none;font-weight:500;transition:opacity 0.2s;" onmouseover="this.style.opacity='0.9'" onmouseout="this.style.opacity='1'">Go to Game Editor</a>
     </div>
   </main>
 </div>
