@@ -1,6 +1,6 @@
 from django.db import models
 from django.conf import settings
-from django.core.validators import MinValueValidator, FileExtensionValidator
+from django.core.validators import MinValueValidator, MaxValueValidator, FileExtensionValidator
 from django.utils.text import slugify
 from django.utils import timezone
 from decimal import Decimal
@@ -96,7 +96,7 @@ class Project(models.Model):
         max_digits=3, 
         decimal_places=2, 
         default=0.00,
-        validators=[MinValueValidator(0), MinValueValidator(5)]
+        validators=[MinValueValidator(0), MaxValueValidator(5)]
     )
     rating_count = models.PositiveIntegerField(default=0)
     
@@ -338,7 +338,7 @@ class ProjectReview(models.Model):
     )
     
     rating = models.PositiveSmallIntegerField(
-        validators=[MinValueValidator(1), MinValueValidator(5)]
+        validators=[MinValueValidator(1), MaxValueValidator(5)]
     )
     title = models.CharField(max_length=100)
     content = models.TextField()

@@ -502,12 +502,8 @@ document.addEventListener('DOMContentLoaded', () => {
         
         games.forEach((g, index) => {
             try {
-                // Map game IDs to their URL names
-                const urlMap = {
-                    'try-not-to-get-banned': '{% url "game_lobby" %}',
-                    'letter-set': '{% url "letter_set_game" %}'
-                };
-                const gameUrl = urlMap[g.id] || '{% url "games_hub" %}';
+                // Use game URL directly from API response
+                const gameUrl = g.url || '{% url "games_hub" %}';
                 
                 const el = document.createElement('a');
                 el.href = gameUrl;

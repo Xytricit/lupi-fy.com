@@ -246,23 +246,7 @@ def games_list_api(request):
     })
 
 
-@login_required
-@require_http_methods(["POST"])
-def reject_game_api(request):
-    """Admin/Moderator: Reject a game (keep as draft)."""
-    from .models import Game
-    if request.user.profile.role not in ('admin', 'moderator'):
-        return JsonResponse({'error': 'Permission denied'}, status=403)
-    try:
-        game_id = request.GET.get('game_id')
-        game = Game.objects.get(id=game_id)
-        game.visibility = 'draft'
-        game.save()
-        return JsonResponse({'status': 'rejected', 'game_id': str(game.id)})
-    except Game.DoesNotExist:
-        return JsonResponse({'error': 'Game not found'}, status=404)
-    except Exception as e:
-        return JsonResponse({'error': str(e)}, status=400)
+ 
 
 
 @login_required
@@ -507,11 +491,6 @@ def tutorial_view(request):
 @login_required
 def moderation_view(request):
     """Serve the moderation panel (admin/moderator only)."""
-    try:
-        if hasattr(request.user, 'profile') and request.user.profile.role not in ('moderator', 'admin'):
-            return JsonResponse({'error': 'Permission denied'}, status=403)
-    except:
-        pass
     return render(request, "games/moderation.html", {})
 
 
@@ -660,8 +639,6 @@ def games_api_view(request):
         except: pass
         # #endregion
         return JsonResponse({'error': str(e)}, status=400)
-
-
 
 
 

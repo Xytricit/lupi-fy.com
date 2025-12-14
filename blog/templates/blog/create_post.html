@@ -17,9 +17,39 @@
     box-sizing: border-box;
 }
 
+/* ===================== Back Button ===================== */
+.back-button-container {
+    display: flex;
+    align-items: center;
+    margin-bottom: 25px;
+}
+
+.back-button {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: transparent;
+    border: none;
+    color: var(--primary, #1f9cee);
+    font-weight: 600;
+    cursor: pointer;
+    padding: 0;
+    font-size: 1rem;
+    transition: opacity 0.2s;
+}
+
+.back-button:hover {
+    opacity: 0.8;
+}
+
+.back-button svg {
+    width: 20px;
+    height: 20px;
+}
+
 /* ===================== Titles ===================== */
 .post-wrapper h2 {
-    color: #1f9cee;
+    color: var(--primary, #1f9cee);
     margin-bottom: 25px;
     font-weight: 700;
     font-size: 1.8rem;
@@ -53,7 +83,7 @@
 
 /* ===================== Buttons ===================== */
 .btn-primary {
-    background: #1f9cee;
+    background: var(--primary, #1f9cee);
     color: white;
     padding: 12px 18px;
     border-radius: 8px;
@@ -63,8 +93,8 @@
     transition: 0.2s;
 }
 .btn-primary:hover {
-    background: #fec76f;
-    color: #111827;
+    background: var(--accent, #fec76f);
+    color: var(--text-dark, #111827);
 }
 
 /* ===================== Link Preview ===================== */
@@ -219,6 +249,14 @@
 <body>
 
 <div class="post-wrapper">
+    <div class="back-button-container">
+        <button type="button" class="back-button" onclick="window.history.back();">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
+                <path d="M15 18l-6-6 6-6"/>
+            </svg>
+            Back
+        </button>
+    </div>
     <h2>Create a New Post</h2>
 
     <!-- Image preview container -->

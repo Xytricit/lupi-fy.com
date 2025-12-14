@@ -65,7 +65,7 @@
                 <path d="M10.268 21a2 2 0 0 0 3.464 0"/>
                 <path d="M3.262 15.326A1 1 0 0 0 4 17h16a1 1 0 0 0 .74-1.673C19.41 13.956 18 12.499 18 8A6 6 0 0 0 6 8c0 4.499-1.411 5.956-2.738 7.326"/>
             </svg>
-            <div id="notificationBadge" style="display: none; position: absolute; top: -4px; right: -4px; width: 20px; height: 20px; background: var(--danger); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 0.75rem; font-weight: bold;"></div>
+            <div id="notificationBadge" style="display: none; position: absolute; top: -4px; right: -4px; width: 20px; height: 20px; background: var(--danger); border-radius: 50%; align-items: center; justify-content: center; color: white; font-size: 0.75rem; font-weight: bold;"></div>
             
             <!-- Notification Dropdown -->
             <div id="notificationDropdown" class="notification-dropdown" style="display: none; position: absolute; top: 100%; right: 0; background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 12px; box-shadow: 0 8px 24px rgba(0,0,0,0.12); z-index: 1000; min-width: 320px; max-height: 400px; overflow-y: auto; margin-top: 8px;">
@@ -183,14 +183,19 @@
                 </svg>
             </a>
         </li>
-        <li class="{% if request.resolver_match.url_name == 'games_dashboard_home' %}active{% endif %}" title="Games">
-            <a href="{% url 'games_dashboard_home' %}">
+        <li class="{% if request.resolver_match.url_name == 'games_hub' %}active{% endif %}" title="Games">
+            <a href="/accounts/games/">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
                     <rect x="2" y="6" width="20" height="12" rx="2"/>
                     <path d="M6 10h3v4H6z"/>
                     <path d="M15 9v6"/>
                     <path d="M18 12h-6"/>
                 </svg>
+            </a>
+        </li>
+        <li class="{% if request.resolver_match.url_name == 'marketplace' %}active{% endif %}" title="Marketplace">
+            <a href="{% url 'marketplace:home' %}">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-store-icon lucide-store"><path d="M15 21v-5a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v5"/><path d="M17.774 10.31a1.12 1.12 0 0 0-1.549 0 2.5 2.5 0 0 1-3.451 0 1.12 1.12 0 0 0-1.548 0 2.5 2.5 0 0 1-3.452 0 1.12 1.12 0 0 0-1.549 0 2.5 2.5 0 0 1-3.77-3.248l2.889-4.184A2 2 0 0 1 7 2h10a2 2 0 0 1 1.653.873l2.895 4.192a2.5 2.5 0 0 1-3.774 3.244"/><path d="M4 10.95V19a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8.05"/></svg>
             </a>
         </li>
     </ul>
@@ -231,7 +236,7 @@
 
 
         <!-- Bubble Filters + Recently Played Games Section -->
-        <section class="full-width" style="margin-bottom:20px;">
+        <section class="full-width" style="margin-bottom:8px;">
             <!-- Filter Bubbles -->
                 <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:8px;">
                 <button id="homeForYouToggle" class="filter-bubble active" type="button" data-sort="for_you" style="padding:8px 16px;border-radius:20px;cursor:pointer;font-weight:500;transition:all 0.2s;font-size:0.9rem;">For you</button>
@@ -249,16 +254,23 @@
         </section>
 
         <!-- For You recommendations containers (shown by default) -->
-        <section id="forYouSection" style="display:block;margin-bottom:20px;">
-            <!-- Blog recommendations (grid layout) -->
-            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:12px;">
-                <div id="blogForYouContainer" style="min-height:120px;"><!-- blogs will render here --></div>
+        <section id="forYouSection" style="display:block;margin-bottom:16px;padding-bottom:0;">
+            <!-- For You filter bubbles -->
+            <div style="display:flex;gap:12px;margin-bottom:16px;flex-wrap:wrap;align-items:center;">
+                <h3 style="margin:0;font-size:1rem;font-weight:700;">For You</h3>
+                <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                    <button class="for-you-filter-btn" data-sort="latest" style="padding:8px 14px;border-radius:20px;border:1px solid var(--primary,#1f9cee);background:var(--primary,#1f9cee);color:white;font-weight:600;cursor:pointer;transition:0.2s;font-size:0.85rem;">
+                        Latest
+                    </button>
+                    <button class="for-you-filter-btn" data-sort="most-liked" style="padding:8px 14px;border-radius:20px;border:1px solid var(--border-color,#ddd);background:transparent;color:var(--text-dark);font-weight:600;cursor:pointer;transition:0.2s;font-size:0.85rem;">
+                        Most Liked
+                    </button>
+                </div>
             </div>
-        </section>
-
-        <!-- Community For You posts (single-column centered) -->
-        <section id="communityForYouSection" style="display:block;margin-bottom:8px;">
-            <div id="communityForYouContainer" style="min-height:200px;"><!-- community posts will render here --></div>
+            <!-- Blog recommendations (grid layout) -->
+            <div id="blogForYouContainer" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px;margin-bottom:12px;"><!-- blogs will render here --></div>
+            <!-- Community For You posts (grid layout matching blog) -->
+            <div id="communityForYouContainer" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px;"><!-- community posts will render here --></div>
         </section>
 
         <!-- Community posts feed (Latest/Most liked/etc - centered column) -->
@@ -696,75 +708,52 @@ async function loadAllRecommendations() {
     ]);
 }
 
+// Store for-you data globally for filtering
+window.forYouData = { blog: [], community: [] };
+window.forYouSortMode = 'latest';
+
 // Load "For You" game recommendations
 async function loadForYouRecommendations() {
     try {
         const res = await fetch('/recommend/for-you/');
         const data = await res.json();
 
-            // Prepare containers (support home and blog page container IDs)
-            const blogContainer = document.getElementById('blogForYouContainer') || document.getElementById('blogPageForYouContainer');
-            const communityContainer = document.getElementById('communityForYouContainer') || document.getElementById('communityForYouContainer');
+        // Prepare containers (support home and blog page container IDs)
+        const blogContainer = document.getElementById('blogForYouContainer') || document.getElementById('blogPageForYouContainer');
+        const communityContainer = document.getElementById('communityForYouContainer') || document.getElementById('communityForYouContainer');
         const gamesForYou = [];
 
-        if (data.results && data.results.length > 0) {
-            // Clear containers
-            if (blogContainer) blogContainer.innerHTML = '';
-            if (communityContainer) communityContainer.innerHTML = '';
+        // Clear data store
+        window.forYouData = { blog: [], community: [] };
 
+        if (data.results && data.results.length > 0) {
+            // Collect and store recommendations by type
             data.results.forEach(rec => {
-                // Backend provides a `type` field now: 'blog', 'community', 'game', or 'unknown'
+                try {
+                    if (!rec || !rec.id) return;
                     if (rec.type === 'blog') {
-                    if (!blogContainer) return;
-                    const card = document.createElement('div');
-                    card.className = 'for-you-card';
-                    card.style.cursor = 'pointer';
-                    card.onclick = () => window.location.href = `/posts/${rec.id}/`;
-                    card.innerHTML = `
-                            <div style="width:100%;aspect-ratio:1;display:flex;align-items:center;justify-content:center;background:var(--muted-bg, #f3f4f6);border-radius:8px;overflow:hidden;">
-                                ${rec.image ? `<img src="${rec.image}" alt="${rec.title}" style="width:100%;height:100%;object-fit:cover;object-position:center;"/>` : `<div style=\"width:100%;height:100%;background:linear-gradient(135deg,#eaeef9,#f7f5f0);\"></div>`}
-                        </div>
-                        <div style="margin-top:8px;font-weight:700;color:var(--text-dark);line-height:1.3;">${rec.title}</div>
-                        ${rec.excerpt ? `<div style="color:var(--secondary-text);font-size:0.85rem;margin-top:4px;line-height:1.3;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;">${rec.excerpt}</div>` : ''}
-                    `;
-                    blogContainer.appendChild(card);
-                } else if (rec.type === 'community') {
-                    if (!communityContainer) return;
-                    const card = document.createElement('div');
-                    card.className = 'for-you-card';
-                    card.style.cursor = 'pointer';
-                    card.onclick = () => { window.location.href = `/communities/post/${rec.id}/`; };
-                    card.innerHTML = `
-                        <div style="width:100%;height:200px;display:flex;align-items:center;justify-content:center;background:var(--muted-bg, #f3f4f6);border-radius:8px;overflow:hidden;">
-                            ${rec.image ? `<img src="${rec.image}" alt="${rec.title}" style="max-width:100%;max-height:100%;object-fit:cover;width:100%;height:100%;"/>` : `<div style=\"width:100%;height:100%;background:linear-gradient(135deg,#f0f4f8,#f7f5f0);\"></div>`}
-                        </div>
-                        <div style="margin-top:8px;font-weight:700;color:var(--text-dark);line-height:1.3;">${rec.title}</div>
-                        ${rec.excerpt ? `<div style="color:var(--secondary-text);font-size:0.85rem;margin-top:4px;line-height:1.3;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;">${rec.excerpt}</div>` : ''}
-                    `;
-                    communityContainer.appendChild(card);
-                } else if (rec.type === 'game') {
-                    // Don't render games on the home dashboard; store them for the Games page to use
-                    gamesForYou.push(rec);
-                } else {
-                    // Unknown type: append to community container as a fallback
-                    if (communityContainer) {
-                        const card = document.createElement('div');
-                        card.className = 'for-you-card';
-                        card.textContent = rec.title || `Item #${rec.object_id || rec.id}`;
-                        communityContainer.appendChild(card);
+                        window.forYouData.blog.push(rec);
+                    } else if (rec.type === 'community') {
+                        window.forYouData.community.push(rec);
+                    } else if (rec.type === 'game') {
+                        gamesForYou.push(rec);
                     }
+                } catch (err) {
+                    console.error('Failed to process For You recommendation:', rec, err);
                 }
             });
 
             // Persist game recommendations temporarily for the games hub
             try { sessionStorage.setItem('forYouGames', JSON.stringify(gamesForYou)); } catch (e) { /* ignore */ }
 
+            // Render with current sort mode
+            renderForYouCards();
+
             // Show blog/community sections if they have content
             const forYouSectionEl = document.getElementById('forYouSection');
-            if ((blogContainer && blogContainer.children.length > 0) || (communityContainer && communityContainer.children.length > 0)) {
+            if ((window.forYouData.blog.length > 0) || (window.forYouData.community.length > 0)) {
                 if (forYouSectionEl) forYouSectionEl.style.display = 'block';
             } else {
-                // Hide the main For You games section if no post recs exist
                 if (forYouSectionEl) forYouSectionEl.style.display = 'none';
             }
         }
@@ -772,6 +761,89 @@ async function loadForYouRecommendations() {
         console.error('Failed to load recommendations:', err);
     }
 }
+
+// Render For You cards based on current sort mode
+function renderForYouCards() {
+    const blogContainer = document.getElementById('blogForYouContainer') || document.getElementById('blogPageForYouContainer');
+    const communityContainer = document.getElementById('communityForYouContainer') || document.getElementById('communityForYouContainer');
+
+    if (blogContainer) blogContainer.innerHTML = '';
+    if (communityContainer) communityContainer.innerHTML = '';
+
+    // Sort data based on selected mode
+    let blogData = [...window.forYouData.blog];
+    let communityData = [...window.forYouData.community];
+
+    if (window.forYouSortMode === 'most-liked') {
+        blogData.sort((a, b) => (b.likes_count || 0) - (a.likes_count || 0));
+        communityData.sort((a, b) => (b.likes_count || 0) - (a.likes_count || 0));
+    } else {
+        // latest (default)
+        blogData.sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
+        communityData.sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
+    }
+
+    // Render blog cards
+    blogData.forEach(rec => {
+        try {
+            if (!rec || !rec.id || !blogContainer) return;
+            const card = document.createElement('div');
+            card.className = 'unified-post-card';
+            card.style.cursor = 'pointer';
+            card.onclick = () => window.location.href = `/posts/${rec.id}/`;
+            const img = rec.image ? `<img src="${rec.image}" alt="${rec.title || 'Blog'}" style="width:100%;height:100%;object-fit:cover;object-position:center;"/>` : `<div style="width:100%;height:100%;background:linear-gradient(135deg,#eaeef9,#f7f5f0);"></div>`;
+            const excerpt = rec.excerpt ? `<div class="excerpt">${rec.excerpt}</div>` : '';
+            card.innerHTML = `<div class="post-media">${img}</div><h3>${rec.title || 'Untitled'}</h3>${excerpt}`;
+            blogContainer.appendChild(card);
+        } catch (err) {
+            console.error('Failed to render blog For You card:', rec, err);
+        }
+    });
+
+    // Render community cards
+    communityData.forEach(rec => {
+        try {
+            if (!rec || !rec.id || !communityContainer) return;
+            const card = document.createElement('div');
+            card.className = 'unified-post-card';
+            card.style.cursor = 'pointer';
+            card.onclick = () => window.location.href = `/communities/post/${rec.id}/`;
+            const img = rec.image ? `<img src="${rec.image}" alt="${rec.title || 'Post'}" style="width:100%;height:100%;object-fit:cover;object-position:center;"/>` : `<div style="width:100%;height:100%;background:linear-gradient(135deg,#f0f4f8,#f7f5f0);"></div>`;
+            const excerpt = rec.excerpt ? `<div class="excerpt">${rec.excerpt}</div>` : '';
+            card.innerHTML = `<div class="post-media">${img}</div><h3>${rec.title || 'Untitled'}</h3>${excerpt}`;
+            communityContainer.appendChild(card);
+        } catch (err) {
+            console.error('Failed to render community For You card:', rec, err);
+        }
+    });
+}
+
+// Handle For You filter button clicks
+document.addEventListener('DOMContentLoaded', () => {
+    const filterButtons = document.querySelectorAll('.for-you-filter-btn');
+    filterButtons.forEach(btn => {
+        btn.addEventListener('click', () => {
+            const sortMode = btn.dataset.sort;
+            window.forYouSortMode = sortMode;
+
+            // Update button styling
+            filterButtons.forEach(b => {
+                if (b.dataset.sort === sortMode) {
+                    b.style.background = 'var(--primary, #1f9cee)';
+                    b.style.color = 'white';
+                    b.style.borderColor = 'var(--primary, #1f9cee)';
+                } else {
+                    b.style.background = 'transparent';
+                    b.style.color = 'var(--text-dark)';
+                    b.style.borderColor = 'var(--border-color, #ddd)';
+                }
+            });
+
+            // Re-render cards
+            renderForYouCards();
+        });
+    });
+}, { once: true });
 
 // Override For You loader to skip blog/community rendering on home and collect only games
 loadForYouRecommendations = async function() {
@@ -798,19 +870,15 @@ async function loadBlogRecommendations() {
         const data = await res.json();
         if (data.results && data.results.length > 0) {
             container.innerHTML = '';
-            // Render blog cards as rectangles (landscape orientation)
+            // Render blog cards (unified design)
             data.results.forEach(rec => {
                 const card = document.createElement('div');
-                card.className = 'for-you-card';
+                card.className = 'unified-post-card';
                 card.style.cursor = 'pointer';
                 card.onclick = () => window.location.href = `/posts/${rec.id}/`;
-                card.innerHTML = `
-                    <div style="width:100%;height:100px;display:flex;align-items:center;justify-content:center;background:#f3f4f6;border-radius:8px;overflow:hidden;">
-                        ${rec.image ? `<img src="${rec.image}" alt="${rec.title}" style="max-width:100%;max-height:100%;object-fit:cover;width:100%;"/>` : `<div style=\"width:100%;height:100%;background:linear-gradient(135deg,#eaeef9,#f7f5f0);\"></div>`}
-                    </div>
-                    <div style="margin-top:8px;font-weight:700;color:var(--text-dark);line-height:1.3;">${rec.title}</div>
-                    ${rec.excerpt ? `<div style="color:var(--secondary-text);font-size:0.85rem;margin-top:4px;line-height:1.3;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;">${rec.excerpt}</div>` : ''}
-                `;
+                const img = rec.image ? `<img src="${rec.image}" alt="${rec.title}" style="width:100%;height:100%;object-fit:cover;object-position:center;"/>` : `<div style="width:100%;height:100%;background:linear-gradient(135deg,#eaeef9,#f7f5f0);"></div>`;
+                const excerpt = rec.excerpt ? `<div class="excerpt">${rec.excerpt}</div>` : '';
+                card.innerHTML = `<div class="post-media">${img}</div><h3>${rec.title}</h3>${excerpt}`;
                 container.appendChild(card);
             });
         }
@@ -832,7 +900,7 @@ async function loadCommunityRecommendations() {
 
             data.results.forEach(rec => {
                 const card = document.createElement('div');
-                card.className = 'for-you-post-card';
+                card.className = 'for-you-post-card unified-post-card';
                 card.style.background = 'var(--card-bg)';
                 card.style.border = '1px solid var(--border-color)';
                 card.style.borderRadius = '12px';
@@ -1389,12 +1457,11 @@ window.addEventListener('resize', () => {
     }
 });
 </script>
-</script>
 
 <script src="{% static 'script.js' %}" defer></script>
 
 <script>
-// Ensure filter-bubble active state is robust and updates feed
+// Ensure filter-bubble active state is robust and updates feed (FIXED: bubble sort now reorders posts correctly)
     (function(){
         try{
             // Skip this handler if we're on the blog page - let blog_list.html handle bubbles
@@ -1403,14 +1470,16 @@ window.addEventListener('resize', () => {
             }
             const bubbles = document.querySelectorAll('.filter-bubble');
             const forYouSection = document.getElementById('forYouSection');
+            
             bubbles.forEach(b => {
                 if (b.dataset.managed === 'true') return;
                 b.dataset.managed = 'true';
+                
                 b.addEventListener('click', async (e) => {
                     const newSort = b.dataset.sort;
                     if (!newSort) return;
 
-                    // Update visual state
+                    // Update visual state: remove active from all, add to clicked
                     document.querySelectorAll('.filter-bubble').forEach(x => x.classList.remove('active'));
                     b.classList.add('active');
 
@@ -1431,12 +1500,15 @@ window.addEventListener('resize', () => {
                         return;
                     }
 
-                    // Regular bubbles: hide For You section and show community feed
+                    // Regular bubbles: hide For You section and show community feed with new sort
                     if (forYouSection) forYouSection.style.display = 'none';
                     const feed = document.getElementById('community-feed'); if (feed) feed.style.display = 'flex';
-                    // Reset infinite scroll state
+                    
+                    // Reset infinite scroll state and clear existing posts
                     if (window.communityPostOffset !== undefined) window.communityPostOffset = 0;
                     if (window.communityPostEndReached !== undefined) window.communityPostEndReached = false;
+                    if (feed) feed.innerHTML = ''; // FIXED: clear feed before loading new posts
+                    
                     // Dispatch custom event to reset the feed with new sort
                     window.dispatchEvent(new CustomEvent('sortChange', { detail: { sort: newSort } }));
                 });
@@ -1489,9 +1561,13 @@ window.addEventListener('resize', () => {
         sort = sort_value;
         offset = 0;
         endReached = false;
-        feedEl.innerHTML = '';
+        if (feedEl) feedEl.innerHTML = '';
         showEnd(false);
-        loadMore();
+        try {
+            loadMore();
+        } catch(err) {
+            console.error('loadMore() failed:', err);
+        }
     });
 
     function showLoading(show) { loadingEl.style.display = show ? 'block' : 'none'; }
@@ -1596,7 +1672,8 @@ window.addEventListener('resize', () => {
         menu.style.boxShadow = '0 4px 12px rgba(0,0,0,0.15)';
         menu.style.maxHeight = '500px';
         menu.style.overflow = 'auto';
-        menu.style.left = '0';\n        menu.style.top = '0';
+        menu.style.left = '0';
+        menu.style.top = '0';
 
         const reportBtn = document.createElement('button');
         reportBtn.style.display = 'block';
@@ -1696,7 +1773,16 @@ window.addEventListener('resize', () => {
 
         // Action buttons (like, dislike, comment, author avatar)
         const actions = document.createElement('div');
-        actions.style.display = 'grid';\n        actions.style.gridTemplateColumns = '1fr auto auto auto';\n        actions.style.gap = '8px';\n        actions.style.alignItems = 'center';\n        actions.style.marginTop = '8px';\n        actions.style.paddingTop = '8px';\n        actions.style.borderTop = '1px solid var(--border-color)';\n        actions.style.position = 'relative';\n        actions.style.zIndex = '10';\n        actions.style.overflow = 'visible';
+        actions.style.display = 'grid';
+        actions.style.gridTemplateColumns = '1fr auto auto auto';
+        actions.style.gap = '8px';
+        actions.style.alignItems = 'center';
+        actions.style.marginTop = '8px';
+        actions.style.paddingTop = '8px';
+        actions.style.borderTop = '1px solid var(--border-color)';
+        actions.style.position = 'relative';
+        actions.style.zIndex = '10';
+        actions.style.overflow = 'visible';
 
         // Like button - full width blue
         const likeBtn = document.createElement('button');
@@ -1891,9 +1977,30 @@ window.addEventListener('resize', () => {
             authorAvatarDiv.appendChild(afb);
         }
 
-        // Make author avatar clickable to open profile
+        // Make author avatar clickable to open profile dropdown
         authorAvatarDiv.style.cursor = 'pointer';
-        authorAvatarDiv.onclick = (e) => { e.stopPropagation(); if (p.author_id) window.location.href = `/accounts/user/${p.author_id}/public-profile/`; };
+        authorAvatarDiv.style.position = 'relative';
+        authorAvatarDiv.onclick = (e) => {
+            e.stopPropagation();
+            const dropdown = document.createElement('div');
+            dropdown.style.cssText = 'position:fixed;background:var(--card-bg);border:1px solid var(--border-color);border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,0.15);z-index:10000;min-width:150px;overflow:hidden;';
+            const rect = authorAvatarDiv.getBoundingClientRect();
+            dropdown.style.left = (rect.right + 8) + 'px';
+            dropdown.style.top = rect.top + 'px';
+            dropdown.innerHTML = `
+                <button style="display:block;width:100%;padding:10px 16px;border:none;background:none;text-align:left;cursor:pointer;color:var(--text-dark);font-size:0.9rem;transition:background 0.2s;" onmouseover="this.style.background='var(--bg)'" onmouseout="this.style.background='none'" onclick="window.location.href='/accounts/user/${p.author_id}/public-profile/';this.parentElement.remove();">View Profile</button>
+                <div style="border-top:1px solid var(--border-color);"></div>
+                <button style="display:block;width:100%;padding:10px 16px;border:none;background:none;text-align:left;cursor:pointer;color:var(--text-dark);font-size:0.9rem;transition:background 0.2s;" onmouseover="this.style.background='var(--bg)'" onmouseout="this.style.background='none'" onclick="window.location.href='/accounts/chat/${p.author_id}/';this.parentElement.remove();">Send Message</button>
+            `;
+            document.body.appendChild(dropdown);
+            const closeDropdown = (e) => {
+                if (!dropdown.contains(e.target)) {
+                    dropdown.remove();
+                    document.removeEventListener('click', closeDropdown);
+                }
+            };
+            setTimeout(() => document.addEventListener('click', closeDropdown), 0);
+        };
 
         actions.appendChild(likeBtn);
         actions.appendChild(dislikeBtn);
@@ -1937,7 +2044,13 @@ window.addEventListener('resize', () => {
                 endReached = true;
                 showEnd(true);
             } else {
-                data.posts.forEach(renderPost);
+                data.posts.forEach(p => {
+                    try {
+                        renderPost(p);
+                    } catch(err) {
+                        console.error('Failed to render post:', p.id, err);
+                    }
+                });
                 offset += data.posts.length;
                 if (offset >= data.total) { endReached = true; showEnd(true); }
             }
@@ -1978,7 +2091,7 @@ window.addEventListener('resize', () => {
     });
 
     // =====================================================
-    // NOTIFICATIONS: Bell icon + dropdown
+    // NOTIFICATIONS: Bell icon + dropdown (FIXED: click handler and z-index)
     // =====================================================
     const notificationBell = document.getElementById('notificationBell');
     const notificationDropdown = document.getElementById('notificationDropdown');
@@ -2032,28 +2145,38 @@ window.addEventListener('resize', () => {
         }
     }
 
-    // Toggle dropdown
-    notificationBell.addEventListener('click', (e) => {
-        e.stopPropagation();
-        if (notificationDropdown.style.display === 'none') {
-            loadNotifications();
-            notificationDropdown.style.display = 'block';
-        } else {
-            notificationDropdown.style.display = 'none';
-        }
-    });
+    // Toggle dropdown on bell click (FIXED: proper stopPropagation to prevent double-closing)
+    if (notificationBell && notificationDropdown) {
+        notificationBell.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const isHidden = notificationDropdown.style.display === 'none';
+            if (isHidden) {
+                loadNotifications();
+                notificationDropdown.style.display = 'block';
+            } else {
+                notificationDropdown.style.display = 'none';
+            }
+        });
 
-    // Close dropdown when clicking outside
-    document.addEventListener('click', (e) => {
-        if (!notificationBell.contains(e.target)) {
-            notificationDropdown.style.display = 'none';
-        }
-    });
+        // Close dropdown when clicking outside (but not on the bell)
+        document.addEventListener('click', (e) => {
+            if (!notificationBell.contains(e.target) && !notificationDropdown.contains(e.target)) {
+                notificationDropdown.style.display = 'none';
+            }
+        });
+
+        // Prevent dropdown from closing when clicking inside it
+        notificationDropdown.addEventListener('click', (e) => {
+            e.stopPropagation();
+        });
+    }
 
     // Load notifications on page load
-    loadNotifications();
-    // Refresh every 30 seconds
-    setInterval(loadNotifications, 30000);
+    if (notificationBell && notificationDropdown) {
+        loadNotifications();
+        // Refresh every 30 seconds
+        setInterval(loadNotifications, 30000);
+    }
 
     // =====================================================
     // Notification Modal
@@ -2270,9 +2393,11 @@ window.addEventListener('resize', () => {
     transform: translateY(-2px);
 }
 
-/* Center the feed column and force single-column layout */
+/* Center the feed column and force single-column layout (FIXED: increased card width and max-width) */
 .posts-center { display:flex; justify-content:center; }
 #community-feed { display:flex; flex-direction:column; gap:20px; align-items:center; width:100%; }
+/* FIXED: Increased max-width from 100% to larger values for better visibility */
+#community-feed .unified-post-card { width: min(95vw, 700px); max-width: 700px; }
 .unified-post-card .post-media { width:100%; height:auto; aspect-ratio:1/1; }
 
 /* Action button styles for unified cards */
@@ -2319,7 +2444,7 @@ document.addEventListener('DOMContentLoaded', () => {
 </script>
 
 {% block extra_js %}{% endblock %}
-</body>
+
 <script>
 // Ensure avatar clicks toggle the user menu dropdown (fallback if external JS not loaded)
 document.querySelectorAll('.user-profile-trigger').forEach(el => {
@@ -2339,7 +2464,53 @@ document.addEventListener('click', function(e){
         if (dropdown) dropdown.style.display = 'none';
     }
 });
+
+// Universal avatar dropdown handler for all pages (respects profile visibility)
+function setupAvatarDropdown(avatarEl, userId, isPublicProfile = false) {
+    if (!avatarEl || !userId) return;
+    
+    avatarEl.style.cursor = 'pointer';
+    avatarEl.addEventListener('click', (e) => {
+        e.stopPropagation();
+        
+        const existing = document.querySelector('.universal-avatar-dropdown');
+        if (existing) existing.remove();
+        
+        const dropdown = document.createElement('div');
+        dropdown.className = 'universal-avatar-dropdown';
+        dropdown.style.cssText = 'position:fixed;background:var(--card-bg);border:1px solid var(--border-color);border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,0.15);z-index:10000;min-width:180px;overflow:hidden;';
+        
+        const rect = avatarEl.getBoundingClientRect();
+        dropdown.style.left = Math.max(8, Math.min(window.innerWidth - 188, rect.right + 8)) + 'px';
+        dropdown.style.top = (rect.top) + 'px';
+        
+        let html = '';
+        if (isPublicProfile) {
+            html += `<button style="display:block;width:100%;padding:10px 16px;border:none;background:none;text-align:left;cursor:pointer;color:var(--text-dark);font-size:0.9rem;transition:background 0.2s;" onmouseover="this.style.background='var(--muted-bg)'" onmouseout="this.style.background='none'" onclick="window.location.href='/accounts/user/${userId}/public-profile/';document.querySelector('.universal-avatar-dropdown').remove();">View Profile</button><div style="border-top:1px solid var(--border-color);"></div>`;
+        }
+        html += `<button style="display:block;width:100%;padding:10px 16px;border:none;background:none;text-align:left;cursor:pointer;color:var(--text-dark);font-size:0.9rem;transition:background 0.2s;" onmouseover="this.style.background='var(--muted-bg)'" onmouseout="this.style.background='none'" onclick="window.location.href='/accounts/chat/${userId}/';document.querySelector('.universal-avatar-dropdown').remove();">Send Message</button>`;
+        
+        dropdown.innerHTML = html;
+        document.body.appendChild(dropdown);
+        
+        const closeDropdown = (e) => {
+            if (!dropdown.contains(e.target) && e.target !== avatarEl) {
+                dropdown.remove();
+                document.removeEventListener('click', closeDropdown);
+            }
+        };
+        setTimeout(() => document.addEventListener('click', closeDropdown), 0);
+    });
+}
+
+// Auto-setup dropdowns for elements with data attributes
+document.addEventListener('DOMContentLoaded', () => {
+    document.querySelectorAll('[data-avatar-user-id]').forEach(el => {
+        const userId = el.dataset.avatarUserId;
+        const isPublic = el.dataset.userPublicProfile === 'true' || el.dataset.userPublicProfile === 'True';
+        setupAvatarDropdown(el, userId, isPublic);
+    });
+});
 </script>
-</html>
 </body>
 </html>

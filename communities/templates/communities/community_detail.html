@@ -502,12 +502,41 @@ document.addEventListener("DOMContentLoaded", () => {
     const toggle = document.getElementById("dropdown-toggle");
     const menu = document.querySelector(".dropdown-content");
 
-    toggle.addEventListener("click", e => {
-        e.stopPropagation();
-        menu.style.display = menu.style.display === "block" ? "none" : "block";
-    });
+    if (toggle && menu) {
+        toggle.addEventListener("click", e => {
+            e.stopPropagation();
+            menu.style.display = menu.style.display === "block" ? "none" : "block";
+        });
 
-    document.addEventListener("click", () => menu.style.display = "none");
+        document.addEventListener("click", () => menu.style.display = "none");
+    }
+
+    document.querySelectorAll('.creator-pfp').forEach(avatar => {
+        avatar.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const userId = avatar.dataset.userId;
+            if (!userId) return;
+
+            const dropdown = document.createElement('div');
+            dropdown.style.cssText = 'position:fixed;background:var(--card-bg);border:1px solid var(--border-color);border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,0.15);z-index:10000;min-width:150px;overflow:hidden;';
+            const rect = avatar.getBoundingClientRect();
+            dropdown.style.left = (rect.right + 8) + 'px';
+            dropdown.style.top = rect.top + 'px';
+            dropdown.innerHTML = `
+                <button style="display:block;width:100%;padding:10px 16px;border:none;background:none;text-align:left;cursor:pointer;color:var(--text-dark);font-size:0.9rem;transition:background 0.2s;" onmouseover="this.style.background='var(--bg)'" onmouseout="this.style.background='none'" onclick="window.location.href='/accounts/user/${userId}/public-profile/';this.parentElement.remove();">View Profile</button>
+                <div style="border-top:1px solid var(--border-color);"></div>
+                <button style="display:block;width:100%;padding:10px 16px;border:none;background:none;text-align:left;cursor:pointer;color:var(--text-dark);font-size:0.9rem;transition:background 0.2s;" onmouseover="this.style.background='var(--bg)'" onmouseout="this.style.background='none'" onclick="window.location.href='/accounts/chat/${userId}/';this.parentElement.remove();">Send Message</button>
+            `;
+            document.body.appendChild(dropdown);
+            const closeDropdown = (e) => {
+                if (!dropdown.contains(e.target)) {
+                    dropdown.remove();
+                    document.removeEventListener('click', closeDropdown);
+                }
+            };
+            setTimeout(() => document.addEventListener('click', closeDropdown), 0);
+        });
+    });
 });
 </script>
 {% endblock %}

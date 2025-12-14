@@ -968,21 +968,17 @@ document.addEventListener('DOMContentLoaded', function() {
             const dropdown = avatar.parentElement?.querySelector('.user-profile-dropdown');
             if (!dropdown) return;
 
-            // Fetch popup JSON to determine privacy + render dropdown dynamically
             const uid = avatar.dataset.userId;
             try {
                 const resp = await fetch(`/accounts/user/${uid}/profile/`, { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
                 if (!resp.ok) throw new Error('Fetch failed');
                 const data = await resp.json();
 
-                // Build dropdown content
                 let html = '';
-                // Show avatar + username row
                 html += `<a href="/accounts/user/${uid}/public-profile/" style="display:flex;align-items:center;gap:8px;padding:10px 16px;border-bottom:1px solid var(--border-color);">`;
                 if (data.avatar) html += `<img src="${data.avatar}" style="width:32px;height:32px;border-radius:50%"/>`;
                 html += `<span style="font-weight:600;color:var(--text-color)">${data.username}</span></a>`;
 
-                // Privacy / message area
                 if (data.is_private || data.is_own_profile === false && data.allow_public_socials === false) {
                     html += `<div style="padding:10px 16px;color:var(--secondary-text);font-size:0.95rem;">This account is private.</div>`;
                 } else if (data.is_own_profile) {
@@ -991,14 +987,17 @@ document.addEventListener('DOMContentLoaded', function() {
                     html += `<div style="padding:10px 16px;color:var(--secondary-text);font-size:0.95rem;">Public profile</div>`;
                 }
 
-                // Actions (View Profile always available)
-                html += `<a href="/accounts/user/${uid}/public-profile/" style="display:block;padding:10px 16px;color:var(--text-color);text-decoration:none;font-weight:600;">View Profile</a>`;
+                html += `<button style="display:block;width:100%;padding:10px 16px;color:var(--text-color);background:none;border:none;text-align:left;text-decoration:none;font-weight:600;cursor:pointer;transition:background 0.2s;" onmouseover="this.style.background='var(--bg)'" onmouseout="this.style.background='none'" onclick="window.location.href='/accounts/user/${uid}/public-profile/';dropdown.classList.remove('show');">View Profile</button>`;
+                
+                if (!data.is_own_profile) {
+                    html += `<div style="border-top:1px solid var(--border-color);"></div>`;
+                    html += `<button style="display:block;width:100%;padding:10px 16px;color:var(--text-color);background:none;border:none;text-align:left;text-decoration:none;font-weight:600;cursor:pointer;transition:background 0.2s;" onmouseover="this.style.background='var(--bg)'" onmouseout="this.style.background='none'" onclick="window.location.href='/accounts/chat/${uid}/';dropdown.classList.remove('show');">Send Message</button>`;
+                }
 
                 dropdown.innerHTML = html;
                 dropdown.classList.add('show');
             } catch (err) {
                 console.error('Profile popup fetch error', err);
-                // Fallback: just toggle existing dropdown
                 dropdown.classList.toggle('show');
             }
         });

@@ -28,26 +28,26 @@
             font-family: 'Inter', sans-serif;
         }
         .navbar {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, var(--primary, #1f9cee) 0%, rgba(31, 156, 238, 0.8) 100%);
         }
         .btn-primary {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: var(--primary, #1f9cee);
         }
         .btn-primary:hover {
             opacity: 0.9;
         }
         .accent-gradient {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, var(--primary, #1f9cee) 0%, rgba(31, 156, 238, 0.8) 100%);
         }
         .accent-text {
-            color: #667eea;
+            color: var(--primary, #1f9cee);
         }
         .card {
             transition: transform 0.2s, box-shadow 0.2s;
         }
         .card:hover {
             transform: translateY(-4px);
-            box-shadow: 0 10px 25px rgba(102, 126, 234, 0.15);
+            box-shadow: 0 10px 25px rgba(31, 156, 238, 0.15);
         }
     </style>
     
@@ -74,7 +74,6 @@
                 {% if request.user.is_authenticated %}
                     <span class="text-sm">{{ request.user.username }}</span>
                     <a href="{% url 'dashboard_home' %}" class="px-4 py-2 bg-white text-purple-600 rounded font-semibold hover:opacity-90">Profile</a>
-                    <a href="{% url 'logout' %}" class="px-4 py-2 border border-white rounded hover:bg-white hover:text-purple-600">Logout</a>
                 {% else %}
                     <a href="{% url 'login' %}" class="px-4 py-2 border border-white rounded hover:bg-white hover:text-purple-600">Login</a>
                     <a href="{% url 'register' %}" class="px-4 py-2 bg-white text-purple-600 rounded font-semibold hover:opacity-90">Sign Up</a>
