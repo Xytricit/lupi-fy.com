@@ -866,11 +866,23 @@ const cropperImage = document.getElementById('cropper-image');
 const cropperOk = document.getElementById('cropper-ok');
 const cropperCancel = document.getElementById('cropper-cancel');
 
+// Verify modal exists, log error if missing
+if (!cropperModal) {
+  console.error('Cropper modal not found. Check template for id="cropper-modal"');
+}
+if (!cropperImage || !cropperOk || !cropperCancel) {
+  console.error('Cropper elements missing. Check IDs: cropper-image, cropper-ok, cropper-cancel');
+}
+
 let cropper;
 
-if(avatarCircle && avatarInput){
+if(avatarCircle && avatarInput && profileForm){
   // Click avatar to open file picker
-  avatarCircle.addEventListener('click', () => avatarInput.click());
+  avatarCircle.addEventListener('click', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    avatarInput.click();
+  });
 
   avatarInput.addEventListener('change', () => {
     const file = avatarInput.files[0];
@@ -1009,25 +1021,54 @@ window.addEventListener('click', e => { if(e.target === upgradeModal) upgradeMod
 /* ================================
    Sidebar Toggle for Mobile
    ================================ */
-const sidebar = document.querySelector('.account-sidebar');
-const toggleBtn = document.getElementById('sidebar-toggle');
-const sidebarLinks = document.querySelectorAll('.account-sidebar a');
+document.addEventListener('DOMContentLoaded', function() {
+  const sidebar = document.querySelector('.account-sidebar');
+  const toggleBtn = document.getElementById('sidebar-toggle');
+  const sidebarLinks = document.querySelectorAll('.account-sidebar a');
+  const overlay = document.createElement('div');
+  overlay.className = 'sidebar-overlay';
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);display:none;z-index:99;';
+  document.body.appendChild(overlay);
 
-if(toggleBtn && sidebar){
-  toggleBtn.addEventListener('click', () => sidebar.classList.toggle('show'));
-}
+  if(toggleBtn && sidebar){
+    toggleBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      const isShown = sidebar.classList.toggle('show');
+      overlay.style.display = isShown ? 'block' : 'none';
+    });
+    
+    overlay.addEventListener('click', () => {
+      sidebar.classList.remove('show');
+      overlay.style.display = 'none';
+    });
+    
+    // Close sidebar when clicking outside (on document)
+    document.addEventListener('click', (e) => {
+      if (sidebar.classList.contains('show') && 
+          !sidebar.contains(e.target) && 
+          !toggleBtn.contains(e.target)) {
+        sidebar.classList.remove('show');
+        overlay.style.display = 'none';
+      }
+    });
+  }
 
-// Smooth scroll for sidebar links with hash
-sidebarLinks.forEach(link => {
-  link.addEventListener('click', e => {
-    if(window.innerWidth <= 768) sidebar.classList.remove('show');
-    const href = link.getAttribute('href');
-    if(href && href.includes('#')){
-      const targetId = href.split('#')[1];
-      const targetEl = document.getElementById(targetId);
-      if(targetEl){
-        e.preventDefault();
-        targetEl.scrollIntoView({ behavior: 'smooth' });
+  // Smooth scroll for sidebar links with hash
+  sidebarLinks.forEach(link => {
+    link.addEventListener('click', e => {
+      if(window.innerWidth <= 768) sidebar.classList.remove('show');
+      const href = link.getAttribute('href');
+      if(href && href.includes('#')){
+        const targetId = href.split('#')[1];
+        const targetEl = document.getElementById(targetId);
+        if(targetEl){
+          e.preventDefault();
+          targetEl.scrollIntoView({ behavior: 'smooth' });
+        }
+      }
+    });
+  });
+});
         history.replaceState(null,'',`#${targetId}`);
       }
     }

@@ -106,7 +106,7 @@
                                                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-ellipsis-icon lucide-ellipsis"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg>
                                             </button>
                                             <div class="options-menu" aria-hidden="true" style="position:absolute;top:100%;right:0;background:var(--card-bg);border:1px solid var(--border-color);border-radius:8px;min-width:150px;z-index:10;display:none;flex-direction:column;">
-                                                <button class="menu-item report-btn" data-post-id="{{ post.id }}" data-post-type="community" style="border:none;background:none;cursor:pointer;padding:10px 12px;text-align:left;color:var(--text-dark);font-size:0.9rem;transition:background 0.2s;display:flex;align-items:center;gap:8px;width:100%;" onmouseover="this.style.background='#f5f5f5'" onmouseout="this.style.background='none'">
+                                                <button class="menu-item report-btn hover-bg-gray" data-post-id="{{ post.id }}" data-post-type="community">
                                                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 24 24" style="display:inline;"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>
                                                     Report
                                                 </button>
@@ -164,7 +164,7 @@
                                                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-ellipsis-icon lucide-ellipsis"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg>
                                             </button>
                                             <div class="options-menu" aria-hidden="true" style="position:absolute;top:100%;right:0;background:var(--card-bg);border:1px solid var(--border-color);border-radius:8px;min-width:150px;z-index:10;display:none;flex-direction:column;">
-                                                <button class="menu-item report-btn" data-post-id="{{ blog.id }}" data-post-type="blog" style="border:none;background:none;cursor:pointer;padding:10px 12px;text-align:left;color:var(--text-dark);font-size:0.9rem;transition:background 0.2s;display:flex;align-items:center;gap:8px;width:100%;" onmouseover="this.style.background='#f5f5f5'" onmouseout="this.style.background='none'">
+                                                <button class="menu-item report-btn hover-bg-gray" data-post-id="{{ blog.id }}" data-post-type="blog">
                                                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 24 24" style="display:inline;"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>
                                                     Report
                                                 </button>
@@ -483,6 +483,25 @@ body[data-theme="dark"] .tab-btn:not(.active),
 #community-posts .bookmark-btn.bookmarked svg,
 #community-posts .bookmark-btn.bookmarked { color: var(--primary); }
 #community-posts .bookmark-btn.bookmarked svg { stroke: currentColor; fill: currentColor; }
+
+.menu-item {
+    border: none;
+    background: none;
+    cursor: pointer;
+    padding: 10px 12px;
+    text-align: left;
+    color: var(--text-dark);
+    font-size: 0.9rem;
+    transition: background 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+}
+
+.menu-item.hover-bg-gray:hover {
+    background: #f5f5f5 !important;
+}
 </style>
 </style>
 
@@ -526,12 +545,22 @@ tabs.forEach(tab => {
 });
 
 if (commPrev && commNext && commSlider) {
-    commPrev.addEventListener('click', () => {
-        commSlider.scrollBy({ left: -260, behavior: 'smooth' });
-    });
-    commNext.addEventListener('click', () => {
-        commSlider.scrollBy({ left: 260, behavior: 'smooth' });
-    });
+    const scrollAmount = window.innerWidth < 768 ? 200 : 260;
+    
+    const scrollLeft = () => {
+        commSlider.scrollBy({ left: -scrollAmount, behavior: 'smooth' });
+    };
+    const scrollRight = () => {
+        commSlider.scrollBy({ left: scrollAmount, behavior: 'smooth' });
+    };
+    
+    commPrev.addEventListener('click', scrollLeft);
+    commNext.addEventListener('click', scrollRight);
+    
+    // Add touch support
+    commPrev.addEventListener('touchstart', (e) => { e.preventDefault(); scrollLeft(); });
+    commNext.addEventListener('touchstart', (e) => { e.preventDefault(); scrollRight(); });
+    
     // Optional: hide arrows when slider is at start/end
     commSlider.addEventListener('scroll', () => {
         const atStart = commSlider.scrollLeft <= 10;
@@ -573,7 +602,12 @@ document.querySelectorAll('.like-btn').forEach(btn => {
             if (res.ok) {
                 const data = await res.json();
                 const countEl = btn.querySelector('.like-count');
-                if (countEl) countEl.textContent = data.likes_count ?? 0;
+                if (countEl) {
+                    countEl.textContent = data.likes_count ?? 0;
+                    // Force re-render
+                    countEl.style.opacity = '0';
+                    setTimeout(() => { countEl.style.opacity = '1'; }, 50);
+                }
                 // Visual state: prefer CSS class for community posts so fill appears only there
                 if (postType === 'community') {
                     btn.classList.toggle('liked', !!data.liked);
@@ -666,14 +700,20 @@ document.querySelectorAll('.bookmark-btn').forEach(btn => {
                     } else {
                         btn.style.color = 'var(--primary)';
                     }
-                    if (svg) svg.setAttribute('class', 'lucide lucide-bookmark-check-icon lucide-bookmark-check');
+                    if (svg) {
+                        svg.setAttribute('fill', 'currentColor');
+                        svg.setAttribute('class', 'lucide lucide-bookmark-check-icon lucide-bookmark-check');
+                    }
                 } else {
                     if (postType === 'community') {
                         btn.classList.remove('bookmarked');
                     } else {
                         btn.style.color = 'var(--secondary-text)';
                     }
-                    if (svg) svg.setAttribute('class', 'lucide lucide-bookmark-icon lucide-bookmark');
+                    if (svg) {
+                        svg.setAttribute('fill', 'none');
+                        svg.setAttribute('class', 'lucide lucide-bookmark-icon lucide-bookmark');
+                    }
                 }
             }
         } catch (err) {
@@ -723,6 +763,14 @@ document.addEventListener('click', () => {
 document.querySelectorAll('.report-btn').forEach(btn => {
     btn.addEventListener('click', async (e) => {
         e.preventDefault();
+        
+        // Close the options menu
+        const menu = btn.closest('.options-menu');
+        if (menu) {
+            menu.setAttribute('aria-hidden', 'true');
+            menu.style.display = 'none';
+        }
+
         const postId = btn.dataset.postId;
         const postType = btn.dataset.postType || 'blog';
         const endpoint = postType === 'blog' ? `/posts/post/${postId}/report/` : `/communities/api/post/${postId}/report/`;

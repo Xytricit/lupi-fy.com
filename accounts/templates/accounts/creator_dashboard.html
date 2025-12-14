@@ -258,11 +258,17 @@ document.addEventListener('DOMContentLoaded', function(){
 
         const ctx1 = document.getElementById('viewsChart').getContext('2d');
         if(viewsChart) viewsChart.destroy();
-        viewsChart = new Chart(ctx1,{type:'line',data:{labels,datasets:[{label:'Views',data:data.views,borderColor:'#1f9cee',backgroundColor:'rgba(31,156,238,0.08)',fill:true}]},options:{responsive:true,maintainAspectRatio:false}});
+        
+        // Ensure we have data, use fallback if empty
+        const viewsData = (data.views && data.views.length > 0) ? data.views : [0];
+        const likesData = (data.likes && data.likes.length > 0) ? data.likes : [0];
+        const chartLabels = (labels && labels.length > 0) ? labels : ['No data'];
+        
+        viewsChart = new Chart(ctx1,{type:'line',data:{labels:chartLabels,datasets:[{label:'Views',data:viewsData,borderColor:'#1f9cee',backgroundColor:'rgba(31,156,238,0.08)',fill:true,tension:0.3}]},options:{responsive:true,maintainAspectRatio:false,scales:{y:{beginAtZero:true}}}});
 
         const ctx2 = document.getElementById('likesChart').getContext('2d');
         if(likesChart) likesChart.destroy();
-        likesChart = new Chart(ctx2,{type:'line',data:{labels,datasets:[{label:'Likes',data:data.likes,borderColor:'#ff6b6b',backgroundColor:'rgba(255,107,107,0.08)',fill:true}]},options:{responsive:true,maintainAspectRatio:false}});
+        likesChart = new Chart(ctx2,{type:'line',data:{labels:chartLabels,datasets:[{label:'Likes',data:likesData,borderColor:'#ff6b6b',backgroundColor:'rgba(255,107,107,0.08)',fill:true,tension:0.3}]},options:{responsive:true,maintainAspectRatio:false,scales:{y:{beginAtZero:true}}}})
       }catch(err){
         titleEl.textContent = 'Error loading analytics';
         console.error(err);

@@ -81,23 +81,14 @@
     }
     
     function handleNotificationClick(e) {
-        // #region agent log
-        try {
-          fetch('http://127.0.0.1:7242/ingest/9fa5a9be-8e34-41c3-809e-a169738bfa94',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'notifications.html:click',message:'Notification click event',data:{target:e.target.tagName},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
-        } catch(e) {}
-        // #endregion
         const item = e.target.closest('.notification-item, .notif-item');
-        // #region agent log
-        try {
-          fetch('http://127.0.0.1:7242/ingest/9fa5a9be-8e34-41c3-809e-a169738bfa94',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'notifications.html:click',message:'Notification item found',data:{found:!!item,notifId:item?.dataset?.notifId},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
-        } catch(e) {}
-        // #endregion
         if (!item) return;
         e.stopPropagation();
         
-        const notifId = item.dataset.notifId;
-        const relatedUser = item.dataset.relatedUserId || item.dataset.relateduserid;
-        const link = item.dataset.url;
+        const notifId = item.getAttribute('data-notif-id');
+        const relatedUser = item.getAttribute('data-related-user-id');
+        const link = item.getAttribute('data-url');
+        const notifType = item.getAttribute('data-type');
         
         // Mark as read
         console.log('[DEBUG] Notification clicked:', {notifId, relatedUser, link, type: item.dataset.type});
@@ -146,6 +137,14 @@
         document.addEventListener('DOMContentLoaded', initNotificationHandlers);
     } else {
         initNotificationHandlers();
+    }
+    
+    // Fallback: if modal doesn't exist, just mark as read
+    if (typeof window.showNotificationModal !== 'function') {
+        window.showNotificationModal = function(id, title, msg, date, isRead, type, userId) {
+            console.log('Notification modal not implemented, marking as read');
+            // Just mark read and do nothing else
+        };
     }
 })();
 </script>

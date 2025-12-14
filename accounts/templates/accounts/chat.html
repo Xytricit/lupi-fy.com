@@ -120,8 +120,24 @@ document.addEventListener('DOMContentLoaded', () => {
         });
         const j = await res.json();
         if (j.success) {
-          // reload the page to refresh chat state (simpler UX)
-          window.location.reload();
+          // Update UI immediately without reload
+          const messageForm = document.getElementById('message-form');
+          
+          if (action === 'block') {
+            if (blockBtn) blockBtn.style.display = 'none';
+            if (unblockBtn) unblockBtn.style.display = 'inline-block';
+            if (messageForm) {
+              messageForm.style.opacity = '0.5';
+              messageForm.style.pointerEvents = 'none';
+            }
+          } else {
+            if (unblockBtn) unblockBtn.style.display = 'none';
+            if (blockBtn) blockBtn.style.display = 'inline-block';
+            if (messageForm) {
+              messageForm.style.opacity = '1';
+              messageForm.style.pointerEvents = 'auto';
+            }
+          }
         } else {
           alert(j.error || 'Failed to update block state');
         }

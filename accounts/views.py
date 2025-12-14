@@ -327,7 +327,9 @@ def subscriptions_view(request):
     subscribed_communities = Community.objects.filter(id__in=community_ids)
 
     # Show posts from communities the user has joined (bring back community posts)
-    community_posts = CommunityPost.objects.filter(community__in=joined_communities)
+    community_posts = CommunityPost.objects.filter(
+        community__in=joined_communities
+    ).select_related('community', 'author').order_by('-created_at')[:50]
 
     # Also include authors the user follows (via User.following)
     try:
@@ -2506,28 +2508,34 @@ def game_lobby_post_message_view(request):
 
 @login_required
 def games_hub_view(request):
-    """Display available games"""
-    games = [
-        {
-            "id": "try-not-to-get-banned",
-            "name": "Try Not To Get Banned",
-            "emoji": "🎮",
-            "description": "Chat freely but watch your words!",
-            "url": "game_lobby",
-        }
-    ]
-    # Add Letter Set as a separate game entry
-    games.append(
-        {
-            "id": "letter-set",
-            "name": "Letter Set",
-            "emoji": "🔤",
-            "description": "Form words from a set of letters and earn points.",
-            "url": "letter_set_game",
-        }
-    )
+    """Display available approved Lupiforge games only"""
+    try:
+        from games.models import Game
+        
+        # Query only approved games created via Lupiforge
+        approved_games = Game.objects.filter(
+            status='approved'
+        ).select_related('creator').order_by('-created_at')
+        
+        games_list = []
+        for game in approved_games:
+            games_list.append({
+                "id": game.id,
+                "name": game.title,
+                "emoji": "🎮",
+                "description": game.description[:150] if game.description else "No description available",
+                "url": f"/games/play/{game.id}/",
+                "creator": game.creator.username if game.creator else "Unknown",
+                "thumbnail": game.thumbnail.url if hasattr(game, 'thumbnail') and game.thumbnail else None,
+                "plays": getattr(game, 'play_count', 0),
+            })
+        
+        return render(request, "core/games_hub.html", {"games": games_list})
+    except Exception as e:
+        # Fallback to empty list if games app not available
+        return render(request, "core/games_hub.html", {"games": [], "error": "Games system not available"})
 
-    return render(request, "core/games_hub.html", {"games": games})
+    return render(request, "core/games_hub.html", {"games": games_list})
 
 
 # --------------------------------

@@ -56,7 +56,7 @@ def _dashboard_home_context(request):
 def main_home_view(request):
     # The product experience lives on the feed-style dashboard.
     # Keep it available for both guests and logged-in users.
-    return render(request, "dashboardhome.html", _dashboard_home_context(request))
+    return render(request, "index.html", _dashboard_home_context(request))
 
 
 @login_required

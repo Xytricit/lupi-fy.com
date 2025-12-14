@@ -63,17 +63,17 @@ urlpatterns = [
         views.mark_notification_read_api,
         name="mark_notification_read",
     ),
-    # Game lobby
-    path("game/lobby/", views.game_lobby_view, name="game_lobby"),
+    # Games hub
+    path("games/", views.games_hub_view, name="games_hub"),
+    # Game lobby (DEPRECATED - admin/testing only)
+    # path("game/lobby/", views.game_lobby_view, name="game_lobby"),
     path(
         "api/game/post-message/",
         views.game_lobby_post_message_view,
         name="game_post_message",
     ),
-    # Games hub
-    path("games/", views.games_hub_view, name="games_hub"),
-    # Letter Set game
-    path("games/letter-set/", views.letter_set_game_view, name="letter_set_game"),
+    # Letter Set game (DEPRECATED - admin/testing only)
+    # path("games/letter-set/", views.letter_set_game_view, name="letter_set_game"),
     path(
         "api/game/letter-set/submit-word/",
         views.letter_set_submit_word_view,

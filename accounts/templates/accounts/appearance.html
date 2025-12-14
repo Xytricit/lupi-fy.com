@@ -93,9 +93,18 @@
         // Live preview theme switching
         themeRadios.forEach(r => r.addEventListener('change', ()=>{
           const v = document.querySelector('input[name="theme"]:checked').value;
+          
+          // Update DOM immediately
           if(v === 'dark') document.documentElement.setAttribute('data-theme','dark');
           else if(v === 'light') document.documentElement.setAttribute('data-theme','light');
           else document.documentElement.removeAttribute('data-theme');
+          
+          // Persist to localStorage immediately
+          try {
+            localStorage.setItem('theme_pref', v);
+          } catch(e) {
+            console.warn('Could not save theme to localStorage:', e);
+          }
         }));
 
         // init
