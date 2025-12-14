@@ -9,15 +9,23 @@
     <h1 style="margin-top: 0;">Notifications</h1>
     
     {% if notifications %}
-      <div style="display: flex; flex-direction: column; gap: 12px;">
+      <div style="display: flex; flex-direction: column; gap: 12px;" id="notificationsList">
         {% for notif in notifications %}
-          <div class="notif-item" data-notif-id="{{ notif.id }}" {% if notif.related_user %}data-related-user-id="{{ notif.related_user.id }}"{% endif %} style="padding: 16px; border-radius: 8px; border-left: 4px solid 
+          <div class="notif-item notification-item" 
+               data-notif-id="{{ notif.id }}" 
+               {% if notif.related_user %}data-related-user-id="{{ notif.related_user.id }}"{% endif %}
+               {% if notif.url %}data-url="{{ notif.url }}"{% endif %}
+               data-type="{{ notif.notification_type|default:'' }}"
+               data-created-at="{{ notif.created_at|date:'c' }}"
+               style="padding: 16px; border-radius: 8px; border-left: 4px solid 
             {% if notif.notification_type == 'admin_warning' %}#e11d48{% elif notif.notification_type == 'post_deleted' %}#f97316{% elif notif.notification_type == 'message' %}#0ea5e9{% else %}#6b7280{% endif %};
-            background: #f9fafb; cursor: pointer; transition: background 0.18s;" onmouseover="this.style.background='#f3f4f6'" onmouseout="this.style.background='#f9fafb'">
+            background: #f9fafb; cursor: pointer; transition: background 0.18s;" 
+               onmouseover="this.style.background='#f3f4f6'" 
+               onmouseout="this.style.background='#f9fafb'">
             <div style="display: flex; justify-content: space-between; align-items: start; gap: 12px;">
               <div style="flex: 1;">
-                <strong style="display: block; font-size: 1rem; color: #111;">{{ notif.title }}</strong>
-                <p style="margin: 6px 0 0 0; color: #666; font-size: 0.95rem;">{{ notif.message }}</p>
+                <strong class="notif-title" style="display: block; font-size: 1rem; color: #111;">{{ notif.title }}</strong>
+                <p class="notif-message" style="margin: 6px 0 0 0; color: #666; font-size: 0.95rem;">{{ notif.message }}</p>
                 <div style="margin-top: 8px; font-size: 0.85rem; color: #999;">
                   {{ notif.created_at|date:'M d, Y H:i' }}
                   {% if not notif.is_read %}
@@ -39,4 +47,106 @@
     {% endif %}
   </div>
 </div>
+
+<script>
+// Notification click handler - consistent with dashboard.js
+(function() {
+    function initNotificationHandlers() {
+        console.log('[DEBUG] Initializing notification handlers');
+        // Try to find the notifications container
+        let notificationsList = document.getElementById('notificationsList');
+        console.log('[DEBUG] notificationsList element:', notificationsList);
+        if (!notificationsList) {
+            // Fallback: look for the div containing notification items
+            notificationsList = document.querySelector('[id*="notification"], .notif-item, .notification-item')?.closest('div');
+            console.log('[DEBUG] Fallback notificationsList:', notificationsList);
+        }
+        if (!notificationsList) {
+            // Last resort: use document delegation on body
+            console.log('[DEBUG] Using document body delegation for notifications');
+            document.body.addEventListener('click', handleNotificationClick);
+            return;
+        }
+        console.log('[DEBUG] Attaching click handler to notificationsList');
+    
+    function csrfToken() {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, 10) === 'csrftoken=') {
+                return decodeURIComponent(cookie.substring(10));
+            }
+        }
+        return '';
+    }
+    
+    function handleNotificationClick(e) {
+        // #region agent log
+        try {
+          fetch('http://127.0.0.1:7242/ingest/9fa5a9be-8e34-41c3-809e-a169738bfa94',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'notifications.html:click',message:'Notification click event',data:{target:e.target.tagName},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
+        } catch(e) {}
+        // #endregion
+        const item = e.target.closest('.notification-item, .notif-item');
+        // #region agent log
+        try {
+          fetch('http://127.0.0.1:7242/ingest/9fa5a9be-8e34-41c3-809e-a169738bfa94',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'notifications.html:click',message:'Notification item found',data:{found:!!item,notifId:item?.dataset?.notifId},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
+        } catch(e) {}
+        // #endregion
+        if (!item) return;
+        e.stopPropagation();
+        
+        const notifId = item.dataset.notifId;
+        const relatedUser = item.dataset.relatedUserId || item.dataset.relateduserid;
+        const link = item.dataset.url;
+        
+        // Mark as read
+        console.log('[DEBUG] Notification clicked:', {notifId, relatedUser, link, type: item.dataset.type});
+        (async () => {
+            try {
+                if (notifId) {
+                    const response = await fetch(`/accounts/api/notifications/${notifId}/mark-read/`, {
+                        method: 'POST',
+                        credentials: 'include',
+                        headers: {
+                            'X-CSRFToken': csrfToken(),
+                            'X-Requested-With': 'XMLHttpRequest'
+                        }
+                    });
+                    console.log('[DEBUG] Mark-read response:', response.status);
+                }
+            } catch(err) {
+                console.warn('[DEBUG] mark-read failed', err);
+            }
+            
+            // Navigate based on notification type
+            if (relatedUser) {
+                window.location.href = `/accounts/chat/${relatedUser}/`;
+                return;
+            }
+            if (link && link !== 'undefined') {
+                window.location.href = link;
+                return;
+            }
+            
+            // Fallback: open modal if available
+            if (typeof window.showNotificationModal === 'function') {
+                const title = item.querySelector('.notif-title')?.textContent || item.dataset.title || 'Notification';
+                const message = item.querySelector('.notif-message')?.textContent || item.dataset.message || '';
+                const createdAt = item.dataset.createdAt || new Date().toISOString();
+                window.showNotificationModal(notifId, title, message, createdAt, true, item.dataset.type || '', relatedUser || '');
+            }
+        })();
+    }
+    
+        notificationsList.addEventListener('click', handleNotificationClick);
+    }
+    
+    // Initialize when DOM is ready
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initNotificationHandlers);
+    } else {
+        initNotificationHandlers();
+    }
+})();
+</script>
 {% endblock %}

@@ -1,0 +1,232 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}About Lupify{% endblock %}
+
+{% block content %}
+<main class="main-content">
+    <section class="about-hero fade-in-up">
+        <div class="about-hero-content">
+            <h1>About Lupify</h1>
+            <p class="about-tagline">Connect, Create, and Celebrate Ideas Together</p>
+        </div>
+    </section>
+
+    <section class="about-section">
+        <div class="about-container">
+            <div class="about-card fade-in-left">
+                <h2>Our Mission</h2>
+                <p>
+                    Lupify is built on the belief that every voice matters. Our platform empowers creators, 
+                    writers, and thinkers to share their stories, build communities, and connect with an 
+                    audience that truly appreciates their work.
+                </p>
+            </div>
+
+            <div class="about-card fade-in-right">
+                <h2>What We Do</h2>
+                <p>
+                    We provide a seamless platform for blogging, community building, and creative expression. 
+                    Whether you're a seasoned writer or just starting out, Lupify makes it easy to publish, 
+                    discover, and engage with content you love.
+                </p>
+            </div>
+
+            <div class="about-card fade-in-left">
+                <h2>Our Values</h2>
+                <ul class="values-list">
+                    <li><strong>Free Expression:</strong> We believe in the power of diverse voices</li>
+                    <li><strong>Community:</strong> Creating spaces where people connect and inspire each other</li>
+                    <li><strong>Simplicity:</strong> Making content creation accessible to everyone</li>
+                    <li><strong>Quality:</strong> Supporting thoughtful, meaningful conversations</li>
+                </ul>
+            </div>
+
+            <div class="about-card fade-in-right">
+                <h2>Why Choose Lupify?</h2>
+                <ul class="features-list">
+                    <li>✨ Beautiful, intuitive interface</li>
+                    <li>📱 Fully responsive design</li>
+                    <li>👥 Active and engaged community</li>
+                    <li>🎯 Discover content tailored to your interests</li>
+                    <li>💬 Join communities and discussions</li>
+                    <li>📊 Track your blog's performance</li>
+                </ul>
+            </div>
+        </div>
+    </section>
+
+    <section class="about-cta">
+        <h2>Ready to Join Lupify?</h2>
+        <p>Start creating, reading, and connecting with our community today.</p>
+        <div class="cta-buttons">
+            <a href="{% url 'register' %}" class="btn-primary">Create Your Blog</a>
+            <a href="{% url 'blogs' %}" class="btn-secondary">Explore Content</a>
+        </div>
+    </section>
+</main>
+
+<style>
+.about-hero {
+    background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+    color: white;
+    padding: 80px 20px;
+    text-align: center;
+    margin-bottom: 60px;
+}
+
+.about-hero-content h1 {
+    font-size: 3.5rem;
+    margin-bottom: 15px;
+    font-weight: 700;
+}
+
+.about-tagline {
+    font-size: 1.3rem;
+    opacity: 0.9;
+}
+
+.about-section {
+    padding: 40px 20px;
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.about-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 30px;
+    margin-bottom: 60px;
+}
+
+.about-card {
+    background: var(--card-background);
+    border: 1px solid var(--border-color);
+    padding: 30px;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.about-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+}
+
+.about-card h2 {
+    font-size: 1.5rem;
+    margin-bottom: 15px;
+    color: var(--primary-color);
+}
+
+.about-card p {
+    line-height: 1.6;
+    color: var(--text-secondary);
+    margin-bottom: 15px;
+}
+
+.values-list,
+.features-list {
+    list-style: none;
+    padding: 0;
+}
+
+.values-list li,
+.features-list li {
+    padding: 10px 0;
+    color: var(--text-secondary);
+    line-height: 1.6;
+}
+
+.features-list li {
+    font-size: 1.05rem;
+}
+
+.about-cta {
+    background: var(--background-secondary);
+    padding: 60px 20px;
+    text-align: center;
+    border-radius: 8px;
+    margin: 60px auto;
+    max-width: 1200px;
+}
+
+.about-cta h2 {
+    font-size: 2rem;
+    margin-bottom: 15px;
+}
+
+.about-cta p {
+    font-size: 1.1rem;
+    margin-bottom: 30px;
+    color: var(--text-secondary);
+}
+
+.cta-buttons {
+    display: flex;
+    gap: 15px;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+.btn-primary,
+.btn-secondary {
+    padding: 12px 30px;
+    border-radius: 6px;
+    font-weight: 600;
+    text-decoration: none;
+    transition: all 0.3s ease;
+    cursor: pointer;
+    border: none;
+    font-size: 1rem;
+}
+
+.btn-primary {
+    background-color: var(--primary-color);
+    color: white;
+}
+
+.btn-primary:hover {
+    background-color: var(--primary-dark);
+    transform: translateY(-2px);
+}
+
+.btn-secondary {
+    background-color: transparent;
+    color: var(--primary-color);
+    border: 2px solid var(--primary-color);
+}
+
+.btn-secondary:hover {
+    background-color: var(--primary-color);
+    color: white;
+}
+
+@media (max-width: 768px) {
+    .about-hero-content h1 {
+        font-size: 2rem;
+    }
+
+    .about-tagline {
+        font-size: 1rem;
+    }
+
+    .about-container {
+        grid-template-columns: 1fr;
+    }
+
+    .about-cta h2 {
+        font-size: 1.5rem;
+    }
+
+    .cta-buttons {
+        flex-direction: column;
+    }
+
+    .btn-primary,
+    .btn-secondary {
+        width: 100%;
+    }
+}
+</style>
+{% endblock %}

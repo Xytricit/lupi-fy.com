@@ -3,6 +3,10 @@ from . import views
 from . import views_advanced
 
 urlpatterns = [
+    # Games Catalog (new)
+    path('', views.games_catalog_view, name='games_catalog'),
+    path('block-burst/', views.block_burst_view, name='block_burst'),
+    
     path('api/recently-played/', views.recently_played_api, name='recently_played_api'),
     path('editor/', views.editor_view, name='editor'),
     path('editor-debug/', views.editor_debug_view, name='editor_debug'),
@@ -10,7 +14,7 @@ urlpatterns = [
     path('editor-guest/', views.editor_public_view, name='editor_guest'),
     # Dashboard for game editor: lists user's games, drafts, analytics
     path('dashboard/', views.editor_dashboard_view, name='dashboard'),
-    path('dashboard/home/', views.dashboard_home_view, name='dashboard_home'),
+    path('dashboard/home/', views.dashboard_home_view, name='games_dashboard_home'),
     path('multiplayer/', views.multiplayer_view, name='multiplayer'),
     path('tutorial/', views.tutorial_view, name='tutorial'),
     path('moderation/', views.moderation_view, name='moderation'),

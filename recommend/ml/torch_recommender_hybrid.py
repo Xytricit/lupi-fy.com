@@ -8,16 +8,27 @@ Enhanced recommendation engine combining:
 """
 
 import os
-import numpy as np
-import torch
-import torch.nn as nn
-import torch.optim as optim
 from collections import defaultdict
 import random
+from datetime import timedelta
+
 from django.conf import settings
 from django.core.cache import cache
 from django.utils import timezone
-from datetime import timedelta
+
+try:
+    import numpy as np
+except ImportError:  # pragma: no cover
+    np = None
+
+try:
+    import torch
+    import torch.nn as nn
+    import torch.optim as optim
+except ImportError:  # pragma: no cover
+    torch = None
+    nn = None
+    optim = None
 
 MODEL_DIR = getattr(
     settings,
@@ -28,38 +39,51 @@ os.makedirs(MODEL_DIR, exist_ok=True)
 MODEL_PATH = os.path.join(MODEL_DIR, "torch_recommender_hybrid.pt")
 
 
-class HybridRecommenderModel(nn.Module):
-    """Enhanced MF with optional content embeddings."""
-    def __init__(self, n_users, n_items, emb_dim=64, content_emb_dim=32):
-        super().__init__()
-        self.user_emb = nn.Embedding(n_users, emb_dim)
-        self.item_emb = nn.Embedding(n_items, emb_dim)
-        # Content-based embeddings (category/tag vectors)
-        self.content_emb = nn.Embedding(n_items, content_emb_dim)
-        
-        nn.init.normal_(self.user_emb.weight, 0, 0.01)
-        nn.init.normal_(self.item_emb.weight, 0, 0.01)
-        nn.init.normal_(self.content_emb.weight, 0, 0.01)
+def _require_deps():
+    if np is None or torch is None or nn is None or optim is None:
+        raise ImportError(
+            "Hybrid recommender requires numpy and torch. Install them to use this feature."
+        )
 
-    def forward(self, u_idx, i_idx, use_content=False):
-        """
-        Compute recommendation score:
-        - Collaborative: user_emb @ item_emb (dot product)
-        - Content: (via projection) user_emb @ content_emb
-        - Hybrid: weighted sum
-        """
-        u = self.user_emb(u_idx)  # [batch, emb_dim]
-        
-        # Collaborative score
-        collab_score = (u * self.item_emb(i_idx)).sum(dim=1)
-        
-        if use_content:
-            # Project user embedding to content space
-            u_content = u[:, :self.content_emb.embedding_dim]  # Take first content_emb_dim dims
-            content_score = (u_content * self.content_emb(i_idx)).sum(dim=1)
-            # Weighted hybrid: 70% collab, 30% content
-            return 0.7 * collab_score + 0.3 * content_score
-        return collab_score
+
+if nn is not None:
+
+    class HybridRecommenderModel(nn.Module):
+        """Enhanced MF with optional content embeddings."""
+
+        def __init__(self, n_users, n_items, emb_dim=64, content_emb_dim=32):
+            super().__init__()
+            self.user_emb = nn.Embedding(n_users, emb_dim)
+            self.item_emb = nn.Embedding(n_items, emb_dim)
+            # Content-based embeddings (category/tag vectors)
+            self.content_emb = nn.Embedding(n_items, content_emb_dim)
+
+            nn.init.normal_(self.user_emb.weight, 0, 0.01)
+            nn.init.normal_(self.item_emb.weight, 0, 0.01)
+            nn.init.normal_(self.content_emb.weight, 0, 0.01)
+
+        def forward(self, u_idx, i_idx, use_content=False):
+            """
+            Compute recommendation score:
+            - Collaborative: user_emb @ item_emb (dot product)
+            - Content: (via projection) user_emb @ content_emb
+            - Hybrid: weighted sum
+            """
+            u = self.user_emb(u_idx)  # [batch, emb_dim]
+
+            # Collaborative score
+            collab_score = (u * self.item_emb(i_idx)).sum(dim=1)
+
+            if use_content:
+                # Project user embedding to content space
+                u_content = u[:, : self.content_emb.embedding_dim]  # Take first content_emb_dim dims
+                content_score = (u_content * self.content_emb(i_idx)).sum(dim=1)
+                # Weighted hybrid: 70% collab, 30% content
+                return 0.7 * collab_score + 0.3 * content_score
+            return collab_score
+
+else:
+    HybridRecommenderModel = None
 
 
 def _build_maps_enhanced(interactions_qs, content_features=None):
@@ -103,6 +127,8 @@ def train_and_save_hybrid(
     use_content=True,
 ):
     """Train hybrid model with collaborative + content-based filtering."""
+    _require_deps()
+
     from recommend.models import Interaction
     from blog.models import Post
     from communities.models import CommunityPost
@@ -253,6 +279,7 @@ def train_and_save_hybrid(
 
 def load_model_hybrid(model_path=MODEL_PATH):
     """Load hybrid model."""
+    _require_deps()
     if not os.path.exists(model_path):
         return None
     return torch.load(model_path, map_location="cpu")

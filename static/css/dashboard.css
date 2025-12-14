@@ -8,6 +8,10 @@
     --secondary-text: #6b7280;
     --icon-default: #6b7280;
     --card-shadow: 0 6px 18px rgba(0,0,0,0.05);
+    --border: #e5e7eb;
+    --border-color: #e5e7eb;
+    --hover-bg: rgba(0,0,0,0.05);
+    --danger: #dc2626;
 }
 
 html[data-theme="dark"] {
@@ -747,4 +751,309 @@ body, html { overflow-x: hidden; }
 
 @media (max-width: 992px) {
     .posts-center { max-width: 100%; padding: 0 12px; }
+}
+
+/* ============================================
+   MOBILE SIDEBAR & ANIMATIONS
+   ============================================ */
+
+/* Mobile sidebar slide-in animation */
+.sidebar {
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.sidebar.open {
+    transform: translateX(0);
+}
+
+/* Sidebar overlay for mobile */
+#sidebarOverlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 1050;
+    display: none;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+#sidebarOverlay.active {
+    display: block;
+    opacity: 1;
+}
+
+/* Mobile TOC button */
+.toc {
+    display: none;
+    cursor: pointer;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
+    transition: background 0.2s;
+}
+
+.toc:hover {
+    background: rgba(31, 156, 238, 0.1);
+}
+
+.toc svg {
+    width: 24px;
+    height: 24px;
+    stroke: var(--text-dark);
+    stroke-width: 2;
+}
+
+@media (max-width: 1024px) {
+    .toc {
+        display: flex;
+    }
+    
+    .sidebar {
+        position: fixed;
+        left: 0;
+        top: 80px;
+        width: 100px;
+        height: calc(100vh - 80px);
+        transform: translateX(-100%);
+        z-index: 1100;
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+    }
+    
+    .sidebar.open {
+        transform: translateX(0);
+    }
+}
+
+/* Dropdown menu styling */
+.dropdown-menu {
+    position: absolute;
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+    z-index: 2000;
+}
+
+.notification-dropdown {
+    min-width: 320px;
+    max-height: 400px;
+}
+
+#userMenuDropdown {
+    min-width: 220px;
+}
+
+/* Smooth transitions for all dropdowns */
+.dropdown-menu {
+    transition: opacity 0.2s, transform 0.2s;
+}
+
+.dropdown-menu[style*="display: none"] {
+    opacity: 0;
+    pointer-events: none;
+}
+
+.dropdown-menu:not([style*="display: none"]) {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+/* Loading spinner animation */
+@keyframes spin {
+    from {
+        transform: rotate(0deg);
+    }
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-4px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Post card animation on load */
+.post-card {
+    animation: fadeIn 0.3s ease;
+}
+
+/* Search suggestions animation */
+#searchSuggestions a {
+    transition: background-color 0.2s ease;
+}
+
+#searchSuggestions a:hover {
+    background: var(--bg) !important;
+}
+
+/* ==================== DROPDOWN MENUS ==================== */
+.dropdown-menu {
+    animation: dropdownFadeIn 0.2s ease;
+}
+
+@keyframes dropdownFadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.dropdown-menu ul li a:hover {
+    background: var(--hover-bg) !important;
+}
+
+/* Notification Badge */
+.notification-btn {
+    position: relative;
+}
+
+.notification-badge {
+    position: absolute;
+    top: -4px;
+    right: -4px;
+    background: #dc2626;
+    color: white;
+    font-size: 10px;
+    font-weight: 700;
+    padding: 2px 6px;
+    border-radius: 10px;
+    min-width: 18px;
+    text-align: center;
+}
+
+/* Notification Item */
+.notification-item {
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border-color);
+    transition: background 0.2s;
+    cursor: pointer;
+}
+
+.notification-item:hover {
+    background: var(--bg);
+}
+
+.notification-item.unread {
+    background: rgba(31, 156, 238, 0.05);
+}
+
+/* Search Suggestions */
+#searchSuggestions {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    margin-top: 4px;
+    max-height: 400px;
+    overflow-y: auto;
+    z-index: 2000;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+}
+
+#searchSuggestions a {
+    display: block;
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border);
+    color: var(--text-dark);
+    text-decoration: none;
+    transition: background 0.2s;
+}
+
+#searchSuggestions a:last-child {
+    border-bottom: none;
+}
+
+#searchSuggestions a:hover {
+    background: var(--bg);
+}
+
+/* Loading Spinner */
+.spinner {
+    border: 3px solid rgba(31, 156, 238, 0.1);
+    border-radius: 50%;
+    border-top: 3px solid var(--primary);
+    width: 32px;
+    height: 32px;
+    animation: spin 1s linear infinite;
+    margin: 0 auto;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* Post Cards */
+.post-card {
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.post-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 12px 28px rgba(0, 0, 0, 0.12);
+}
+
+.post-card .like-btn:hover svg {
+    stroke: var(--primary);
+}
+
+/* ==================== RESPONSIVE DROPDOWN ==================== */
+@media (max-width: 768px) {
+    #notificationDropdown,
+    #userMenuDropdown {
+        right: 0;
+        left: auto;
+        width: 280px;
+    }
+    
+    #searchSuggestions {
+        left: 10px;
+        right: 10px;
+        width: calc(100% - 20px);
+    }
+}
+
+/* Mobile responsive adjustments */
+@media (max-width: 768px) {
+    .sidebar.mobile {
+        width: 80px;
+    }
+    
+    .sidebar li a {
+        width: 44px;
+        height: 44px;
+    }
+    
+    header {
+        padding: 8px 12px;
+    }
+    
+    .search-bar {
+        width: 100%;
+        max-width: none;
+    }
+    
+    .nav-actions {
+        gap: 8px;
+    }
 }

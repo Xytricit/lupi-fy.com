@@ -399,56 +399,84 @@ class LetterSetGameConsumer(AsyncJsonWebsocketConsumer):
     """Real-time WebSocket consumer for the Letter Set game."""
 
     async def connect(self):
-        self.group_name = "letter_set_game"
-        self.user = self.scope["user"]
-        
-        if not self.user or not self.user.is_authenticated:
-            await self.close()
-            return
+        """Handle new WebSocket connection."""
+        try:
+            self.group_name = "letter_set_game"
+            self.user = self.scope.get("user")
             
-        await self.channel_layer.group_add(self.group_name, self.channel_name)
-        await self.accept()
-        
-        # Get or create game for user
-        game = await sync_to_async(
-            lambda: LetterSetGame.objects.filter(user=self.user).order_by("-updated_at").first()
-        )()
-        
-        # Send initial game state
-        if game:
-            await self.send_json({
-                "type": "game_state",
-                "letters": list(game.letters),
-                "score": game.score,
-                "completed_words": game.get_completed_words_list(),
-            })
-        
-        # Broadcast player join
-        await self.channel_layer.group_send(
-            self.group_name,
-            {
-                "type": "player_joined",
-                "username": self.user.username,
-            }
-        )
+            if not self.user or not self.user.is_authenticated:
+                log_error(f"[LetterSet] ❌ Rejecting - user not authenticated")
+                await self.close()
+                return
+                
+            await self.channel_layer.group_add(self.group_name, self.channel_name)
+            await self.accept()
+            log_error(f"[LetterSet] ✅ {self.user.username} connected and accepted")
+            
+            # Get or create game for user
+            game = await sync_to_async(
+                lambda: LetterSetGame.objects.filter(user=self.user).order_by("-updated_at").first()
+            )()
+            
+            # Send initial game state
+            if game:
+                await self.send_json({
+                    "type": "game_state",
+                    "letters": list(game.letters),
+                    "score": game.score,
+                    "completed_words": game.get_completed_words_list(),
+                })
+            
+            # Broadcast player join
+            await self.channel_layer.group_send(
+                self.group_name,
+                {
+                    "type": "player_joined",
+                    "username": self.user.username,
+                }
+            )
+        except Exception as e:
+            log_error(f"[LetterSet] ❌ Error in connect: {e}")
+            import traceback
+            log_error(traceback.format_exc())
+            try:
+                await self.close()
+            except:
+                pass
 
     async def disconnect(self, close_code):
-        await self.channel_layer.group_discard(self.group_name, self.channel_name)
+        """Handle WebSocket disconnection."""
+        try:
+            log_error(f"[LetterSet] 🔌 {self.user.username if hasattr(self, 'user') and self.user else 'Unknown'} disconnected (code: {close_code})")
+            await self.channel_layer.group_discard(self.group_name, self.channel_name)
+        except Exception as e:
+            log_error(f"[LetterSet] ⚠️ Error during disconnect: {e}")
 
-    async def receive_json(self, content):
+    async def receive_json(self, content, **kwargs):
         """Handle incoming WebSocket messages."""
-        if not self.user or not self.user.is_authenticated:
-            await self.send_json({"error": "Not authenticated"})
-            return
+        try:
+            if not self.user or not self.user.is_authenticated:
+                log_error(f"[LetterSet] ⚠️ Received message from unauthenticated user")
+                await self.send_json({"error": "Not authenticated"})
+                return
 
-        action = content.get("action")
-        
-        if action == "submit_word":
-            await self.handle_submit_word(content)
-        elif action == "send_chat":
-            await self.handle_chat(content)
-        else:
-            pass
+            action = content.get("action")
+            log_error(f"[LetterSet] 📨 Received action: {action}")
+            
+            if action == "submit_word":
+                await self.handle_submit_word(content)
+            elif action == "send_chat":
+                await self.handle_chat(content)
+            else:
+                log_error(f"[LetterSet] ⚠️ Unknown action: {action}")
+        except Exception as e:
+            log_error(f"[LetterSet] ❌ Error in receive_json: {e}")
+            import traceback
+            log_error(traceback.format_exc())
+            try:
+                await self.send_json({"type": "error", "message": str(e)})
+            except:
+                pass
 
     async def handle_submit_word(self, content):
         """Process word submission."""
@@ -526,68 +554,6 @@ class LetterSetGameConsumer(AsyncJsonWebsocketConsumer):
                 await self.send_json({"type": "error", "error": "Internal server error processing word"})
             except:
                 pass
-        from accounts.views import is_valid_word, is_dictionary_word
-        
-        word = content.get("word", "").strip()
-        if not word or len(word) < 2:
-            await self.send_json({"error": "Word must be at least 2 characters"})
-            return
-        
-        # Get game
-        game = await sync_to_async(
-            lambda: LetterSetGame.objects.filter(user=self.user).order_by("-updated_at").first()
-        )()
-        
-        if not game:
-            await self.send_json({"error": "Game not found"})
-            return
-        
-        # Check if word already used
-        if word.lower() in [w.lower() for w in game.get_completed_words_list()]:
-            await self.send_json({"error": "Word already used", "duplicate": True})
-            return
-        
-        # Check if valid word from letters
-        is_valid = await sync_to_async(lambda: is_valid_word(word, game.letters))()
-        if not is_valid:
-            await self.send_json({"error": "Word cannot be formed from the letters"})
-            return
-        
-        # Check if it's a real dictionary word
-        is_real_word, _ = await sync_to_async(is_dictionary_word)(word)
-        if not is_real_word:
-            await self.send_json({"error": "Not a valid English word"})
-            return
-        
-        # Add word and update score (wrap sync calls)
-        async def add_word_sync():
-            game.add_word(word)
-            game.score = (game.score or 0) + 10
-            game.save()
-            return game.get_completed_words_list()
-        
-        completed_words = await sync_to_async(add_word_sync)()
-
-        
-        # Broadcast word submission
-        await self.channel_layer.group_send(
-            self.group_name,
-            {
-                "type": "word_submitted",
-                "username": self.user.username,
-                "word": word,
-                "score": game.score,
-                "completed_words": completed_words,
-            }
-        )
-        
-        # Send success response
-        await self.send_json({
-            "success": True,
-            "word": word,
-            "score": game.score,
-            "completed_words": game.get_completed_words_list(),
-        })
 
     async def handle_chat(self, content):
         """Process chat message in game."""

@@ -29,9 +29,18 @@
         })();
         </script>
 </head>
-<body>
+    <form class="search-form" action="{% url 'search_page' %}" method="GET" style="width:75%;max-width:900px;">
 
 <!-- Header -->
+
+<style>
+/* Header adjustments: make search bar wider and ensure notification dropdown is clickable */
+.search-form { width: 75%; max-width: 900px; }
+.search-form .search-bar { width: 100%; }
+.search-form #searchInput { width: 100%; box-sizing: border-box; }
+.nav-actions .notification-btn { z-index: 2350; position: relative; }
+#notificationDropdown { z-index: 2400 !important; pointer-events: auto; }
+</style>
 
 <header>
     <span class="toc" id="mobileTOC">
@@ -40,15 +49,15 @@
         </svg>
     </span>
     <h1 class="logo">Lupify</h1>
-    <div class="search-wrapper">
+    <form action="{% url 'search_page' %}" method="GET" style="width:60%;max-width:550px;">
         <div class="search-bar collapsed" id="mobileSearch">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor">
                 <circle cx="11" cy="11" r="8"/>
                 <line x1="21" y1="21" x2="16.65" y2="16.65"/>
             </svg>
-            <input type="text" placeholder="Search Lupify...">
+            <input type="text" name="q" id="searchInput" placeholder="Search Lupify..." autocomplete="off">
         </div>
-    </div>
+    </form>
     <div class="nav-actions">
         <!-- Notifications Bell -->
         <div class="icon-btn notification-btn" id="notificationBell" style="position: relative; cursor: pointer;">
@@ -84,13 +93,44 @@
                     {{ user.username|slice:":1"|upper }}
                 </div>
             {% endif %}
-            <div class="avatar-menu">
-                <a href="{% url 'account_dashboard' %}">Accounts</a>
-                <a href="{% url 'creator_dashboard' %}">Creators</a>
-                <a href="/games/dashboard/">Game Editor</a>
-                <a href="{% url 'appearance' %}">Appearance</a>
-                <p id="logout">Logout</p>
+            
+            <!-- User Menu Dropdown -->
+            <div id="userMenuDropdown" class="dropdown-menu" style="display:none;position:absolute;top:50px;right:0;background:var(--card-bg);border:1px solid var(--border);border-radius:12px;box-shadow:0 8px 24px rgba(0,0,0,0.15);width:220px;z-index:2000;">
+                <div style="padding:12px;border-bottom:1px solid var(--border);">
+                    <div style="font-weight:600;color:var(--text-dark);font-size:14px;">{{ user.username }}</div>
+                    <div style="font-size:12px;color:var(--secondary-text);">{{ user.email }}</div>
+                </div>
+                <ul style="list-style:none;padding:8px 0;margin:0;">
+                    <li><a href="{% url 'account_dashboard' %}" style="display:block;padding:10px 16px;color:var(--text-dark);text-decoration:none;transition:background 0.2s;font-size:14px;" onmouseover="this.style.background='var(--bg)'" onmouseout="this.style.background='transparent'">
+                        <svg style="width:16px;height:16px;display:inline-block;margin-right:8px;vertical-align:middle;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                        Profile
+                    </a></li>
+                    <li><a href="{% url 'appearance' %}" style="display:block;padding:10px 16px;color:var(--text-dark);text-decoration:none;transition:background 0.2s;font-size:14px;" onmouseover="this.style.background='var(--bg)'" onmouseout="this.style.background='transparent'">
+                        <svg style="width:16px;height:16px;display:inline-block;margin-right:8px;vertical-align:middle;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 1v6m0 6v6m9-9h-6m-6 0H3"/></svg>
+                        Appearance
+                    </a></li>
+                    <li><a href="{% url 'games_dashboard_home' %}" style="display:block;padding:10px 16px;color:var(--text-dark);text-decoration:none;transition:background 0.2s;font-size:14px;" onmouseover="this.style.background='var(--bg)'" onmouseout="this.style.background='transparent'">
+                        <svg style="width:16px;height:16px;display:inline-block;margin-right:8px;vertical-align:middle;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="6" width="20" height="12" rx="2"/></svg>
+                        Game Editor
+                    </a></li>
+                    <li><a href="{% url 'creator_dashboard' %}" style="display:block;padding:10px 16px;color:var(--text-dark);text-decoration:none;transition:background 0.2s;font-size:14px;" onmouseover="this.style.background='var(--bg)'" onmouseout="this.style.background='transparent'">
+                        <svg style="width:16px;height:16px;display:inline-block;margin-right:8px;vertical-align:middle;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><polyline points="13 2 13 9 20 9"/></svg>
+                        Creator
+                    </a></li>
+                       <li><a href="{% url 'marketplace:home' %}" style="display:block;padding:10px 16px;color:var(--text-dark);text-decoration:none;transition:background 0.2s;font-size:14px;" onmouseover="this.style.background='var(--bg)'" onmouseout="this.style.background='transparent'">
+                           <svg style="width:16px;height:16px;display:inline-block;margin-right:8px;vertical-align:middle;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>
+                           Marketplace
+                       </a></li>
+                       <li style="border-top:1px solid var(--border);margin-top:8px;padding-top:8px;">
+                        <a href="#" id="logout" style="display:block;padding:10px 16px;color:#dc2626;text-decoration:none;transition:background 0.2s;font-size:14px;" onmouseover="this.style.background='rgba(220,38,38,0.05)'" onmouseout="this.style.background='transparent'">
+                            <svg style="width:16px;height:16px;display:inline-block;margin-right:8px;vertical-align:middle;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+                            Logout
+                        </a>
+                    </li>
+                </ul>
             </div>
+            
+            <!-- legacy avatar-menu removed; use #userMenuDropdown instead -->
         </div>
     </div>
 </header>
@@ -143,8 +183,8 @@
                 </svg>
             </a>
         </li>
-        <li title="Games">
-            <a href="{% url 'games_hub' %}">
+        <li class="{% if request.resolver_match.url_name == 'games_dashboard_home' %}active{% endif %}" title="Games">
+            <a href="{% url 'games_dashboard_home' %}">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
                     <rect x="2" y="6" width="20" height="12" rx="2"/>
                     <path d="M6 10h3v4H6z"/>
@@ -2060,7 +2100,7 @@ window.addEventListener('resize', () => {
       const notifId = notificationModal.dataset.notifId;
       if (!notifId) return;
       try {
-        await fetch(`/accounts/api/notifications/${notifId}/mark-read/`, {method: 'POST', headers: {'X-CSRFToken': getCSRF()}});
+                await fetch(`/accounts/api/notifications/${notifId}/mark-read/`, {method: 'POST', credentials: 'include', headers: {'X-CSRFToken': csrfToken(), 'X-Requested-With': 'XMLHttpRequest'}});
         document.getElementById('markReadBtn').style.display = 'none';
         loadNotifications();
       } catch (err) {
@@ -2074,7 +2114,7 @@ window.addEventListener('resize', () => {
             const notifId = notificationModal.dataset.notifId;
             try {
                 if (notifId && notificationModal.dataset.isRead === 'false') {
-                    await fetch(`/accounts/api/notifications/${notifId}/mark-read/`, {method: 'POST', headers: {'X-CSRFToken': getCSRF()}});
+                    await fetch(`/accounts/api/notifications/${notifId}/mark-read/`, {method: 'POST', credentials: 'include', headers: {'X-CSRFToken': csrfToken(), 'X-Requested-With': 'XMLHttpRequest'}});
                 }
             } catch (err) {
                 console.error('Failed to mark notification before opening message', err);
@@ -2086,6 +2126,8 @@ window.addEventListener('resize', () => {
     notificationModal.addEventListener('click', (e) => {
       if (e.target === notificationModal) notificationModal.style.display = 'none';
     });
+
+    // Notification clicks are handled by the central dashboard script.
 
     // REMOVED: Duplicate bubble handler - use the one at line 1030 instead
 
@@ -2116,6 +2158,14 @@ window.addEventListener('resize', () => {
         height: 24px;
     }
 }
+</style>
+
+<style>
+/* Ensure small UI bubbles sit below modals */
+.filter-bubble, .filter-bubble.active, .create-btn, #aiChatBubble, .foryou-action-btn { z-index: 100; position: relative; }
+/* Keep dropdowns above basic bubbles but below full-screen modals */
+#notificationDropdown, #userMenuDropdown { z-index: 2000; }
+.interests-modal, .create-modal, #notificationModal { z-index: 6000 !important; }
 </style>
 
 <style>
@@ -2269,6 +2319,27 @@ document.addEventListener('DOMContentLoaded', () => {
 </script>
 
 {% block extra_js %}{% endblock %}
+</body>
+<script>
+// Ensure avatar clicks toggle the user menu dropdown (fallback if external JS not loaded)
+document.querySelectorAll('.user-profile-trigger').forEach(el => {
+    el.addEventListener('click', function(e){
+        e.stopPropagation();
+        const dropdown = document.getElementById('userMenuDropdown');
+        if (!dropdown) return;
+        const isVisible = dropdown.style.display === 'block';
+        document.querySelectorAll('.dropdown-menu').forEach(d => d.style.display = 'none');
+        dropdown.style.display = isVisible ? 'none' : 'block';
+    });
+});
 
+document.addEventListener('click', function(e){
+    if (!e.target.closest('.avatar-wrapper') && !e.target.closest('#userMenuDropdown')) {
+        const dropdown = document.getElementById('userMenuDropdown');
+        if (dropdown) dropdown.style.display = 'none';
+    }
+});
+</script>
+</html>
 </body>
 </html>

@@ -7,6 +7,8 @@ from core import views as core_views
 
 urlpatterns = [
     path("", core_views.main_home_view, name="main_home"),
+    path("about/", core_views.about_view, name="about"),
+    path("contact/", core_views.contact_view, name="contact"),
     path("dashboard/", core_views.dashboard_view, name="dashboard_home"),
     path(
         "dashboard/community-posts-api/",

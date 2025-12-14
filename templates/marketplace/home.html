@@ -37,7 +37,7 @@
       <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {% for project in featured %}
         <div class="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-xl transition-shadow">
-          <a href="/marketplace/{{ project.slug }}/">
+          <a href="{% url 'marketplace:project_detail' slug=project.slug %}">
             <img src="{{ project.thumbnail.url }}" alt="{{ project.title }}" class="w-full h-48 object-cover">
           </a>
           <div class="p-4">
@@ -47,7 +47,7 @@
               <span class="text-blue-600 font-bold">
                 {% if project.is_free %}FREE{% else %} ${{ project.price }}{% endif %}
               </span>
-              <a href="/marketplace/{{ project.slug }}/" class="text-blue-600 hover:text-blue-800">
+              <a href="{% url 'marketplace:project_detail' slug=project.slug %}" class="text-blue-600 hover:text-blue-800">
                 View →
               </a>
             </div>
@@ -99,7 +99,7 @@
       <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
         {% for project in projects %}
         <div class="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-xl transition-shadow">
-          <a href="/marketplace/{{ project.slug }}/">
+          <a href="{% url 'marketplace:project_detail' slug=project.slug %}">
             <div class="relative">
               <img src="{{ project.thumbnail.url }}" alt="{{ project.title }}" class="w-full h-48 object-cover">
               <div class="absolute top-2 left-2 bg-blue-600 text-white px-3 py-1 rounded-full text-sm">

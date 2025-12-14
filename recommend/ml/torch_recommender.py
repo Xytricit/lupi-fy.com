@@ -2,10 +2,16 @@ import os
 import random
 from collections import defaultdict
 
-import torch
-import torch.nn as nn
-import torch.optim as optim
 from django.conf import settings
+
+try:
+    import torch
+    import torch.nn as nn
+    import torch.optim as optim
+except ImportError:  # pragma: no cover
+    torch = None
+    nn = None
+    optim = None
 
 MODEL_DIR = getattr(
     settings,
@@ -16,18 +22,23 @@ os.makedirs(MODEL_DIR, exist_ok=True)
 MODEL_PATH = os.path.join(MODEL_DIR, "torch_recommender.pt")
 
 
-class MFModel(nn.Module):
-    def __init__(self, n_users, n_items, emb_dim=64):
-        super().__init__()
-        self.user_emb = nn.Embedding(n_users, emb_dim)
-        self.item_emb = nn.Embedding(n_items, emb_dim)
-        nn.init.normal_(self.user_emb.weight, 0, 0.01)
-        nn.init.normal_(self.item_emb.weight, 0, 0.01)
+if nn is not None:
 
-    def forward(self, u_idx, i_idx):
-        u = self.user_emb(u_idx)
-        v = self.item_emb(i_idx)
-        return (u * v).sum(dim=1)
+    class MFModel(nn.Module):
+        def __init__(self, n_users, n_items, emb_dim=64):
+            super().__init__()
+            self.user_emb = nn.Embedding(n_users, emb_dim)
+            self.item_emb = nn.Embedding(n_items, emb_dim)
+            nn.init.normal_(self.user_emb.weight, 0, 0.01)
+            nn.init.normal_(self.item_emb.weight, 0, 0.01)
+
+        def forward(self, u_idx, i_idx):
+            u = self.user_emb(u_idx)
+            v = self.item_emb(i_idx)
+            return (u * v).sum(dim=1)
+
+else:
+    MFModel = None
 
 
 def _build_maps(interactions_qs):
@@ -50,9 +61,18 @@ def _build_maps(interactions_qs):
     return user_map, item_map, items_by_user
 
 
+def _require_torch():
+    if torch is None or nn is None or optim is None or MFModel is None:
+        raise ImportError(
+            "PyTorch is required for the torch recommender. Install torch to use this feature."
+        )
+
+
 def train_and_save(
     days=None, emb_dim=64, epochs=6, lr=0.01, model_path=MODEL_PATH, batch_size=1024
 ):
+    _require_torch()
+
     # lazy import to avoid requiring Django models at module import time
     from recommend.models import Interaction
 
@@ -159,12 +179,14 @@ def train_and_save(
 
 
 def load_model(model_path=MODEL_PATH):
+    _require_torch()
     if not os.path.exists(model_path):
         return None
     return torch.load(model_path, map_location="cpu")
 
 
 def recommend_for_user(user_id, model=None, topn=20, exclude_seen=True):
+    _require_torch()
     if model is None:
         model = load_model()
         if model is None:

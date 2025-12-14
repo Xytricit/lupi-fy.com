@@ -1,0 +1,171 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}LupiForge Games{% endblock %}
+
+{% block content %}
+<div style="max-width:1200px;margin:28px auto;padding:16px;">
+  <header style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px">
+    <div>
+      <h1 style="font-size:20px;margin:0">LupiForge Games</h1>
+      <p style="margin:6px 0 0;color:#6b7280">Play only released and admin-approved games</p>
+    </div>
+    <div style="font-size:12px;color:#6b7280" id="games-count">Loading…</div>
+  </header>
+
+  <main>
+    <div id="games-grid" style="display:grid;gap:16px;grid-template-columns:repeat(auto-fill,minmax(220px,1fr))" aria-live="polite"></div>
+    <div id="empty" style="display:none;padding:48px;background:linear-gradient(180deg,#fff, #fbfdff);border-radius:12px;text-align:center;color:#6b7280">
+      No released & approved games found.
+    </div>
+  </main>
+</div>
+
+<script>
+  const grid = document.getElementById('games-grid');
+  const empty = document.getElementById('empty');
+  const gamesCount = document.getElementById('games-count');
+
+  // Helper to create elements
+  const el = (tag, attrs={}, ...children) => {
+    const node = document.createElement(tag);
+    Object.entries(attrs).forEach(([k,v])=>{
+      if(k==='class') node.className=v;
+      else if(k==='html') node.innerHTML=v;
+      else node.setAttribute(k,v);
+    });
+    children.flat().forEach(c=>{
+      if(c==null) return;
+      node.append(typeof c === 'string' ? document.createTextNode(c) : c);
+    });
+    return node;
+  };
+
+  // Fetch games from Django API
+  async function fetchGames() {
+    // #region agent log
+    try {
+      fetch('http://127.0.0.1:7242/ingest/9fa5a9be-8e34-41c3-809e-a169738bfa94',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'games_catalog.html:45',message:'fetchGames called',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+    } catch(e) {}
+    // #endregion
+    try {
+      // #region agent log
+      try {
+        fetch('http://127.0.0.1:7242/ingest/9fa5a9be-8e34-41c3-809e-a169738bfa94',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'games_catalog.html:47',message:'Fetching /games/api/',data:{url:'/games/api/'},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+      } catch(e) {}
+      // #endregion
+      const res = await fetch('/games/api/', {cache: 'no-store'});
+      // #region agent log
+      try {
+        fetch('http://127.0.0.1:7242/ingest/9fa5a9be-8e34-41c3-809e-a169738bfa94',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'games_catalog.html:49',message:'API response received',data:{status:res.status,ok:res.ok},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+      } catch(e) {}
+      // #endregion
+      if(!res.ok) throw new Error('API fetch failed');
+      const data = await res.json();
+      // #region agent log
+      console.log('[DEBUG] Games API response:', data);
+      try {
+        fetch('http://127.0.0.1:7242/ingest/9fa5a9be-8e34-41c3-809e-a169738bfa94',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'games_catalog.html:52',message:'API data parsed',data:{isArray:Array.isArray(data),count:Array.isArray(data)?data.length:0,data:data},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+      } catch(e) {}
+      // #endregion
+      const gamesArray = Array.isArray(data) ? data : [];
+      console.log('[DEBUG] Games array:', gamesArray);
+      return gamesArray;
+    } catch (err) {
+      // #region agent log
+      try {
+        fetch('http://127.0.0.1:7242/ingest/9fa5a9be-8e34-41c3-809e-a169738bfa94',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'games_catalog.html:54',message:'fetchGames error',data:{error:err.message,stack:err.stack},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+      } catch(e) {}
+      // #endregion
+      console.warn('Failed to fetch /games/api/:', err);
+      // Return empty array - no placeholder games
+      return [];
+    }
+  }
+
+  // Render games
+  function renderGames(games) {
+    // #region agent log
+    try {
+      fetch('http://127.0.0.1:7242/ingest/9fa5a9be-8e34-41c3-809e-a169738bfa94',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'games_catalog.html:59',message:'renderGames called',data:{games_count:games.length,games:games},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+    } catch(e) {}
+    // #endregion
+    if (!grid || !gamesCount || !empty) {
+      console.error('[DEBUG] Missing DOM elements:', {grid: !!grid, gamesCount: !!gamesCount, empty: !!empty});
+      return;
+    }
+    grid.innerHTML = '';
+    const visible = games.filter(g => {
+      const isVisible = g.released === true && g.approved === true;
+      if (!isVisible) {
+        console.log('[DEBUG] Game filtered out:', g.title, {released: g.released, approved: g.approved});
+      }
+      return isVisible;
+    });
+    // #region agent log
+    console.log('[DEBUG] Visible games after filter:', visible.length, 'out of', games.length);
+    try {
+      fetch('http://127.0.0.1:7242/ingest/9fa5a9be-8e34-41c3-809e-a169738bfa94',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'games_catalog.html:62',message:'Games filtered',data:{total:games.length,visible:visible.length,visible_games:visible},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+    } catch(e) {}
+    // #endregion
+    gamesCount.textContent = `${visible.length} game${visible.length !== 1 ? 's' : ''}`;
+    if(visible.length === 0) {
+      empty.style.display = 'block';
+      return;
+    } else {
+      empty.style.display = 'none';
+    }
+
+    for(const g of visible){
+      const thumb = el('div', {style:'width:100%;height:140px;object-fit:cover;background:#eaeef6;display:flex;align-items:center;justify-content:center;color:#6b7280;font-weight:600;border-radius:12px 12px 0 0', role:'img', 'aria-label': g.title + ' thumbnail'});
+      if(g.thumbnail) {
+        const img = document.createElement('img');
+        img.src = g.thumbnail;
+        img.alt = g.title + ' thumbnail';
+        img.style.width='100%'; 
+        img.style.height='100%'; 
+        img.style.objectFit='cover';
+        img.style.borderRadius='12px 12px 0 0';
+        thumb.appendChild(img);
+      } else {
+        thumb.textContent = g.title;
+      }
+
+      const title = el('h3', {style:'font-weight:600;margin:0;font-size:15px'}, g.title);
+      const desc = el('p', {style:'font-size:13px;color:#6b7280;margin:0;flex:1'}, g.description || '');
+      const play = el('a', {style:'padding:8px 12px;border-radius:8px;border:0;background:#0066ff;color:#fff;text-decoration:none;display:inline-block;font-size:14px;font-weight:600;cursor:pointer', href: g.url || '#', role: 'button'}, 'Play Now');
+
+      const body = el('div', {style:'padding:12px;display:flex;flex-direction:column;gap:8px;flex:1'},
+        title,
+        desc,
+        el('div', {style:'display:flex;gap:8px;align-items:center'}, play)
+      );
+
+      const card = el('article', {style:'background:#ffffff;border-radius:12px;box-shadow:0 6px 18px rgba(11,17,34,0.06);overflow:hidden;display:flex;flex-direction:column;height:100%'}, thumb, body);
+      grid.appendChild(card);
+    }
+  }
+
+  // Initialize when DOM is ready
+  function initGamesCatalog() {
+    console.log('[DEBUG] Initializing games catalog');
+    if (!grid || !gamesCount || !empty) {
+      console.error('[DEBUG] DOM elements not found, retrying...');
+      setTimeout(initGamesCatalog, 100);
+      return;
+    }
+    (async function(){
+      console.log('[DEBUG] Starting to fetch games');
+      const games = await fetchGames();
+      console.log('[DEBUG] Fetched games, rendering...');
+      renderGames(games);
+    })();
+  }
+  
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initGamesCatalog);
+  } else {
+    initGamesCatalog();
+  }
+</script>
+{% endblock %}

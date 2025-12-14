@@ -43,13 +43,15 @@
     <!-- Header -->
     <header class="site-header bg-white shadow">
         <div class="container mx-auto px-4 py-4 flex justify-between items-center">
-            <h1 class="logo text-2xl font-bold"><a href="/">Lupify</a></h1>
+            <h1 class="logo text-2xl font-bold"><a href="{% url 'main_home' %}">Lupify</a></h1>
             
             <nav class="navbar flex gap-6">
                 <ul class="nav-links flex gap-6">
-                    <li class="nav-item"><a href="/" class="hover:text-blue-600">Home</a></li>
+                    <li class="nav-item"><a href="{% url 'main_home' %}" class="hover:text-blue-600">Home</a></li>
                     <li class="nav-item"><a href="{% url 'blogs' %}" class="hover:text-blue-600">Blogs</a></li>
                     <li class="nav-item"><a href="{% url 'communities' %}" class="hover:text-blue-600">Communities</a></li>
+                    <li class="nav-item"><a href="{% url 'about' %}" class="hover:text-blue-600">About</a></li>
+                    <li class="nav-item"><a href="{% url 'contact' %}" class="hover:text-blue-600">Contact</a></li>
                     <li class="nav-item"><a href="{% url 'marketplace:home' %}" class="hover:text-blue-600">Marketplace</a></li>
                     {% if request.user.is_authenticated %}
                         <li class="nav-item"><a href="{% url 'marketplace:library' %}" class="hover:text-blue-600">My Library</a></li>
@@ -81,8 +83,10 @@
                 <div>
                     <h4 class="font-bold mb-4">Links</h4>
                     <ul class="text-gray-400 space-y-2">
-                        <li><a href="/" class="hover:text-white">Home</a></li>
+                        <li><a href="{% url 'main_home' %}" class="hover:text-white">Home</a></li>
                         <li><a href="{% url 'blogs' %}" class="hover:text-white">Blogs</a></li>
+                        <li><a href="{% url 'about' %}" class="hover:text-white">About</a></li>
+                        <li><a href="{% url 'contact' %}" class="hover:text-white">Contact</a></li>
                         <li><a href="{% url 'marketplace:home' %}" class="hover:text-white">Marketplace</a></li>
                     </ul>
                 </div>

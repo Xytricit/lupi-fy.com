@@ -515,6 +515,153 @@ def moderation_view(request):
     return render(request, "games/moderation.html", {})
 
 
+def games_catalog_view(request):
+    """Serve the games catalog page showing all released & approved games."""
+    return render(request, "games/games_catalog.html", {})
+
+
+def block_burst_view(request):
+    """Serve the Block Burst game."""
+    return render(request, "games/block_burst.html", {})
+
+
+@require_http_methods(["GET"])
+def games_api_view(request):
+    """API endpoint: return released & approved games created via Lupiforge.
+    
+    Returns JSON array of game objects with id, title, description, thumbnail, url, released, approved.
+    Only includes games that:
+    - Have visibility='public' (approved by admin)
+    - Have at least one GameVersion with logic_json (created via Lupiforge)
+    """
+    # #region agent log
+    import json
+    import os
+    from datetime import datetime
+    log_path = r'c:\Users\turbo\OneDrive\Documents\GitHub\lupi-fy.com\.cursor\debug.log'
+    try:
+        with open(log_path, 'a', encoding='utf-8') as f:
+            json.dump({'location':'games/views.py:529','message':'games_api_view called','data':{'method':request.method},'timestamp':int(datetime.now().timestamp()*1000),'sessionId':'debug-session','runId':'run1','hypothesisId':'A'}, f)
+            f.write('\n')
+    except: pass
+    # #endregion
+    from .models import Game, GameVersion
+    try:
+        # #region agent log
+        try:
+            with open(log_path, 'a', encoding='utf-8') as f:
+                json.dump({'location':'games/views.py:540','message':'Querying games_with_versions','data':{},'timestamp':int(datetime.now().timestamp()*1000),'sessionId':'debug-session','runId':'run1','hypothesisId':'A'}, f)
+                f.write('\n')
+        except: pass
+        # #endregion
+        # Fetch only public games that have versions (created via Lupiforge)
+        # A game is created via Lupiforge if it has at least one GameVersion
+        # We check for games with public visibility that have GameVersions
+        # (logic_json default is {}, so we just check that GameVersion exists)
+        games_with_versions = GameVersion.objects.filter(
+            game__visibility='public'
+        ).values_list('game_id', flat=True).distinct()
+        
+        # Get the actual games - convert to list first
+        games_with_versions_list = list(games_with_versions)
+        
+        # #region agent log
+        try:
+            with open(log_path, 'a', encoding='utf-8') as f:
+                json.dump({'location':'games/views.py:567','message':'games_with_versions result','data':{'count':len(games_with_versions_list),'ids':[str(x) for x in games_with_versions_list]},'timestamp':int(datetime.now().timestamp()*1000),'sessionId':'debug-session','runId':'run1','hypothesisId':'A'}, f)
+                f.write('\n')
+        except: pass
+        # #endregion
+        
+        # If no games with versions, return empty list
+        if not games_with_versions_list:
+            # #region agent log
+            try:
+                with open(log_path, 'a', encoding='utf-8') as f:
+                    json.dump({'location':'games/views.py:573','message':'No games with versions found','data':{},'timestamp':int(datetime.now().timestamp()*1000),'sessionId':'debug-session','runId':'run1','hypothesisId':'A'}, f)
+                    f.write('\n')
+            except: pass
+            # #endregion
+            return JsonResponse([], safe=False)
+        
+        games = Game.objects.filter(
+            id__in=games_with_versions_list,
+            visibility='public'
+        ).values(
+            'id', 'title', 'description', 'created_at', 'thumbnail'
+        )
+        
+        # #region agent log
+        try:
+            games_list = list(games)
+            with open(log_path, 'a', encoding='utf-8') as f:
+                json.dump({'location':'games/views.py:552','message':'Games queried','data':{'count':len(games_list)},'timestamp':int(datetime.now().timestamp()*1000),'sessionId':'debug-session','runId':'run1','hypothesisId':'A'}, f)
+                f.write('\n')
+        except: pass
+        # #endregion
+        
+        # Format for frontend consumption
+        result = []
+        for g in games:
+            try:
+                thumbnail_url = ''
+                # Check if thumbnail field exists and has a value
+                thumbnail_field = g.get('thumbnail')
+                if thumbnail_field:
+                    try:
+                        game_obj = Game.objects.get(id=g['id'])
+                        if game_obj.thumbnail:
+                            thumbnail_url = game_obj.thumbnail.url
+                    except Exception as thumb_err:
+                        # #region agent log
+                        try:
+                            with open(log_path, 'a', encoding='utf-8') as f:
+                                json.dump({'location':'games/views.py:610','message':'Thumbnail error','data':{'game_id':str(g['id']),'error':str(thumb_err)},'timestamp':int(datetime.now().timestamp()*1000),'sessionId':'debug-session','runId':'run1','hypothesisId':'A'}, f)
+                                f.write('\n')
+                        except: pass
+                        # #endregion
+                        pass
+                
+                result.append({
+                    'id': str(g['id']),
+                    'title': g.get('title', 'Untitled Game'),
+                    'description': g.get('description', ''),
+                    'thumbnail': thumbnail_url,
+                    'url': f"/games/{g['id']}/",
+                    'released': True,
+                    'approved': True
+                })
+            except Exception as game_err:
+                # #region agent log
+                try:
+                    with open(log_path, 'a', encoding='utf-8') as f:
+                        json.dump({'location':'games/views.py:625','message':'Error formatting game','data':{'game':str(g),'error':str(game_err)},'timestamp':int(datetime.now().timestamp()*1000),'sessionId':'debug-session','runId':'run1','hypothesisId':'A'}, f)
+                        f.write('\n')
+                except: pass
+                # #endregion
+                continue
+        
+        # #region agent log
+        try:
+            with open(log_path, 'a', encoding='utf-8') as f:
+                json.dump({'location':'games/views.py:575','message':'Returning result','data':{'result_count':len(result),'titles':[r['title'] for r in result]},'timestamp':int(datetime.now().timestamp()*1000),'sessionId':'debug-session','runId':'run1','hypothesisId':'A'}, f)
+                f.write('\n')
+        except: pass
+        # #endregion
+        
+        return JsonResponse(result, safe=False)
+    except Exception as e:
+        # #region agent log
+        try:
+            import traceback
+            with open(log_path, 'a', encoding='utf-8') as f:
+                json.dump({'location':'games/views.py:580','message':'Exception in games_api_view','data':{'error':str(e),'traceback':traceback.format_exc()},'timestamp':int(datetime.now().timestamp()*1000),'sessionId':'debug-session','runId':'run1','hypothesisId':'A'}, f)
+                f.write('\n')
+        except: pass
+        # #endregion
+        return JsonResponse({'error': str(e)}, status=400)
+
+
 
 
 

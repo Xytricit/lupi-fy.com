@@ -15,50 +15,55 @@ from blog.models import Post
 from communities.models import Community, CommunityPost
 
 
-def main_home_view(request):
-    return render(request, "index.html")
+def _dashboard_home_context(request):
+    """Build context used by the dashboard-style home page.
 
-
-@login_required
-def dashboard_view(request):
-    blog_pages = ["blogs", "view_post", "create_post", "moderation_dashboard"]
-    community_pages = ["communities", "create_community", "view_community"]
-    subscription_pages = ["subscriptions", "subscription_detail"]
-
-    # Recently played (current user's last 8 game sessions by last_played)
+    Kept in a helper so both the public home page and the authenticated dashboard
+    can render consistently.
+    """
     from accounts.models import UserGameSession, WordListGame
     from django.db import DatabaseError
 
-    try:
-        # Evaluate the queryset here so any DB errors occur inside the try
-        recent_games_qs = (
-            UserGameSession.objects.filter(user=request.user)
-            .order_by("-last_played")[:8]
-        )
-        recent_games = list(recent_games_qs)
-    except DatabaseError:
-        # Migration/table may not exist in this environment; fall back to WordListGame
-        recent_games = list(WordListGame.objects.select_related("user").order_by("-updated_at")[:8])
+    # Recently played (current user's last 8 game sessions by last_played)
+    if request.user.is_authenticated:
+        try:
+            recent_games_qs = (
+                UserGameSession.objects.filter(user=request.user)
+                .order_by("-last_played")[:8]
+            )
+            recent_games = list(recent_games_qs)
+        except DatabaseError:
+            recent_games = list(
+                WordListGame.objects.select_related("user").order_by("-updated_at")[:8]
+            )
+    else:
+        recent_games = []
 
     # Popular communities (for sidebar)
     popular_communities = Community.objects.annotate(
         member_count=Count("members")
     ).order_by("-member_count")[:6]
 
-    return render(
-        request,
-        "dashboardhome.html",
-        {
-            "blog_pages": blog_pages,
-            "community_pages": community_pages,
-            "subscription_pages": subscription_pages,
-            "recent_games": recent_games,
-            "popular_communities": popular_communities,
-        },
-    )
+    return {
+        "blog_pages": ["blogs", "view_post", "create_post", "moderation_dashboard"],
+        "community_pages": ["communities", "create_community", "view_community"],
+        "subscription_pages": ["subscriptions", "subscription_detail"],
+        "recent_games": recent_games,
+        "popular_communities": popular_communities,
+    }
+
+
+def main_home_view(request):
+    # The product experience lives on the feed-style dashboard.
+    # Keep it available for both guests and logged-in users.
+    return render(request, "dashboardhome.html", _dashboard_home_context(request))
 
 
 @login_required
+def dashboard_view(request):
+    return render(request, "dashboardhome.html", _dashboard_home_context(request))
+
+
 def community_posts_api(request):
     """API endpoint to return community posts paginated and sorted.
 
@@ -552,3 +557,13 @@ def toggle_subscription(request, community_id=None, author_id=None):
             sub.delete()
 
     return redirect("subscriptions")
+
+
+def about_view(request):
+    """Display the about page"""
+    return render(request, "core/about.html")
+
+
+def contact_view(request):
+    """Display the contact page"""
+    return render(request, "core/contact.html")

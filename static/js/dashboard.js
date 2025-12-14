@@ -1,5 +1,28 @@
 // Dashboard JavaScript - Dashboard Theme, Modals, Recommendations
 
+// ==================== UTILITY FUNCTIONS ====================
+// Add CSS Variables to style tag
+if (!document.querySelector('#dynamic-spinner-styles')) {
+    const spinnerStyles = document.createElement('style');
+    spinnerStyles.id = 'dynamic-spinner-styles';
+    spinnerStyles.textContent = `
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .spinner {
+            border: 3px solid rgba(31, 156, 238, 0.1);
+            border-radius: 50%;
+            border-top: 3px solid var(--primary);
+            width: 32px;
+            height: 32px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+    `;
+    document.head.appendChild(spinnerStyles);
+}
+
 // ============================================
 // Theme Handler
 // ============================================
@@ -122,7 +145,7 @@ if (notificationBell && notificationDropdown && notificationList) {
     async function loadNotifications(limit = 6) {
         notificationList.innerHTML = '<div style="padding:12px;color:var(--secondary-text)">Loading...</div>';
         try {
-            const res = await fetch(`/notifications/api/recent/?limit=${limit}`);
+            const res = await fetch(`/accounts/api/notifications/?limit=${limit}`, { credentials: 'include' });
             if (!res.ok) throw new Error('Network error');
             const data = await res.json();
             if (!data || !data.notifications || data.notifications.length === 0) {
@@ -138,13 +161,17 @@ if (notificationBell && notificationDropdown && notificationList) {
                 item.style.padding = '10px';
                 item.style.borderBottom = '1px solid var(--border-color)';
                 item.style.cursor = 'pointer';
+                // attach metadata for delegated handler (match accounts API shape)
+                try { item.dataset.notifId = n.id; } catch(e){}
+                try { item.dataset.type = n.type || n.notification_type || ''; } catch(e){}
+                if (n.related_user_id) try { item.dataset.relatedUserId = n.related_user_id; } catch(e){}
+                if (n.related_user_username) try { item.dataset.relatedUsername = n.related_user_username; } catch(e){}
+                if (n.url) try { item.dataset.url = n.url; } catch(e){}
+                try { item.dataset.createdAt = n.created_at || n.createdAt || ''; } catch(e){}
                 item.innerHTML = `
-                    <div style="font-weight:600;color:var(--text-dark)">${n.title || 'Notification'}</div>
-                    <div style="font-size:0.95rem;color:var(--secondary-text);margin-top:4px">${n.message || ''}</div>
+                    <div class="notif-title" style="font-weight:600;color:var(--text-dark)">${n.title || 'Notification'}</div>
+                    <div class="notif-message" style="font-size:0.95rem;color:var(--secondary-text);margin-top:4px">${n.message || ''}</div>
                 `;
-                item.addEventListener('click', () => {
-                    window.location.href = n.url || '{% url "notifications_page" %}';
-                });
                 notificationList.appendChild(item);
             });
 
@@ -176,6 +203,41 @@ if (notificationBell && notificationDropdown && notificationList) {
         if (!notificationDropdown.contains(e.target) && !notificationBell.contains(e.target)) {
             notificationDropdown.style.display = 'none';
             notificationDropdown.classList.remove('open');
+        }
+    });
+
+    // Delegated click handler for notification items: mark-read and navigate/open modal
+    notificationList.addEventListener('click', async function(e){
+        const item = e.target.closest('.notification-item');
+        if (!item) return;
+        e.stopPropagation();
+        try { console.debug('Notification clicked', item.dataset); } catch(e){}
+        const notifId = item.dataset.notifId;
+        const relatedUser = item.dataset.relatedUserId || item.dataset.relateduserid;
+        const link = item.dataset.url;
+        try{
+            if (notifId) {
+                await fetch(`/accounts/api/notifications/${notifId}/mark-read/`, {method:'POST', credentials:'include', headers:{'X-CSRFToken': csrfToken(), 'X-Requested-With':'XMLHttpRequest'}});
+                // optimistically update badge
+                if (notificationBadge) {
+                    const cur = parseInt(notificationBadge.textContent||'0');
+                    if (!isNaN(cur) && cur>0) notificationBadge.textContent = Math.max(0, cur-1) || '';
+                }
+            }
+        }catch(err){ console.warn('mark-read failed', err); }
+
+        if (relatedUser) {
+            window.location.href = `/accounts/chat/${relatedUser}/`;
+            return;
+        }
+        if (link && link !== 'undefined') { window.location.href = link; return; }
+
+        // fallback: open inline modal if available
+        if (typeof window.showNotificationModal === 'function') {
+            const title = item.querySelector('.notif-title')?.textContent || item.dataset.title || 'Notification';
+            const message = item.querySelector('.notif-message')?.textContent || item.dataset.message || '';
+            const createdAt = item.dataset.createdAt || new Date().toISOString();
+            window.showNotificationModal(notifId, title, message, createdAt, true, item.dataset.type || '', relatedUser || '');
         }
     });
 }
@@ -931,4 +993,282 @@ window.addEventListener('resize', () => {
     } else {
         sidebar.classList.add('mobile');
     }
+});
+
+// ============================================
+// CREATE BUTTON MODAL HANDLER
+// ============================================
+document.querySelector('.create-btn')?.addEventListener('click', function() {
+    const modal = document.getElementById('createModal');
+    if (modal) {
+        modal.style.display = 'flex';
+    }
+});
+
+document.getElementById('createModal')?.addEventListener('click', function(e) {
+    if (e.target === this) {
+        this.style.display = 'none';
+    }
+});
+
+document.getElementById('community-post')?.addEventListener('click', function() {
+    window.location.href = '/communities/create-post/';
+});
+
+document.getElementById('blog-post')?.addEventListener('click', function() {
+    window.location.href = '/posts/create/';
+});
+
+// ============================================
+// NOTIFICATION BELL DROPDOWN
+// ============================================
+document.getElementById('notificationBell')?.addEventListener('click', function(e) {
+    e.stopPropagation();
+    const dropdown = document.getElementById('notificationDropdown');
+    if (dropdown) {
+        const isVisible = dropdown.style.display === 'block';
+        document.querySelectorAll('.dropdown-menu').forEach(d => d.style.display = 'none');
+        dropdown.style.display = isVisible ? 'none' : 'block';
+    }
+});
+
+// ============================================
+// USER AVATAR MENU DROPDOWN (for new dropdown)
+// ============================================
+document.querySelectorAll('.user-profile-trigger')?.forEach(trigger => {
+    trigger.addEventListener('click', function(e) {
+        if (e.target.closest('.dropdown-menu') || e.target.closest('ul')) return;
+        e.stopPropagation();
+        const dropdown = document.getElementById('userMenuDropdown');
+        if (dropdown) {
+            const isVisible = dropdown.style.display === 'block';
+            document.querySelectorAll('.dropdown-menu').forEach(d => d.style.display = 'none');
+            dropdown.style.display = isVisible ? 'none' : 'block';
+        }
+    });
+});
+
+// LOGOUT HANDLER
+document.getElementById('logout')?.addEventListener('click', function(e) {
+    e.preventDefault();
+    const form = document.getElementById('logout-form');
+    if (form) {
+        form.submit();
+    }
+});
+
+// ============================================
+// GLOBAL DROPDOWN CLOSE HANDLER
+// ============================================
+document.addEventListener('click', function(e) {
+    const isNotificationBtn = e.target.closest('.notification-btn');
+    const isNotificationDropdown = e.target.closest('#notificationDropdown');
+    const isAvatarWrapper = e.target.closest('.avatar-wrapper');
+    const isUserMenuDropdown = e.target.closest('#userMenuDropdown');
+
+    if (!isNotificationBtn && !isNotificationDropdown) {
+        const notifDropdown = document.getElementById('notificationDropdown');
+        if (notifDropdown) notifDropdown.style.display = 'none';
+    }
+
+    if (!isAvatarWrapper && !isUserMenuDropdown) {
+        const userDropdown = document.getElementById('userMenuDropdown');
+        if (userDropdown) userDropdown.style.display = 'none';
+    }
+});
+
+// ============================================
+// FILTER BUBBLES & COMMUNITY POSTS
+// ============================================
+document.querySelectorAll('.filter-bubble').forEach(btn => {
+    btn.addEventListener('click', async function() {
+        document.querySelectorAll('.filter-bubble').forEach(b => b.classList.remove('active'));
+        this.classList.add('active');
+        
+        const sortType = this.dataset.sort;
+        await loadCommunityPosts(sortType);
+    });
+});
+
+async function loadCommunityPosts(sort = 'for_you') {
+    const feedContainer = document.getElementById('community-feed');
+    if (!feedContainer) return;
+    
+    feedContainer.style.display = 'flex';
+    
+    // Show professional loading state
+    feedContainer.innerHTML = `
+        <div style="text-align:center;padding:60px 20px;">
+            <div class="spinner" style="margin-bottom:16px;"></div>
+            <p style="margin:0;color:var(--secondary-text);font-size:14px;">Loading posts...</p>
+        </div>
+    `;
+    
+    try {
+        const response = await fetch(`/dashboard/community-posts-api/?sort=${sort}`);
+        if (!response.ok) throw new Error('Failed to load posts');
+        
+        const data = await response.json();
+        
+        if (data.posts && data.posts.length > 0) {
+            feedContainer.innerHTML = '';
+            data.posts.forEach(post => {
+                feedContainer.appendChild(createPostCard(post));
+            });
+        } else {
+            feedContainer.innerHTML = `
+                <div style="text-align:center;padding:60px 20px;max-width:400px;margin:0 auto;">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="opacity:0.3;margin-bottom:20px;">
+                        <rect x="3" y="3" width="18" height="18" rx="2"/>
+                        <path d="M9 9h.01M15 9h.01M9 15h6"/>
+                    </svg>
+                    <h3 style="margin:0 0 8px;font-size:18px;color:var(--text-dark);font-weight:600;">No posts yet</h3>
+                    <p style="margin:0;color:var(--secondary-text);font-size:14px;line-height:1.6;">
+                        ${sort === 'for_you' ? 'Posts from your interests will appear here. Try following some communities!' : 'No posts match this filter. Try another one!'}
+                    </p>
+                </div>
+            `;
+        }
+    } catch (error) {
+        console.error('Error loading posts:', error);
+    }
+}
+
+function createPostCard(post) {
+    const card = document.createElement('div');
+    card.className = 'post-card';
+    card.style.cssText = 'background:var(--card-bg);border-radius:12px;padding:16px;box-shadow:var(--card-shadow);border:1px solid var(--border);';
+    
+    const authorAvatar = post.author_avatar || '/static/default-avatar.png';
+    const authorUrl = post.author_profile_url || `/accounts/profile/${post.author_username}/`;
+    
+    card.innerHTML = `
+        <div style="display:flex;gap:12px;margin-bottom:12px;align-items:center;">
+            <img src="${authorAvatar}" alt="${post.author_username}"
+                 style="width:40px;height:40px;border-radius:50%;object-fit:cover;cursor:pointer;"
+                 onclick="window.location.href='${authorUrl}'">
+            <div style="flex:1;">
+                <div style="font-weight:600;color:var(--text-dark);"><a href="${authorUrl}" style="color:var(--text-dark);text-decoration:none;cursor:pointer;">${post.author_username}</a></div>
+                <div style="font-size:0.85rem;color:var(--secondary-text);">${post.created_at || 'Just now'}</div>
+            </div>
+        </div>
+        <h3 style="margin:0 0 8px;font-size:1.1rem;color:var(--text-dark);">${post.title || 'Untitled'}</h3>
+        <p style="color:var(--secondary-text);margin:0 0 12px;line-height:1.4;">${post.content_preview || post.content || ''}</p>
+        <div style="display:flex;gap:16px;align-items:center;">
+            <button class="like-btn" data-post-id="${post.id}" style="background:none;border:none;color:var(--secondary-text);cursor:pointer;display:flex;align-items:center;gap:6px;font-size:0.9rem;transition:color 0.2s;" onmouseover="this.style.color='var(--primary)'" onmouseout="this.style.color='var(--secondary-text)'">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3.172 12.519a1 1 0 0 1 1.414-1.414L12 19.172l7.414-7.414a1 1 0 1 1 1.414 1.414l-8.121 8.121a1 1 0 0 1-1.414 0l-8.121-8.121z"/><path d="M12 2v8m0 0l-7-7m7 7l7-7"/></svg>
+                <span>${post.likes_count || 0}</span>
+            </button>
+            <a href="${post.url || '#'}" style="color:var(--primary);text-decoration:none;font-weight:500;font-size:0.9rem;transition:opacity 0.2s;" onmouseover="this.style.opacity='0.8'" onmouseout="this.style.opacity='1'">View post →</a>
+        </div>
+    `;
+    
+    return card;
+}
+
+// Auto-load "For you" feed on page load
+document.addEventListener('DOMContentLoaded', function() {
+    const forYouBtn = document.querySelector('.filter-bubble[data-sort="for_you"]');
+    if (forYouBtn && document.getElementById('community-feed')) {
+        loadCommunityPosts('for_you');
+    }
+});
+
+// ============================================
+// SEARCH FUNCTIONALITY
+// ============================================
+const searchInput = document.getElementById('searchInput');
+let searchTimeout;
+let suggestionsDropdown;
+
+if (searchInput) {
+    searchInput.addEventListener('input', function() {
+        clearTimeout(searchTimeout);
+        const query = this.value.trim();
+        
+        if (query.length < 2) {
+            hideSuggestions();
+            return;
+        }
+        
+        searchTimeout = setTimeout(async () => {
+            try {
+                const response = await fetch(`/dashboard/search-suggestions/?q=${encodeURIComponent(query)}`);
+                const data = await response.json();
+                showSearchSuggestions(data.suggestions || []);
+            } catch (error) {
+                console.error('Search suggestions error:', error);
+            }
+        }, 300);
+    });
+}
+
+function showSearchSuggestions(suggestions) {
+    if (!suggestionsDropdown) {
+        suggestionsDropdown = document.createElement('div');
+        suggestionsDropdown.id = 'searchSuggestions';
+        suggestionsDropdown.className = 'dropdown-menu';
+        suggestionsDropdown.style.cssText = 'position:absolute;top:100%;left:0;right:0;background:var(--card-bg);border:1px solid var(--border);border-radius:8px;margin-top:4px;max-height:300px;overflow-y:auto;z-index:2000;box-shadow:0 8px 24px rgba(0,0,0,0.15);';
+        
+        const searchBar = searchInput?.parentElement;
+        if (searchBar) {
+            searchBar.style.position = 'relative';
+            searchBar.appendChild(suggestionsDropdown);
+        }
+    }
+    
+    if (suggestions.length === 0) {
+        suggestionsDropdown.innerHTML = '<div style="padding:12px;text-align:center;color:var(--secondary-text);">No results found</div>';
+    } else {
+        suggestionsDropdown.innerHTML = suggestions.map(s => `
+            <a href="${s.url || '#'}" style="display:block;padding:12px 16px;border-bottom:1px solid var(--border);color:var(--text-dark);text-decoration:none;transition:background 0.2s;cursor:pointer;" onmouseover="this.style.background='var(--bg)'" onmouseout="this.style.background='transparent'">
+                <div style="font-weight:600;font-size:0.95rem;">${s.title || s.name || 'Untitled'}</div>
+                <div style="font-size:0.8rem;color:var(--secondary-text);">${s.type || s.category || 'Content'}</div>
+            </a>
+        `).join('');
+    }
+    
+    suggestionsDropdown.style.display = 'block';
+}
+
+function hideSuggestions() {
+    if (suggestionsDropdown) {
+        suggestionsDropdown.style.display = 'none';
+    }
+}
+
+document.addEventListener('click', function(e) {
+    if (!e.target.closest('.search-bar')) {
+        hideSuggestions();
+    }
+});
+
+// ============================================
+// CSS ANIMATION FOR SPINNER
+// ============================================
+if (!document.getElementById('spinnerCss')) {
+    const style = document.createElement('style');
+    style.id = 'spinnerCss';
+    style.textContent = `
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+    `;
+    document.head.appendChild(style);
+}
+// ==================== AUTO-LOAD ON PAGE LOAD ====================
+document.addEventListener('DOMContentLoaded', function() {
+    // Auto-load "For You" feed
+    const forYouBtn = document.querySelector('.filter-bubble[data-sort="for_you"]');
+    if (forYouBtn && document.getElementById('community-feed')) {
+        loadCommunityPosts('for_you');
+    }
+    
+    // Load notifications
+    if (document.getElementById('notificationBell')) {
+        loadNotifications(6);
+    }
+    
+    // Initialize onboarding if needed
+    setTimeout(checkOnboardingStatus, 500);
 });

@@ -84,7 +84,7 @@
             {% for sale in recent_sales %}
             <tr class="border-b hover:bg-gray-50">
               <td class="py-3">
-                <a href="/marketplace/{{ sale.project.slug }}/" class="text-blue-600 hover:underline">
+                <a href="{% url 'marketplace:project_detail' slug=sale.project.slug %}" class="text-blue-600 hover:underline">
                   {{ sale.project.title }}
                 </a>
               </td>
@@ -126,8 +126,7 @@
               </div>
               
               <div class="flex gap-2">
-                <a href="/marketplace/{{ project.slug }}/" class="text-blue-600 hover:underline text-sm">View</a>
-                <a href="/marketplace/{{ project.slug }}/edit/" class="text-blue-600 hover:underline text-sm">Edit</a>
+                <a href="{% url 'marketplace:project_detail' slug=project.slug %}" class="text-blue-600 hover:underline text-sm">View</a>
               </div>
             </div>
           </div>

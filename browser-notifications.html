@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Browser Notifications Demo</title>
+  <style>
+    body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,Helvetica,sans-serif;display:flex;min-height:100vh;align-items:center;justify-content:center;background:#f7f7f7;margin:0}
+    .container{background:#fff;padding:24px;border-radius:8px;box-shadow:0 6px 18px rgba(0,0,0,.08);text-align:center;max-width:380px}
+    button{padding:10px 16px;border-radius:6px;border:0;background:#0066ff;color:#fff;font-size:16px;cursor:pointer}
+    button:disabled{opacity:.6;cursor:not-allowed}
+    small{display:block;margin-top:8px;color:#555}
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2>Notifications</h2>
+    <button id="enable-btn">Enable Notifications</button>
+    <small id="status">Click the button to request permission.</small>
+  </div>
+
+  <script>
+    const btn = document.getElementById('enable-btn');
+    const status = document.getElementById('status');
+
+    const updateStatus = (text) => { status.textContent = text; };
+
+    // Lightweight SVG bell icon used as a data-URI so the file is self-contained
+    const svgIcon = (() => {
+      const svg = "<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%230066ff' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'><path d='M15 17h5l-1.4-1.4A2 2 0 0118 14.2V11a6 6 0 10-12 0v3.2c0 .5-.2 1.1-.6 1.4L4 17h5'></path><path d='M13.7 21a2 2 0 01-3.4 0'></path></svg>";
+      return 'data:image/svg+xml;utf8,' + encodeURIComponent(svg);
+    })();
+
+    async function requestAndShow() {
+      if (!('Notification' in window)) {
+        updateStatus('This browser does not support the Notifications API.');
+        btn.disabled = true;
+        return;
+      }
+
+      try {
+        const permission = await Notification.requestPermission();
+        if (permission === 'granted') {
+          updateStatus('Permission granted — showing test notification.');
+          // use the shared helper so external events can call it too
+          sendNotification('Test Notification', 'Notifications are enabled — this is a test message.');
+        } else if (permission === 'denied') {
+          updateStatus('Permission denied. Enable notifications from your browser settings.');
+        } else {
+          updateStatus('Permission dismissed or closed without a choice.');
+        }
+      } catch (err) {
+        console.error('Error while requesting notification permission:', err);
+        updateStatus('An error occurred while requesting permission. See console.');
+      }
+    }
+
+    // Reusable notification sender. Returns true if shown.
+    async function sendNotification(title, body, extra = {}) {
+      try {
+        // ensure Notifications API available
+        if (!('Notification' in window)) {
+          updateStatus('Notifications API not supported in this browser.');
+          return false;
+        }
+
+        // If permission not granted, request it (but do not spam request repeatedly)
+        if (Notification.permission === 'default') {
+          const p = await Notification.requestPermission();
+          if (p !== 'granted') {
+            updateStatus('Permission not granted for notifications.');
+            return false;
+          }
+        }
+
+        if (Notification.permission !== 'granted') {
+          updateStatus('Notifications are denied. Enable them in your browser settings.');
+          return false;
+        }
+
+        const options = Object.assign({
+          body: body || '',
+          icon: svgIcon,
+          tag: extra.tag || 'lupi-fy-notification',
+          renotify: extra.renotify || false,
+        }, extra);
+
+        const n = new Notification(title, options);
+
+        n.onclick = (ev) => {
+          try { window.focus(); } catch (e) {}
+          n.close();
+        };
+
+        setTimeout(() => { try { n.close(); } catch (e) {} }, extra.timeout || 8000);
+        updateStatus('Notification sent.');
+        return true;
+      } catch (err) {
+        console.error('Failed to send notification:', err);
+        updateStatus('Failed to send notification — check console.');
+        return false;
+      }
+    }
+
+    // Expose for integration: other scripts can call `window.sendNotification(...)`
+    window.sendNotification = sendNotification;
+
+    btn.addEventListener('click', async () => {
+      btn.disabled = true;
+      updateStatus('Requesting permission...');
+      await requestAndShow();
+      btn.disabled = false;
+    });
+
+    // optional: a small simulate button for testing incoming notifications
+    const simBtn = document.createElement('button');
+    simBtn.textContent = 'Simulate Incoming';
+    simBtn.style.marginLeft = '10px';
+    simBtn.addEventListener('click', async () => {
+      const ok = await sendNotification('Incoming message', 'This simulates an incoming notification.');
+      if (!ok) console.log('Simulated notification not shown.');
+    });
+    // place the simulate button next to the enable button
+    btn.insertAdjacentElement('afterend', simBtn);
+  </script>
+</body>
+</html>

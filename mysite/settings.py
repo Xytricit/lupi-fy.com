@@ -25,6 +25,8 @@ ALLOWED_HOSTS = ["lupi-fy-com.onrender.com", "127.0.0.1", "localhost"]
 if DEBUG:
     ALLOWED_HOSTS.append("*")  # allow all hosts in development
 
+# Base URL used in absolute links in emails, etc.
+SITE_URL = os.environ.get("SITE_URL", "http://localhost:8000")
 
 # ---------------------------
 # INSTALLED APPS
@@ -145,7 +147,13 @@ USE_TZ = True
 STATIC_URL = "/static/"
 STATICFILES_DIRS = [BASE_DIR / "static"]  # for development
 STATIC_ROOT = BASE_DIR / "staticfiles"  # for collectstatic in production
-STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
+
+# Using Manifest storage in development/tests can raise
+# "Missing staticfiles manifest entry" errors because collectstatic isn't run.
+if DEBUG:
+    STATICFILES_STORAGE = "django.contrib.staticfiles.storage.StaticFilesStorage"
+else:
+    STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
 
 MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
