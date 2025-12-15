@@ -1,0 +1,152 @@
+ANIMATION UPLOAD TROUBLESHOOTING CHECKLIST
+==========================================
+
+Problem: "I pressed Create Animation and nothing happened"
+
+Diagnostic Steps:
+================
+
+1. MODAL APPEARED?
+   [ ] Yes → Go to step 2
+   [ ] No → 
+       - Reload page (Ctrl+F5)
+       - Check you clicked "🎬 Upload Sprite Sheet" button
+       - Check browser console (F12) for errors
+       - Verify file is PNG/JPG
+
+2. COULD YOU FILL THE FORM?
+   [ ] Yes → Go to step 3
+   [ ] No →
+       - Form fields not showing = modal didn't render properly
+       - Refresh page and try again
+       - Try smaller image file
+
+3. DID YOU CLICK "CREATE ANIMATION"?
+   [ ] Yes, button was clickable → Go to step 4
+   [ ] No, button was grayed out or disabled →
+       - Fill all fields with valid numbers
+       - Make sure "Frames Per Row" doesn't exceed image width/height
+       - Check form has no obvious issues
+
+4. WHAT HAPPENED AFTER CLICKING?
+   [ ] Modal closed, toast appeared → SUCCESS! Go to VERIFY section
+   [ ] Modal closed, nothing appeared →
+       - Open F12 console
+       - Look for messages starting with "Creating animation..."
+       - Report what you see
+   [ ] Modal is still there →
+       - Button might not have worked
+       - Check browser console (F12) for red errors
+       - Click button again
+   [ ] Error alert popped up →
+       - Copy the error message exactly
+       - See ERROR MESSAGES section below
+
+5. VERIFY ANIMATION CREATED
+   [ ] In Asset Panel, click "🎬 Animations" tab
+   [ ] Do you see your animation listed?
+       [ ] Yes! → ✅ WORKS - Skip to NEXT STEPS
+       [ ] No → Go to CHECKING STORAGE
+
+6. CHECKING STORAGE
+   [ ] Open browser console (F12)
+   [ ] Type and press Enter:
+       console.log(AssetManager.assets.animations);
+   [ ] Do you see your animation in the output?
+       [ ] Yes (array with your animation) → 
+           - Animation exists but UI not showing
+           - Refresh page and check Animations tab again
+       [ ] Empty array [] →
+           - Animation was not saved
+           - Check console for "Saved to localStorage" message
+       [ ] Error message →
+           - See ERROR MESSAGES below
+
+
+COMMON ERROR MESSAGES:
+=====================
+
+ERROR: "Cannot read property 'animations' of undefined"
+FIX: AssetManager not initialized
+  - Refresh page (Ctrl+F5)
+  - Wait for page to fully load before uploading
+  - Check network tab (F12 > Network) for failed requests
+
+ERROR: "showToast is not defined"
+FIX: Page didn't load completely
+  - Wait 3 seconds after page loads
+  - Refresh page
+  - Check console for other errors
+
+ERROR: "Modal is null"
+FIX: Modal HTML didn't create
+  - This is a serious error, page likely broken
+  - Refresh page (Ctrl+F5)
+  - Try accessing editor from fresh tab
+
+ERROR: "Cannot read property 'querySelector'"
+FIX: Button click happened but modal is gone
+  - Modal element removed before button processed
+  - Try clicking button again slowly
+  - Or reload and try different file
+
+BROWSER CONSOLE NOT SHOWING MESSAGES?
+======================================
+
+If you don't see log messages like "Creating animation...":
+
+Option 1: Check logs
+  - F12 → Console tab
+  - Filter by "Creating" to find animation logs
+  - Should see 7-8 messages for successful creation
+
+Option 2: Check for errors
+  - Look for any RED text in console
+  - Copy exact error message
+  - Those errors are the real problem
+
+Option 3: Manual test
+  - F12 → Console tab
+  - Copy paste this:
+    
+    AssetManager.showSpriteSheetConfig('test.png', 
+      'data:image/png;base64,iVBORw0KGgoAAAANS...', 256, 64);
+  
+  - This manually triggers the modal
+  - If modal appears, upload file is the issue
+  - If nothing, modal code has a problem
+
+
+NEXT STEPS AFTER SUCCESSFUL CREATION:
+=====================================
+
+1. Your animation is in localStorage now
+2. It appears in 🎬 Animations tab
+3. Click animation → see Animation Editor
+   - Preview canvas shows first frame
+   - Buttons let you see each frame
+   - Can edit name and duration
+   - Can set tags
+
+4. To use in game:
+   - Add "🎬 Play Animation" block
+   - Select your animation from dropdown
+   - Select tag (or create new tagged sprites)
+   - Block will play animation on all entities with that tag
+
+5. Optional: Add keyframes
+   - Create keyframes for movement
+   - Combine with animation for walking sprites that move
+
+
+STILL STUCK?
+===========
+
+Provide these details:
+1. Does the modal appear? (Yes/No)
+2. What do you see in browser console (F12 > Console)?
+3. Any red error messages?
+4. What's the image size? (e.g., 256x128)
+5. What values did you enter? (frames/row, total frames, duration)
+
+These details will pinpoint the exact issue!

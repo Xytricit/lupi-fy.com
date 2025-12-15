@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Animation System Quick Test</title>
+    <style>
+        body { font-family: Arial; background: #1a1a2e; color: white; padding: 20px; }
+        .test { background: #0f3460; padding: 15px; margin: 10px 0; border-radius: 5px; border-left: 4px solid #533483; }
+        .pass { border-left-color: #27ae60; }
+        .fail { border-left-color: #e74c3c; }
+        button { background: #533483; color: white; padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer; margin: 5px; }
+        button:hover { background: #9b59b6; }
+        code { background: #16213e; padding: 5px 10px; border-radius: 3px; font-family: monospace; }
+        h2 { color: #f39c12; }
+    </style>
+</head>
+<body>
+    <h1>🎬 Animation System Quick Test</h1>
+    <p>This page tests if the animation system components are properly initialized.</p>
+    
+    <h2>Component Status</h2>
+    <div id="status"></div>
+    
+    <h2>Quick Actions</h2>
+    <button onclick="testAssetManager()">Test AssetManager</button>
+    <button onclick="testAnimationManager()">Test AnimationManager</button>
+    <button onclick="testLocalStorage()">Test LocalStorage</button>
+    <button onclick="createTestAnimation()">Create Test Animation</button>
+    <button onclick="viewConsole()">Open Console (F12)</button>
+    
+    <h2>Console Output</h2>
+    <div id="output" style="background: #16213e; padding: 15px; border-radius: 5px; font-family: monospace; font-size: 12px; max-height: 400px; overflow-y: auto; white-space: pre-wrap;"></div>
+
+    <script>
+        const output = document.getElementById('output');
+        const logOutput = (msg, type = 'log') => {
+            const line = document.createElement('div');
+            line.style.color = type === 'error' ? '#e74c3c' : type === 'warn' ? '#f39c12' : '#0f8';
+            line.textContent = `[${type.toUpperCase()}] ${msg}`;
+            output.appendChild(line);
+            output.scrollTop = output.scrollHeight;
+            console.log(msg);
+        };
+
+        const testAssetManager = () => {
+            logOutput('Testing AssetManager...', 'log');
+            if (typeof AssetManager === 'undefined') {
+                logOutput('❌ AssetManager not defined!', 'error');
+                return;
+            }
+            logOutput('✓ AssetManager exists', 'log');
+            logOutput('  - assets.sprites: ' + AssetManager.assets.sprites.length, 'log');
+            logOutput('  - assets.sounds: ' + AssetManager.assets.sounds.length, 'log');
+            logOutput('  - assets.backgrounds: ' + AssetManager.assets.backgrounds.length, 'log');
+            logOutput('  - assets.animations: ' + AssetManager.assets.animations.length, 'log');
+            logOutput('✓ AssetManager functional', 'log');
+        };
+
+        const testAnimationManager = () => {
+            logOutput('Testing AnimationManager...', 'log');
+            if (typeof AnimationManager === 'undefined') {
+                logOutput('❌ AnimationManager not defined!', 'error');
+                return;
+            }
+            logOutput('✓ AnimationManager exists', 'log');
+            logOutput('  - animations: ' + Object.keys(AnimationManager.animations).length, 'log');
+            logOutput('✓ AnimationManager functional', 'log');
+        };
+
+        const testLocalStorage = () => {
+            logOutput('Testing LocalStorage...', 'log');
+            try {
+                const test = localStorage.getItem('lupiforge_assets');
+                if (test) {
+                    const data = JSON.parse(test);
+                    logOutput('✓ Found saved assets in localStorage', 'log');
+                    logOutput('  - animations: ' + (data.assets?.animations?.length || 0), 'log');
+                } else {
+                    logOutput('⚠ No saved assets found (first time)', 'warn');
+                }
+            } catch (e) {
+                logOutput('❌ LocalStorage error: ' + e.message, 'error');
+            }
+        };
+
+        const createTestAnimation = () => {
+            logOutput('Creating test animation...', 'log');
+            try {
+                const canvas = document.createElement('canvas');
+                canvas.width = 256;
+                canvas.height = 64;
+                const ctx = canvas.getContext('2d');
+                
+                // Draw 4 colored squares
+                ctx.fillStyle = '#FF0000';
+                ctx.fillRect(0, 0, 64, 64);
+                ctx.fillStyle = '#00FF00';
+                ctx.fillRect(64, 0, 64, 64);
+                ctx.fillStyle = '#0000FF';
+                ctx.fillRect(128, 0, 64, 64);
+                ctx.fillStyle = '#FFFF00';
+                ctx.fillRect(192, 0, 64, 64);
+                
+                const dataUrl = canvas.toDataURL('image/png');
+                
+                const animation = {
+                    id: Date.now() + Math.random(),
+                    name: 'test_animation',
+                    filename: 'test.png',
+                    spriteSheet: dataUrl,
+                    width: 256,
+                    height: 64,
+                    framesPerRow: 4,
+                    totalFrames: 4,
+                    frameDuration: 100,
+                    frameWidth: 64,
+                    frameHeight: 64,
+                    tags: ['test'],
+                    createdAt: new Date().toISOString()
+                };
+                
+                AssetManager.assets.animations.push(animation);
+                AssetManager.saveAssets();
+                logOutput('✓ Test animation created and saved!', 'log');
+                logOutput('  - Name: ' + animation.name, 'log');
+                logOutput('  - Frames: ' + animation.totalFrames, 'log');
+                logOutput('  - Duration: ' + animation.frameDuration + 'ms', 'log');
+                
+                // Try to load it back
+                const saved = localStorage.getItem('lupiforge_assets');
+                const data = JSON.parse(saved);
+                if (data.assets.animations.length > 0) {
+                    logOutput('✓ Successfully verified in localStorage!', 'log');
+                } else {
+                    logOutput('❌ Could not find animation in localStorage', 'error');
+                }
+            } catch (e) {
+                logOutput('❌ Error: ' + e.message, 'error');
+            }
+        };
+
+        const viewConsole = () => {
+            alert('Press F12 or right-click > Inspect > Console tab to see detailed logs');
+        };
+
+        // Run initial tests
+        window.addEventListener('load', () => {
+            logOutput('=== Animation System Test Started ===', 'log');
+            setTimeout(() => {
+                testAssetManager();
+                logOutput('', 'log');
+                testAnimationManager();
+                logOutput('', 'log');
+                testLocalStorage();
+            }, 500);
+        });
+    </script>
+</body>
+</html>

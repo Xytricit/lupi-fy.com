@@ -124,6 +124,8 @@ def multiplayer_view(request):
 def save_game_api(request):
     """Save or update a game version."""
     from .models import Game, GameVersion
+    import logging
+    logger = logging.getLogger(__name__)
     try:
         data = json.loads(request.body)
         title = data.get('title', 'Untitled Game')
@@ -158,6 +160,7 @@ def save_game_api(request):
         
         return JsonResponse({'game_id': str(game.id), 'version': version_number, 'status': 'saved'})
     except Exception as e:
+        logger.error(f'Save game API error: {str(e)}', exc_info=True)
         return JsonResponse({'error': str(e)}, status=400)
 
 
