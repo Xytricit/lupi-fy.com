@@ -5,11 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>LupiForge Block Editor</title>
-    <!-- Blockly Core -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/blockly/10.4.3/blockly_compressed.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/blockly/10.4.3/blocks_compressed.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/blockly/10.4.3/msg/en.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/blockly/10.4.3/javascript_compressed.min.js"></script>
+    <!-- Blockly will be loaded dynamically with fallback support -->
     
     <script>
     // === LUPIFORGE GLOBAL STATE ===
@@ -591,6 +587,14 @@
         try {
             console.log('🚀 === LUPIFORGE INITIALIZATION SEQUENCE ===');
             
+            // CRITICAL: Load Blockly FIRST before anything else
+            console.log('📦 Loading Blockly dependencies...');
+            const blocklyLoaded = await loadBlocklyDependencies();
+            if (!blocklyLoaded) {
+                throw new Error('Failed to load Blockly dependencies');
+            }
+            
+            console.log('📦 Loading other dependencies...');
             await loadDependencies();
             
             console.log('🎮 Initializing Blockly editor...');
@@ -606,113 +610,124 @@
             
         } catch (error) {
             console.error('❌ Initialization error:', error);
-            setTimeout(initializeLupiForge, 2000);
+            showFatalError(`Initialization failed: ${error.message}`);
         }
     }
 
-    // === CRITICAL FIX 1: PROPER BLOCKLY INITIALIZATION ===
-
+    // === CRITICAL FIX: PROPER BLOCKLY INITIALIZATION ===
     function initializeEditor() {
-        initializationAttempts++;
-        console.log(`🚀 Attempting to initialize LupiForge... (Attempt ${initializationAttempts}/${MAX_INIT_ATTEMPTS})`);
-        
         // Wait for DOM to be fully loaded
         if (document.readyState !== 'complete') {
-            console.log('⏳ Waiting for DOM to fully load...');
-            if (initializationAttempts === 1) {
-                document.addEventListener('DOMContentLoaded', initializeEditor);
-            }
+            setTimeout(initializeEditor, 100);
             return;
         }
-        
-        // Check if Blockly is loaded
-        if (typeof Blockly === 'undefined') {
-            console.error('❌ Blockly is not loaded!');
-            if (initializationAttempts < MAX_INIT_ATTEMPTS) {
-                console.log('⏳ Retrying in 500ms...');
-                setTimeout(initializeEditor, 500);
-                return;
-            } else {
-                showFatalError('Blockly failed to load after multiple attempts. Please refresh the page.');
-                return;
-            }
-        }
-        
-        // Check for required DOM elements
+
         const blocklyDiv = document.getElementById('blocklyDiv');
         const toolbox = document.getElementById('toolbox');
         
         if (!blocklyDiv) {
             console.error('❌ blocklyDiv not found!');
-            if (initializationAttempts < MAX_INIT_ATTEMPTS) {
-                setTimeout(initializeEditor, 500);
-                return;
-            }
-            showFatalError('Editor container not found. Please refresh the page.');
             return;
         }
         
         if (!toolbox) {
             console.error('❌ toolbox not found!');
-            if (initializationAttempts < MAX_INIT_ATTEMPTS) {
-                setTimeout(initializeEditor, 500);
-                return;
-            }
-            showFatalError('Toolbox not found. Please refresh the page.');
             return;
         }
-        
+
+        if (typeof Blockly === 'undefined') {
+            console.error('❌ Blockly is not defined. Dependencies may have failed to load.');
+            setTimeout(initializeEditor, 500);
+            return;
+        }
+
+        if (typeof Blockly.inject !== 'function') {
+            console.error('❌ Blockly.inject is not a function. Initialization cannot proceed.');
+            return;
+        }
+
+        if (typeof Blockly.Blocks === 'undefined' || typeof Blockly.JavaScript === 'undefined') {
+            console.error('❌ Blockly.Blocks or Blockly.JavaScript is undefined. Required components are missing.');
+            setTimeout(initializeEditor, 500);
+            return;
+        }
+
         // Ensure blocklyDiv has proper dimensions
         blocklyDiv.style.height = '100%';
         blocklyDiv.style.width = '100%';
-        
+
         try {
-            // Register fallback blocks before creating workspace
-            registerFallbackBlocks();
-            
-            // Create workspace with proper configuration
+            // FIRST: Define custom blocks before creating workspace
+            console.log('📦 Defining custom blocks...');
+            if (typeof defineCustomBlocks === 'function') {
+                defineCustomBlocks();
+            } else {
+                console.warn('⚠️ defineCustomBlocks function not found');
+            }
+
+            // Initialize Blockly workspace
             workspace = Blockly.inject('blocklyDiv', {
-                toolbox: document.getElementById('toolbox'),
-                zoom: {
-                    controls: true,
-                    wheel: true,
-                    startScale: 1.0,
-                    maxScale: 3,
-                    minScale: 0.3,
-                    scaleSpeed: 1.2
-                },
+                toolbox: toolbox,
+                zoom: { controls: true, wheel: true, startScale: 1.0, maxScale: 3, minScale: 0.3 },
                 trashcan: true,
-                scrollbars: true,
-                grid: {
-                    spacing: 20,
-                    length: 3,
-                    colour: '#ccc',
-                    snap: true
-                }
+                scrollbars: true
             });
             
-            if (!workspace) {
-                throw new Error('Workspace creation failed');
-            }
-            
-            console.log('✅ Blockly workspace initialized successfully!');
+            // Also set on window for compatibility
             window.workspace = workspace;
+
+            // Force register all blocks NOW (they're defined later in the second script)
+            setTimeout(() => {
+                console.log('⏰ Attempting to load custom block definitions from second script...');
+                forceLoadAllBlockDefinitions();
+            }, 500);
+
+            // Setup event listeners immediately after workspace is ready
+            setupEventListeners();
             
             // Initialize subsystems after workspace is ready
             initializeSubsystems();
-            
-            // Load saved project
+
+            // Load project AFTER workspace is ready
             loadProject();
-            
-            // Add starter block if workspace is empty
             if (workspace.getAllBlocks(false).length === 0) {
                 addStarterBlock();
             }
+
+            // Dispatch workspaceReady event to initialize dependent systems
+            document.dispatchEvent(new Event('workspaceReady'));
+            console.log('✅ Editor initialized successfully');
             
         } catch (error) {
-            console.error('❌ Failed to initialize Blockly:', error);
-            showFatalError(`Initialization error: ${error.message}`);
+            console.error('❌ Editor initialization failed:', error);
         }
+    }
+
+    // === HELPER: Force Load Block Definitions ===
+    function forceLoadAllBlockDefinitions() {
+        console.log('🔄 Force loading all block definitions...');
+        
+        // Check if required block types exist, create fallbacks if missing
+        const requiredBlockTypes = [
+            'on_game_start', 'on_key_press', 'spawn_sprite', 'move_player', 
+            'destroy_sprite', 'add_score', 'get_mouse_x', 'get_mouse_y'
+        ];
+        
+        requiredBlockTypes.forEach(type => {
+            if (!Blockly.Blocks[type]) {
+                console.warn(`⚠️ Missing block definition: ${type}. Creating fallback.`);
+                Blockly.Blocks[type] = {
+                    init: function() {
+                        this.appendDummyInput().appendField(`[MISSING BLOCK: ${type}]`);
+                        this.setColour("#ff0000");
+                        this.setTooltip(`This block is missing in the current configuration`);
+                    }
+                };
+                Blockly.JavaScript.forBlock[type] = function(block) {
+                    return `// Missing block: ${type}`;
+                };
+            }
+        });
     }
 
     function showFatalError(message) {
@@ -766,7 +781,7 @@
                     }
                 };
                 
-                Blockly.JavaScript[type] = function(block) {
+                Blockly.JavaScript.forBlock[type] = function(block) {
                     return `// Missing block: ${type}\n`;
                 };
             }
@@ -947,6 +962,20 @@
                     }
                     return false;
                 }
+            },
+            {
+                name: 'LupiScript',
+                init: () => {
+                    try {
+                        if (typeof LupiScript !== 'undefined' && LupiScript.loadSavedBlocks) {
+                            LupiScript.loadSavedBlocks();
+                            return true;
+                        }
+                    } catch (error) {
+                        console.warn('LupiScript initialization failed:', error);
+                    }
+                    return false;
+                }
             }
         ];
         
@@ -998,14 +1027,6 @@
         // Core editor buttons
         bindButton('saveBtn', saveProject, 'Save button');
         bindButton('clearBtn', clearProject, 'Clear button');
-        bindButton('exportBtn', () => {
-            const code = Blockly.JavaScript.workspaceToCode(workspace);
-            const output = document.getElementById('output');
-            if (output) {
-                output.textContent = code || '// No blocks in workspace';
-                output.classList.add('show');
-            }
-        }, 'Export button');
         bindButton('quickPreviewBtn', () => {
             if (window.PreviewManager && PreviewManager.play) {
                 PreviewManager.play();
@@ -1014,9 +1035,6 @@
             }
         }, 'Quick Preview button');
         bindButton('publishBtn', preparePublish, 'Publish button');
-        bindButton('mobileExportBtn', () => {
-            document.getElementById('mobileExportModal')?.classList.add('show');
-        }, 'Mobile Export button');
         bindButton('terminalBtn', () => {
             if (window.TerminalManager && TerminalManager.toggle) {
                 TerminalManager.toggle();
@@ -1031,6 +1049,27 @@
                 showToast('⚠️ AI Suggestion System not initialized', true);
             }
         }, 'AI Suggestions button');
+        
+        bindButton('lupiScriptBtn', () => {
+            console.log('🧱 LupiScript button clicked');
+            if (typeof window.toggleLupiScript === 'function') {
+                window.toggleLupiScript();
+            } else {
+                // Fallback inline toggle
+                const panel = document.getElementById('lupiScriptPanel');
+                const btn = document.getElementById('lupiScriptBtn');
+                if (panel) {
+                    const isVisible = panel.style.display !== 'none';
+                    panel.style.display = isVisible ? 'none' : 'block';
+                    if (btn) {
+                        btn.classList.toggle('active', !isVisible);
+                    }
+                    console.log(`🧱 LupiScript toggled ${isVisible ? 'off' : 'on'} (fallback)`);
+                } else {
+                    console.error('❌ LupiScript panel not found in DOM');
+                }
+            }
+        }, 'LupiScript button');
         
         // Modal buttons
         bindButton('cancelPublish', () => {
@@ -1304,10 +1343,16 @@
     async function startApplication() {
         const memoryManager = MemoryManager.getInstance();
         console.log('✅ Memory manager initialized');
-        
-        await initializeLupiForge();
-        setupCleanupHandlers();
-        startPerformanceMonitoring();
+
+        try {
+            // Don't load Blockly here - let initializeLupiForge handle it
+            await initializeLupiForge();
+            setupCleanupHandlers();
+            startPerformanceMonitoring();
+        } catch (error) {
+            console.error('❌ Critical initialization failure:', error);
+            showFatalError(`Initialization failed: ${error.message}. Please refresh the page.`);
+        }
     }
 
     function setupCleanupHandlers() {
@@ -1376,52 +1421,396 @@
         requestAnimationFrame(monitorPerformance);
     }
 
-    function loadBlocklyDependencies() {
+    async function loadBlocklyDependencies() {
+        // Check if already loaded
+        if (typeof Blockly !== 'undefined' && Blockly.inject && Blockly.Blocks && Blockly.JavaScript) {
+            console.log('✅ Blockly already loaded');
+            return true;
+        }
+
+        const dependencies = [
+            { url: 'https://unpkg.com/blockly@10.4.3/blockly_compressed.js', name: 'Blockly Core' },
+            { url: 'https://unpkg.com/blockly@10.4.3/blocks_compressed.js', name: 'Blockly Blocks' },
+            { url: 'https://unpkg.com/blockly@10.4.3/javascript_compressed.js', name: 'Blockly JavaScript Generator' },
+            { url: 'https://unpkg.com/blockly@10.4.3/msg/en.js', name: 'Blockly Messages' }
+        ];
+
+        // Load scripts sequentially (order matters for Blockly)
+        for (const dep of dependencies) {
+            try {
+                await loadSingleScript(dep.url, dep.name);
+            } catch (error) {
+                console.error(`❌ Failed to load ${dep.name}:`, error);
+                throw new Error(`Failed to load ${dep.name} from CDN`);
+            }
+        }
+
+        // Wait for Blockly to be fully initialized
+        await new Promise((resolve, reject) => {
+            let attempts = 0;
+            const maxAttempts = 50; // 5 seconds
+            
+            const checkBlockly = () => {
+                attempts++;
+                if (typeof Blockly !== 'undefined' && 
+                    typeof Blockly.inject === 'function' && 
+                    typeof Blockly.Blocks !== 'undefined' && 
+                    typeof Blockly.JavaScript !== 'undefined') {
+                    console.log('✅ All Blockly dependencies loaded and verified');
+                    resolve(true);
+                } else if (attempts >= maxAttempts) {
+                    console.error('❌ Blockly verification timeout');
+                    reject(new Error('Blockly loaded but components missing'));
+                } else {
+                    setTimeout(checkBlockly, 100);
+                }
+            };
+            
+            checkBlockly();
+        });
+
+        return true;
+    }
+
+    function loadSingleScript(url, name) {
         return new Promise((resolve, reject) => {
-            const dependencies = [
-                'https://cdnjs.cloudflare.com/ajax/libs/blockly/10.4.3/blockly_compressed.min.js',
-                'https://cdnjs.cloudflare.com/ajax/libs/blockly/10.4.3/blocks_compressed.min.js',
-                'https://cdnjs.cloudflare.com/ajax/libs/blockly/10.4.3/javascript_compressed.min.js',
-                'https://cdnjs.cloudflare.com/ajax/libs/blockly/10.4.3/msg/en.min.js'
-            ];
+            // Check if script already exists in DOM
+            const existingScript = document.querySelector(`script[src="${url}"]`);
+            if (existingScript) {
+                console.log(`🔄 Script already in DOM: ${name}`);
+                // Wait a bit for it to execute
+                setTimeout(resolve, 100);
+                return;
+            }
+
+            const script = document.createElement('script');
+            script.src = url;
+            script.async = false;
+            script.crossOrigin = 'anonymous';
             
-            let loadedCount = 0;
+            script.onload = () => {
+                console.log(`✅ Loaded ${name}`);
+                setTimeout(resolve, 50); // Small delay to let script execute
+            };
             
-            dependencies.forEach(url => {
-                const script = document.createElement('script');
-                script.src = url;
-                script.async = false;
-                script.onload = function() {
-                    loadedCount++;
-                    if (loadedCount === dependencies.length) {
-                        console.log('✅ All Blockly dependencies loaded');
-                        resolve();
-                    }
-                };
-                script.onerror = function() {
-                    reject(new Error(`Failed to load script: ${url}`));
-                };
-                document.head.appendChild(script);
-            });
+            script.onerror = (error) => {
+                console.error(`❌ Failed to load ${name} from ${url}`);
+                reject(new Error(`Failed to load ${name}`));
+            };
+            
+            document.head.appendChild(script);
         });
     }
 
     // Start initialization when DOM is ready
     if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', function() {
-            if (typeof Blockly === 'undefined') {
-                loadBlocklyDependencies().then(startApplication);
+        document.addEventListener('DOMContentLoaded', async function() {
+            console.log('🚀 DOM loaded, starting application...');
+            
+            // Check if mobile and show warning
+            checkMobileDevice();
+            
+            await startApplication();
+        });
+    } else {
+        console.log('🚀 DOM already loaded, starting application immediately...');
+        
+        // Check if mobile and show warning
+        checkMobileDevice();
+        
+        startApplication();
+    }
+
+    // === MOBILE DEVICE DETECTION ===
+    function checkMobileDevice() {
+        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
+                        (window.innerWidth <= 768);
+        
+        if (isMobile) {
+            const warning = document.getElementById('mobileWarning');
+            if (warning) {
+                warning.style.display = 'inline-block';
+                warning.style.animation = 'pulse 2s ease-in-out infinite';
+            }
+            
+            // Show a toast notification
+            setTimeout(() => {
+                if (typeof showToast === 'function') {
+                    showToast('📱 Mobile development not recommended - editor may be laggy', true);
+                }
+            }, 2000);
+            
+            console.warn('📱 Mobile device detected - performance may be limited');
+        }
+    }
+
+    // === RESTORE ASSET PANEL FUNCTION ===
+    window.restoreAssetPanel = function() {
+        const assetPanel = document.getElementById('assetPanel');
+        const toggleBtn = document.getElementById('toggleAssets');
+        
+        if (assetPanel) {
+            assetPanel.classList.remove('collapsed');
+            console.log('📦 Asset panel restored');
+            
+            if (toggleBtn) {
+                toggleBtn.textContent = '▼';
+            }
+            
+            // Trigger Blockly resize
+            if (window.workspace) {
+                setTimeout(() => {
+                    Blockly.svgResize(workspace);
+                }, 300);
+            }
+        }
+    };
+
+    // === GLOBAL LUPISCRIPT TOGGLE FUNCTION ===
+    window.toggleLupiScript = function() {
+        console.log('🧱 toggleLupiScript called');
+        
+        const panel = document.getElementById('lupiScriptPanel');
+        const btn = document.getElementById('lupiScriptBtn');
+        
+        console.log('Panel found:', !!panel, 'Button found:', !!btn);
+        
+        if (!panel) {
+            console.error('❌ LupiScript panel not found in DOM');
+            // Try to find it with a query selector
+            const allDivs = document.querySelectorAll('div[id*="lupi"]');
+            console.log('Found divs with "lupi" in id:', Array.from(allDivs).map(d => d.id));
+            return;
+        }
+        
+        const currentDisplay = window.getComputedStyle(panel).display;
+        const isVisible = currentDisplay !== 'none';
+        
+        console.log('Current display:', currentDisplay, 'Is visible:', isVisible);
+        
+        panel.style.display = isVisible ? 'none' : 'block';
+        
+        if (btn) {
+            if (isVisible) {
+                btn.classList.remove('active');
             } else {
-                startApplication();
+                btn.classList.add('active');
+            }
+        }
+        
+        console.log(`🧱 LupiScript panel ${isVisible ? 'closed' : 'opened'}`);
+        
+        // If opening, focus the editor
+        if (!isVisible) {
+            setTimeout(() => {
+                const editor = document.getElementById('lupiEditor');
+                if (editor) {
+                    editor.focus();
+                }
+            }, 100);
+        }
+    };
+
+    // === BLOCKLY TOOLBOX AUTO-CLOSE ON DRAG ===
+    window.setupBlocklyToolboxAutoClose = function() {
+        if (!window.workspace) {
+            console.warn('⚠️ Workspace not ready for toolbox auto-close');
+            setTimeout(() => {
+                if (window.workspace) {
+                    window.setupBlocklyToolboxAutoClose();
+                }
+            }, 500);
+            return;
+        }
+        
+        console.log('🔧 Setting up Blockly toolbox auto-close...');
+        
+        let isDragging = false;
+        
+        // Listen for block drag events
+        workspace.addChangeListener(function(event) {
+            // When drag starts
+            if (event.type === Blockly.Events.BLOCK_DRAG && event.isStart) {
+                isDragging = true;
+                
+                // Close the flyout immediately when drag starts
+                try {
+                    const flyout = workspace.getFlyout && workspace.getFlyout();
+                    if (flyout && flyout.isVisible && flyout.isVisible()) {
+                        flyout.hide();
+                        console.log('🎯 Flyout closed on drag start');
+                    }
+                    
+                    // Clear toolbox selection
+                    if (workspace.toolbox_ && workspace.toolbox_.clearSelection) {
+                        workspace.toolbox_.clearSelection();
+                    }
+                } catch (e) {
+                    console.warn('⚠️ Error closing flyout:', e);
+                }
+            }
+            
+            // When drag ends
+            if (event.type === Blockly.Events.BLOCK_DRAG && !event.isStart) {
+                isDragging = false;
+            }
+        });
+        
+        // Also listen for mouse events to ensure flyout closes
+        const blocklyDiv = document.getElementById('blocklyDiv');
+        if (blocklyDiv) {
+            blocklyDiv.addEventListener('mousedown', function(e) {
+                // If clicking on workspace (not toolbox), close flyout
+                const isToolboxClick = e.target.closest('.blocklyToolboxDiv') || 
+                                      e.target.closest('.blocklyFlyout');
+                
+                if (!isToolboxClick) {
+                    setTimeout(() => {
+                        try {
+                            const flyout = workspace.getFlyout && workspace.getFlyout();
+                            if (flyout && flyout.isVisible && flyout.isVisible()) {
+                                flyout.hide();
+                                if (workspace.toolbox_ && workspace.toolbox_.clearSelection) {
+                                    workspace.toolbox_.clearSelection();
+                                }
+                            }
+                        } catch (e) {
+                            // Silent fail
+                        }
+                    }, 50);
+                }
+            });
+        }
+        
+        console.log('✅ Toolbox auto-close enabled');
+    };
+
+    // === CLICK OUTSIDE TO CLOSE BEHAVIOR ===
+    window.setupClickOutsideHandlers = function() {
+        console.log('🔧 Setting up click-outside handlers...');
+        
+        // Store references to closeable panels
+        const closeablePanels = [
+            { 
+                panel: () => document.getElementById('lupiScriptPanel'),
+                button: () => document.getElementById('lupiScriptBtn'),
+                name: 'LupiScript'
+            },
+            {
+                panel: () => document.getElementById('terminalPanel'),
+                button: () => document.getElementById('terminalBtn'),
+                name: 'Terminal',
+                checkVisible: (panel) => panel.classList.contains('show')
+            }
+        ];
+        
+        document.addEventListener('click', function(event) {
+            closeablePanels.forEach(({ panel: getPanelFn, button: getButtonFn, name, checkVisible }) => {
+                const panel = getPanelFn();
+                const button = getButtonFn();
+                
+                if (!panel) return;
+                
+                // Check if panel is visible
+                const isVisible = checkVisible ? 
+                    checkVisible(panel) : 
+                    (panel.style.display === 'block' || panel.style.display === 'flex');
+                
+                if (isVisible) {
+                    // Check if click is outside panel and button
+                    const isOutsidePanel = !panel.contains(event.target);
+                    const isOutsideButton = !button || (!button.contains(event.target) && event.target !== button);
+                    
+                    // Don't close if clicking on Blockly elements
+                    const isBlocklyClick = event.target.closest('.blocklyWorkspace') || 
+                                          event.target.closest('.blocklyFlyout') ||
+                                          event.target.closest('.blocklyToolboxDiv');
+                    
+                    if (isOutsidePanel && isOutsideButton && !isBlocklyClick) {
+                        // Close the panel
+                        if (checkVisible) {
+                            panel.classList.remove('show');
+                        } else {
+                            panel.style.display = 'none';
+                        }
+                        
+                        // Remove active state from button
+                        if (button) {
+                            button.classList.remove('active');
+                        }
+                        
+                        console.log(`🔒 ${name} panel closed (click outside)`);
+                    }
+                }
+            });
+        });
+        
+        // ESC key to close panels
+        document.addEventListener('keydown', function(event) {
+            if (event.key === 'Escape') {
+                closeablePanels.forEach(({ panel: getPanelFn, button: getButtonFn, name, checkVisible }) => {
+                    const panel = getPanelFn();
+                    const button = getButtonFn();
+                    
+                    if (!panel) return;
+                    
+                    const isVisible = checkVisible ? 
+                        checkVisible(panel) : 
+                        (panel.style.display === 'block' || panel.style.display === 'flex');
+                    
+                    if (isVisible) {
+                        if (checkVisible) {
+                            panel.classList.remove('show');
+                        } else {
+                            panel.style.display = 'none';
+                        }
+                        
+                        if (button) {
+                            button.classList.remove('active');
+                        }
+                        
+                        console.log(`🔒 ${name} panel closed (ESC key)`);
+                    }
+                });
+            }
+        });
+        
+        console.log('✅ Click-outside handlers enabled');
+    };
+    </script>
+    <script>
+    // Initialize UX behaviors immediately when DOM is ready
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('🎯 DOM ready, initializing click handlers...');
+            
+            if (typeof setupClickOutsideHandlers === 'function') {
+                setupClickOutsideHandlers();
             }
         });
     } else {
-        if (typeof Blockly === 'undefined') {
-            loadBlocklyDependencies().then(startApplication);
-        } else {
-            startApplication();
+        console.log('🎯 DOM already loaded, initializing click handlers immediately...');
+        
+        if (typeof setupClickOutsideHandlers === 'function') {
+            setupClickOutsideHandlers();
         }
     }
+    
+    // Initialize toolbox behaviors after workspace is ready
+    document.addEventListener('workspaceReady', function() {
+        console.log('🎯 Workspace ready, initializing toolbox behaviors...');
+        
+        if (typeof setupBlocklyToolboxAutoClose === 'function') {
+            setupBlocklyToolboxAutoClose();
+        }
+    });
+    
+    // Fallback: Try to initialize after a delay if workspaceReady doesn't fire
+    setTimeout(function() {
+        if (window.workspace && typeof setupBlocklyToolboxAutoClose === 'function') {
+            setupBlocklyToolboxAutoClose();
+        }
+    }, 3000);
     </script>
     <style>
         * {
@@ -1494,14 +1883,6 @@
             background: #c0392b;
             transform: translateY(-2px);
         }
-        #exportBtn {
-            background: #3498db;
-            color: white;
-        }
-        #exportBtn:hover {
-            background: #2980b9;
-            transform: translateY(-2px);
-        }
         #clearBtn {
             background: #95a5a6;
             color: white;
@@ -1540,14 +1921,6 @@
         }
         #aiSuggestionsBtn.active {
             background: linear-gradient(135deg, #764ba2 0%, #667eea 100%);
-        }
-        #mobileExportBtn {
-            background: #e67e22;
-            color: white;
-        }
-        #mobileExportBtn:hover {
-            background: #d35400;
-            transform: translateY(-2px);
         }
         #saveStatus {
             font-size: 12px;
@@ -1606,7 +1979,7 @@
             position: fixed;
             bottom: 0;
             left: 0;
-            right: 0;
+            right: 300px;  /* Account for asset panel width */
             background: #1e1e1e;
             color: #d4d4d4;
             border-top: 2px solid #533483;
@@ -1615,7 +1988,7 @@
             z-index: 500;
             max-height: 40vh;
             height: 250px;
-            transition: height 0.3s ease;
+            transition: all 0.3s ease;
         }
         #terminalPanel.show {
             display: flex;
@@ -1820,6 +2193,16 @@
                 opacity: 1;
             }
         }
+        
+        @keyframes pulse {
+            0%, 100% {
+                opacity: 1;
+            }
+            50% {
+                opacity: 0.5;
+            }
+        }
+        
         /* Asset Panel Styles */
         .asset-panel {
             position: fixed;
@@ -1839,6 +2222,36 @@
         .asset-panel.collapsed {
             transform: translateX(300px);
         }
+        
+        /* Restore Asset Panel Button (shows when collapsed) */
+        .restore-assets-btn {
+            position: fixed;
+            right: 10px;
+            top: 70px;
+            background: #533483;
+            color: white;
+            border: 2px solid #FF6B6B;
+            padding: 10px 15px;
+            border-radius: 8px 0 0 8px;
+            cursor: pointer;
+            z-index: 150;
+            font-size: 20px;
+            box-shadow: -2px 2px 10px rgba(0,0,0,0.5);
+            transition: all 0.3s ease;
+            opacity: 0;
+            pointer-events: none;
+            transform: translateX(50px);
+        }
+        .asset-panel.collapsed ~ .restore-assets-btn {
+            opacity: 1;
+            pointer-events: all;
+            transform: translateX(0);
+        }
+        .restore-assets-btn:hover {
+            background: #FF6B6B;
+            transform: translateX(-5px);
+        }
+        
         .asset-header {
             background: #0f3460;
             padding: 15px;
@@ -1981,6 +2394,16 @@
         .asset-panel.collapsed ~ #blocklyDiv {
             width: 100%;
         }
+        
+        /* Terminal/Debug Console expands when asset panel collapsed */
+        .asset-panel.collapsed ~ #terminalPanel,
+        .asset-panel.collapsed ~ .debug-overlay,
+        .asset-panel.collapsed ~ #lupiScriptPanel {
+            right: 0 !important;
+            left: 0;
+            width: 100%;
+        }
+        
         /* Preview Panel Styles */
         .preview-panel {
             position: fixed;
@@ -1990,11 +2413,18 @@
             height: 400px;
             background: #1a1a2e;
             border-top: 3px solid #533483;
+            transition: all 0.3s ease;
             z-index: 90;
             display: flex;
             flex-direction: column;
-            transition: transform 0.3s ease;
         }
+        
+        /* Preview panel also expands when asset panel collapsed */
+        .asset-panel.collapsed ~ .preview-panel {
+            right: 0 !important;
+            width: 100%;
+        }
+        
         .preview-panel.collapsed {
             transform: translateY(400px);
         }
@@ -2245,6 +2675,11 @@
         }
         .header-icon-btn:hover {
             transform: scale(1.2);
+        }
+        .header-icon-btn.active,
+        button.active {
+            background: #533483 !important;
+            transform: scale(1.1);
         }
 
         /* Autosave Indicator */
@@ -3058,28 +3493,107 @@
             <input type="text" id="projectName" placeholder="My Awesome Game" maxlength="50">
         </div>
         <div class="button-group">
-            <button id="leaderboardBtn" class="header-icon-btn" title="Leaderboard">🏆</button>
-
-            <button id="dashboardBtn" class="header-icon-btn" title="Dashboard">📊</button>
             <button id="moderationBtn" class="header-icon-btn moderator-only" title="Moderation" style="display: none;">🛡️</button>
-
-            <button id="settingsBtn" class="header-icon-btn" title="Settings">⚙️</button>
-            <div id="notificationBell" class="notification-bell">
-                🔔
-                <span id="notificationCount" class="notification-badge">0</span>
-            </div>
             <span id="saveStatus">Never saved</span>
             <button id="clearBtn">🗑️ Clear</button>
             <button id="saveBtn">💾 Save</button>
             <button id="quickPreviewBtn">👁️ Quick Preview</button>
             <button id="publishBtn">🚀 Publish</button>
-            <button id="exportBtn">📤 Export Code</button>
-            <button id="mobileExportBtn">📱 Mobile Export</button>
             <button id="terminalBtn">⌨️ Terminal</button>
             <button id="aiSuggestionsBtn" title="AI Suggestions">🤖 AI Suggestions</button>
+            <button id="lupiScriptBtn" title="LupiScript v1 - Create Custom Blocks" onclick="window.toggleLupiScript()">🧱 LupiScript</button>
+            <span id="mobileWarning" style="display:none; color:#e74c3c; font-size:12px; margin-left:10px;">📱 Mobile development not supported - too laggy</span>
         </div>
     </div>
     <div id="blocklyDiv"></div>
+    
+    <!-- Restore Asset Panel Button (appears when collapsed) -->
+    <button class="restore-assets-btn" id="restoreAssetsBtn" onclick="window.restoreAssetPanel()" title="Restore Asset Library">
+        📦 ◀
+    </button>
+    
+    <!-- LupiScript v1 Panel -->
+    <div id="lupiScriptPanel" style="display:none; position:fixed; bottom:0; left:0; right:300px; max-height:50vh; overflow:auto; padding:15px; border-top:2px solid #533483; background:#1a1a2e; z-index:1000; box-shadow:0 -4px 20px rgba(0,0,0,0.5); transition:right 0.3s ease;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+            <h3 style="color:#fff; margin:0;">🧱 LupiScript v1 - Create Custom Blocks</h3>
+            <button onclick="document.getElementById('lupiScriptPanel').style.display='none'" style="background:#e74c3c; color:white; border:none; padding:5px 12px; border-radius:4px; cursor:pointer;">✖ Close</button>
+        </div>
+        
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:15px;">
+            <div>
+                <label style="display:block; color:#dcdcaa; font-size:12px; margin-bottom:5px; font-weight:bold;">✍️ Write Your Block</label>
+                <textarea id="lupiEditor" placeholder='block play_sound "🔊 Play [sound] at [volume]%"
+  category Audio
+  field sound asset:audio
+  field volume number 100 min 0 max 100
+  code playSound("[sound]", [volume]/100)' style="width:100%; min-height:200px; font-family:'Courier New',monospace; padding:12px; background:#0f3460; color:#fff; border:1px solid #533483; border-radius:4px; font-size:13px; resize:vertical;"></textarea>
+                
+                <div style="margin-top:10px; display:flex; gap:10px;">
+                    <button onclick="LupiScript.submit()" style="flex:1; padding:10px; background:#2ecc71; color:#fff; border:none; border-radius:4px; cursor:pointer; font-weight:bold; font-size:14px;">✅ Create Block</button>
+                    <button onclick="document.getElementById('lupiExamples').style.display=document.getElementById('lupiExamples').style.display==='none'?'block':'none'" style="padding:10px 20px; background:#3498db; color:#fff; border:none; border-radius:4px; cursor:pointer;">📚 Examples</button>
+                </div>
+                
+                <div id="lupiExamples" style="display:none; margin-top:10px; padding:10px; background:#0f3460; border-radius:4px; font-size:11px; color:#95a5a6; max-height:150px; overflow:auto;">
+                    <strong style="color:#4ec9b0;">Quick Copy Examples:</strong><br><br>
+                    <div style="cursor:pointer; padding:5px; margin:5px 0; background:#1a1a2e; border-radius:3px;" onclick="document.getElementById('lupiEditor').value=this.dataset.code" data-code='block jump_entity "⬆️ Jump [entity]"
+  category Player
+  input entity Entity
+  code jump([entity])'>
+                        <strong style="color:#e74c3c;">Simple:</strong> Jump entity
+                    </div>
+                    <div style="cursor:pointer; padding:5px; margin:5px 0; background:#1a1a2e; border-radius:3px;" onclick="document.getElementById('lupiEditor').value=this.dataset.code" data-code='block play_sound "🔊 Play [sound] at [volume]%"
+  category Audio
+  field sound asset:audio
+  field volume number 100 min 0 max 100
+  code playSound("[sound]", [volume]/100)'>
+                        <strong style="color:#f39c12;">With Fields:</strong> Play sound with volume
+                    </div>
+                    <div style="cursor:pointer; padding:5px; margin:5px 0; background:#1a1a2e; border-radius:3px;" onclick="document.getElementById('lupiEditor').value=this.dataset.code" data-code='block move_entity "➡️ Move [entity] right by [pixels]px"
+  category Movement
+  input entity Entity "Entity to move"
+  field pixels number 10 min 1 max 1000
+  code setEntityX([entity], getEntityX([entity]) + [pixels])'>
+                        <strong style="color:#9b59b6;">With Input:</strong> Move entity
+                    </div>
+                    <div style="cursor:pointer; padding:5px; margin:5px 0; background:#1a1a2e; border-radius:3px;" onclick="document.getElementById('lupiEditor').value=this.dataset.code" data-code='block is_grounded "👣 Is [entity] on ground?"
+  category Physics
+  input entity Entity
+  output Boolean
+  code isGrounded([entity])'>
+                        <strong style="color:#3498db;">Output Block:</strong> Check if grounded
+                    </div>
+                </div>
+            </div>
+            
+            <div>
+                <label style="display:block; color:#dcdcaa; font-size:12px; margin-bottom:5px; font-weight:bold;">👁️ Preview & Status</label>
+                <div id="lupiPreview" style="padding:12px; background:#0f3460; border-radius:4px; color:#95a5a6; min-height:120px; margin-bottom:10px; border:1px solid #533483;">
+                    <div style="color:#95a5a6; text-align:center; padding:20px;">
+                        Your block preview will appear here
+                    </div>
+                </div>
+                
+                <div id="lupiStatus" style="padding:10px; background:#0f3460; border-radius:4px; color:#95a5a6; font-size:13px; border:1px solid #533483;">
+                    Ready to create blocks...
+                </div>
+                
+                <div style="margin-top:10px; padding:12px; background:#0f3460; border-radius:4px; font-size:11px; color:#95a5a6; border:1px solid #533483;">
+                    <strong style="color:#4ec9b0; display:block; margin-bottom:8px;">📝 Syntax Cheatsheet:</strong>
+                    <code style="display:block; background:#1a1a2e; padding:8px; border-radius:3px; margin:5px 0;">
+                        block <span style="color:#e74c3c;">name</span> "<span style="color:#2ecc71;">Display [field]</span>"<br>
+                        &nbsp;&nbsp;category <span style="color:#3498db;">CategoryName</span><br>
+                        &nbsp;&nbsp;field <span style="color:#e74c3c;">id</span> <span style="color:#f39c12;">type</span> <span style="color:#9b59b6;">default</span><br>
+                        &nbsp;&nbsp;input <span style="color:#e74c3c;">id</span> <span style="color:#f39c12;">Type</span> "<span style="color:#2ecc71;">Label</span>"<br>
+                        &nbsp;&nbsp;output <span style="color:#f39c12;">Type</span><br>
+                        &nbsp;&nbsp;code <span style="color:#dcdcaa;">yourFunction([field])</span>
+                    </code>
+                    <div style="margin-top:8px; color:#7f8c8d;">
+                        <strong>Field types:</strong> text, number, checkbox, color, choice, asset:audio, asset:sprite, tags:entities
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
     <div id="editor-container"></div>
     <canvas id="levelEditorCanvas" style="display: none;"></canvas>
     <div id="output"></div>
@@ -3833,12 +4347,10 @@
             <block type="get_touch_position"></block>
         </category>
 
-        <category name="📦 Export" colour="#27ae60">
-            <block type="export_desktop"></block>
-            <block type="export_web"></block>
-            <block type="set_game_title"></block>
-            <block type="set_game_version"></block>
+        <category name="🧱 Custom Blocks" colour="#FF6B6B" id="custom_blocks">
+            <!-- New blocks will appear here -->
         </category>
+
     </xml>
 
     <!-- AI Suggestion System is now in an external file -->
@@ -4292,7 +4804,15 @@ dependencies {
             }
         }
 
-        // Define custom blocks
+        // Define custom blocks - MUST BE CALLED AFTER BLOCKLY IS LOADED
+        function defineCustomBlocks() {
+            if (typeof Blockly === 'undefined') {
+                console.error('❌ Cannot define blocks - Blockly is not loaded');
+                return false;
+            }
+            
+            console.log('📦 Defining custom Blockly blocks...');
+
         Blockly.Blocks['on_game_start'] = {
             init: function() {
                 this.appendDummyInput()
@@ -6739,125 +7259,69 @@ dependencies {
             }
         };
 
-        // === EXPORT BLOCKS ===
-        Blockly.Blocks['export_desktop'] = {
-            init: function() {
-                this.appendDummyInput()
-                    .appendField("💾 Export to Desktop")
-                    .appendField(new Blockly.FieldDropdown([
-                        ["Windows", "windows"],
-                        ["Mac", "mac"],
-                        ["Linux", "linux"]
-                    ]), "PLATFORM");
-                this.appendDummyInput()
-                    .appendField(new Blockly.FieldCheckbox(false), "OPTIMIZE")
-                    .appendField("Optimize code");
-                this.setPreviousStatement(true, null);
-                this.setNextStatement(true, null);
-                this.setColour("#27ae60");
-                this.setTooltip("Export game as desktop application");
-            }
-        };
-
-        Blockly.Blocks['export_web'] = {
-            init: function() {
-                this.appendDummyInput()
-                    .appendField("🌐 Export to Web");
-                this.appendDummyInput()
-                    .appendField(new Blockly.FieldCheckbox(false), "OPTIMIZE")
-                    .appendField("Optimize code");
-                this.setPreviousStatement(true, null);
-                this.setNextStatement(true, null);
-                this.setColour("#27ae60");
-                this.setTooltip("Export game as web-playable HTML");
-            }
-        };
-
-        Blockly.Blocks['set_game_title'] = {
-            init: function() {
-                this.appendDummyInput()
-                    .appendField("📝 Set Game Title:")
-                    .appendField(new Blockly.FieldTextInput("My Game"), "TITLE");
-                this.setPreviousStatement(true, null);
-                this.setNextStatement(true, null);
-                this.setColour("#27ae60");
-                this.setTooltip("Set the game title for exports");
-            }
-        };
-
-        Blockly.Blocks['set_game_version'] = {
-            init: function() {
-                this.appendDummyInput()
-                    .appendField("🔢 Set Game Version:")
-                    .appendField(new Blockly.FieldTextInput("1.0.0"), "VERSION");
-                this.setPreviousStatement(true, null);
-                this.setNextStatement(true, null);
-                this.setColour("#27ae60");
-                this.setTooltip("Set the game version for exports");
-            }
-        };
+        // === EXPORT BLOCKS REMOVED (Not part of V1) ===
 
         // Code generators
-        Blockly.JavaScript['on_game_start'] = function(block) {
+        Blockly.JavaScript.forBlock['on_game_start'] = function(block) {
             var statements = Blockly.JavaScript.statementToCode(block, 'DO');
             return 'onGameStart(() => {\n' + statements + '});\n';
         };
 
-        Blockly.JavaScript['on_key_press'] = function(block) {
+        Blockly.JavaScript.forBlock['on_key_press'] = function(block) {
             var key = block.getFieldValue('KEY');
             var statements = Blockly.JavaScript.statementToCode(block, 'DO');
             return 'onKeyPress("' + key + '", () => {\n' + statements + '});\n';
         };
 
-        Blockly.JavaScript['on_collision'] = function(block) {
+        Blockly.JavaScript.forBlock['on_collision'] = function(block) {
             var obj1 = block.getFieldValue('OBJECT1');
             var obj2 = block.getFieldValue('OBJECT2');
             var statements = Blockly.JavaScript.statementToCode(block, 'DO');
             return 'onCollision("' + obj1 + '", "' + obj2 + '", () => {\n' + statements + '});\n';
         };
 
-        Blockly.JavaScript['on_timer'] = function(block) {
+        Blockly.JavaScript.forBlock['on_timer'] = function(block) {
             var seconds = block.getFieldValue('SECONDS');
             var statements = Blockly.JavaScript.statementToCode(block, 'DO');
             return 'everySeconds(' + seconds + ', () => {\n' + statements + '});\n';
         };
 
-        Blockly.JavaScript['move_player'] = function(block) {
+        Blockly.JavaScript.forBlock['move_player'] = function(block) {
             var direction = block.getFieldValue('DIRECTION');
             var amount = block.getFieldValue('AMOUNT');
             return 'movePlayer("' + direction + '", ' + amount + ');\n';
         };
 
-        Blockly.JavaScript['spawn_sprite'] = function(block) {
+        Blockly.JavaScript.forBlock['spawn_sprite'] = function(block) {
             var sprite = block.getFieldValue('SPRITE');
             var x = block.getFieldValue('X');
             var y = block.getFieldValue('Y');
             return 'spawnSprite("' + sprite + '", ' + x + ', ' + y + ');\n';
         };
 
-        Blockly.JavaScript['destroy_sprite'] = function(block) {
+        Blockly.JavaScript.forBlock['destroy_sprite'] = function(block) {
             var target = block.getFieldValue('TARGET');
             return 'destroySprite("' + target + '");\n';
         };
 
-        Blockly.JavaScript['add_score'] = function(block) {
+        Blockly.JavaScript.forBlock['add_score'] = function(block) {
             var points = block.getFieldValue('POINTS');
             return 'addScore(' + points + ');\n';
         };
 
-        Blockly.JavaScript['create_keyframe'] = function(block) {
+        Blockly.JavaScript.forBlock['create_keyframe'] = function(block) {
             const tag = block.getFieldValue('TAG');
             const time = block.getFieldValue('TIME');
             return `createKeyframeForTag("${tag}", ${time});\n`;
         };
 
-        Blockly.JavaScript['set_keyframe_property'] = function(block) {
+        Blockly.JavaScript.forBlock['set_keyframe_property'] = function(block) {
             const property = block.getFieldValue('PROPERTY');
             const value = block.getFieldValue('VALUE');
             return `setKeyframeProperty("${property}", ${value});\n`;
         };
 
-        Blockly.JavaScript['animate_keyframes'] = function(block) {
+        Blockly.JavaScript.forBlock['animate_keyframes'] = function(block) {
             const tag = block.getFieldValue('TAG');
             const startTime = block.getFieldValue('START_TIME');
             const endTime = block.getFieldValue('END_TIME');
@@ -6865,20 +7329,20 @@ dependencies {
             return `animateKeyframes("${tag}", ${startTime}, ${endTime}, "${easing}");\n`;
         };
 
-        Blockly.JavaScript['play_animation'] = function(block) {
+        Blockly.JavaScript.forBlock['play_animation'] = function(block) {
             const animation = block.getFieldValue('ANIMATION');
             const tag = block.getFieldValue('TAG');
             const loop = block.getFieldValue('LOOP') === 'TRUE';
             return `playAnimationOnTag("${animation}", "${tag}", {loop: ${loop}});\n`;
         };
 
-        Blockly.JavaScript['stop_animation'] = function(block) {
+        Blockly.JavaScript.forBlock['stop_animation'] = function(block) {
             const animation = block.getFieldValue('ANIMATION');
             const tag = block.getFieldValue('TAG');
             return `stopAnimationOnTag("${animation}", "${tag}");\n`;
         };
 
-        Blockly.JavaScript['animation_with_keyframes'] = function(block) {
+        Blockly.JavaScript.forBlock['animation_with_keyframes'] = function(block) {
             const animation = block.getFieldValue('ANIMATION');
             const tag = block.getFieldValue('TAG');
             const duration = block.getFieldValue('DURATION');
@@ -6887,24 +7351,24 @@ dependencies {
         };
 
         // === MOVEMENT GENERATORS ===
-        Blockly.JavaScript['set_velocity'] = function(block) {
+        Blockly.JavaScript.forBlock['set_velocity'] = function(block) {
             const axis = block.getFieldValue('AXIS');
             const value = block.getFieldValue('VALUE');
             return `setVelocity("${axis}", ${value});\n`;
         };
 
-        Blockly.JavaScript['apply_gravity'] = function(block) {
+        Blockly.JavaScript.forBlock['apply_gravity'] = function(block) {
             const force = block.getFieldValue('FORCE');
             return `applyGravity(${force});\n`;
         };
 
-        Blockly.JavaScript['apply_friction'] = function(block) {
+        Blockly.JavaScript.forBlock['apply_friction'] = function(block) {
             const amount = block.getFieldValue('AMOUNT');
             return `applyFriction(${amount});\n`;
         };
 
         // === COLLISION GENERATORS ===
-        Blockly.JavaScript['collision_response'] = function(block) {
+        Blockly.JavaScript.forBlock['collision_response'] = function(block) {
             const target = block.getFieldValue('TARGET');
             const response = block.getFieldValue('RESPONSE');
             const statements = Blockly.JavaScript.statementToCode(block, 'DO');
@@ -6912,215 +7376,215 @@ dependencies {
         };
 
         // === CAMERA GENERATORS ===
-        Blockly.JavaScript['camera_follow'] = function(block) {
+        Blockly.JavaScript.forBlock['camera_follow'] = function(block) {
             const target = block.getFieldValue('TARGET');
             const smooth = block.getFieldValue('SMOOTH');
             return `cameraFollow("${target}", ${smooth});\n`;
         };
 
-        Blockly.JavaScript['camera_clamp'] = function(block) {
+        Blockly.JavaScript.forBlock['camera_clamp'] = function(block) {
             const minX = block.getFieldValue('MINX');
             const maxX = block.getFieldValue('MAXX');
             return `cameraClamp(${minX}, ${maxX});\n`;
         };
 
         // === STATE GENERATORS ===
-        Blockly.JavaScript['set_variable'] = function(block) {
+        Blockly.JavaScript.forBlock['set_variable'] = function(block) {
             const varName = block.getFieldValue('VARNAME');
             const value = block.getFieldValue('VALUE');
             return `gameState["${varName}"] = ${value};\n`;
         };
 
-        Blockly.JavaScript['get_variable'] = function(block) {
+        Blockly.JavaScript.forBlock['get_variable'] = function(block) {
             const varName = block.getFieldValue('VARNAME');
             return [`gameState["${varName}"]`, Blockly.JavaScript.ORDER_MEMBER];
         };
 
-        Blockly.JavaScript['create_array'] = function(block) {
+        Blockly.JavaScript.forBlock['create_array'] = function(block) {
             const arrayName = block.getFieldValue('ARRAYNAME');
             return `gameState["${arrayName}"] = [];\n`;
         };
 
-        Blockly.JavaScript['array_push'] = function(block) {
+        Blockly.JavaScript.forBlock['array_push'] = function(block) {
             const arrayName = block.getFieldValue('ARRAYNAME');
             const item = Blockly.JavaScript.valueToCode(block, 'ITEM', Blockly.JavaScript.ORDER_NONE) || 'null';
             return `gameState["${arrayName}"].push(${item});\n`;
         };
 
         // === HEALTH GENERATORS ===
-        Blockly.JavaScript['set_health'] = function(block) {
+        Blockly.JavaScript.forBlock['set_health'] = function(block) {
             const value = block.getFieldValue('VALUE');
             return `setHealth(${value});\n`;
         };
 
-        Blockly.JavaScript['add_health'] = function(block) {
+        Blockly.JavaScript.forBlock['add_health'] = function(block) {
             const amount = block.getFieldValue('AMOUNT');
             return `addHealth(${amount});\n`;
         };
 
-        Blockly.JavaScript['set_lives'] = function(block) {
+        Blockly.JavaScript.forBlock['set_lives'] = function(block) {
             const value = block.getFieldValue('VALUE');
             return `setLives(${value});\n`;
         };
 
         // === SAVE/LOAD GENERATORS ===
-        Blockly.JavaScript['save_game'] = function(block) {
+        Blockly.JavaScript.forBlock['save_game'] = function(block) {
             return `saveGameState();\n`;
         };
 
-        Blockly.JavaScript['load_game'] = function(block) {
+        Blockly.JavaScript.forBlock['load_game'] = function(block) {
             return `loadGameState();\n`;
         };
 
         // === SNIPPET 2 CODE GENERATORS ===
-        Blockly.JavaScript['on_scene_load'] = function(block) {
+        Blockly.JavaScript.forBlock['on_scene_load'] = function(block) {
             const scene = block.getFieldValue('SCENE');
             const statements = Blockly.JavaScript.statementToCode(block, 'DO');
             return `onSceneLoad("${scene}", () => {\n${statements}});\n`;
         };
 
-        Blockly.JavaScript['on_collision_tagged'] = function(block) {
+        Blockly.JavaScript.forBlock['on_collision_tagged'] = function(block) {
             const tag1 = block.getFieldValue('TAG1');
             const tag2 = block.getFieldValue('TAG2');
             const statements = Blockly.JavaScript.statementToCode(block, 'DO');
             return `onCollisionTagged("${tag1}", "${tag2}", () => {\n${statements}});\n`;
         };
 
-        Blockly.JavaScript['on_mouse_click'] = function(block) {
+        Blockly.JavaScript.forBlock['on_mouse_click'] = function(block) {
             const statements = Blockly.JavaScript.statementToCode(block, 'DO');
             return `onMouseClick(() => {\n${statements}});\n`;
         };
 
-        Blockly.JavaScript['on_object_destroyed'] = function(block) {
+        Blockly.JavaScript.forBlock['on_object_destroyed'] = function(block) {
             const tag = block.getFieldValue('TAG');
             const statements = Blockly.JavaScript.statementToCode(block, 'DO');
             return `onObjectDestroyed("${tag}", () => {\n${statements}});\n`;
         };
 
-        Blockly.JavaScript['on_score_change'] = function(block) {
+        Blockly.JavaScript.forBlock['on_score_change'] = function(block) {
             const type = block.getFieldValue('TYPE');
             const statements = Blockly.JavaScript.statementToCode(block, 'DO');
             return `onScoreChange("${type}", () => {\n${statements}});\n`;
         };
 
-        Blockly.JavaScript['on_area_enter'] = function(block) {
+        Blockly.JavaScript.forBlock['on_area_enter'] = function(block) {
             const zone = block.getFieldValue('ZONE');
             const statements = Blockly.JavaScript.statementToCode(block, 'DO');
             return `onAreaEnter("${zone}", () => {\n${statements}});\n`;
         };
 
-        Blockly.JavaScript['on_level_complete'] = function(block) {
+        Blockly.JavaScript.forBlock['on_level_complete'] = function(block) {
             const statements = Blockly.JavaScript.statementToCode(block, 'DO');
             return `onLevelComplete(() => {\n${statements}});\n`;
         };
 
-        Blockly.JavaScript['load_scene'] = function(block) {
+        Blockly.JavaScript.forBlock['load_scene'] = function(block) {
             const sceneName = block.getFieldValue('SCENE_NAME');
             return `loadScene("${sceneName}");\n`;
         };
 
-        Blockly.JavaScript['set_camera_target'] = function(block) {
+        Blockly.JavaScript.forBlock['set_camera_target'] = function(block) {
             const target = Blockly.JavaScript.valueToCode(block, 'TARGET', Blockly.JavaScript.ORDER_NONE) || 'null';
             return `setCameraTarget(${target});\n`;
         };
 
-        Blockly.JavaScript['pause_game'] = function(block) {
+        Blockly.JavaScript.forBlock['pause_game'] = function(block) {
             return `pauseGame();\n`;
         };
 
-        Blockly.JavaScript['resume_game'] = function(block) {
+        Blockly.JavaScript.forBlock['resume_game'] = function(block) {
             return `resumeGame();\n`;
         };
 
-        Blockly.JavaScript['set_time_scale'] = function(block) {
+        Blockly.JavaScript.forBlock['set_time_scale'] = function(block) {
             const scale = block.getFieldValue('SCALE');
             return `setTimeScale(${scale});\n`;
         };
 
-        Blockly.JavaScript['for_each_with_tag'] = function(block) {
+        Blockly.JavaScript.forBlock['for_each_with_tag'] = function(block) {
             const tag = block.getFieldValue('TAG');
             const statements = Blockly.JavaScript.statementToCode(block, 'DO');
             return `forEachWithTag("${tag}", (entity) => {\n${statements}});\n`;
         };
 
-        Blockly.JavaScript['count_with_tag'] = function(block) {
+        Blockly.JavaScript.forBlock['count_with_tag'] = function(block) {
             const tag = block.getFieldValue('TAG');
             return [`countWithTag("${tag}")`, Blockly.JavaScript.ORDER_FUNCTION_CALL];
         };
 
-        Blockly.JavaScript['destroy_all_with_tag'] = function(block) {
+        Blockly.JavaScript.forBlock['destroy_all_with_tag'] = function(block) {
             const tag = block.getFieldValue('TAG');
             return `destroyAllWithTag("${tag}");\n`;
         };
 
         // === SNIPPET 3 CODE GENERATORS ===
-        Blockly.JavaScript['move_along_path'] = function(block) {
+        Blockly.JavaScript.forBlock['move_along_path'] = function(block) {
             const object = block.getFieldValue('OBJECT');
             const path = block.getFieldValue('PATH');
             const speed = block.getFieldValue('SPEED');
             return `moveAlongPath("${object}", "${path}", ${speed});\n`;
         };
 
-        Blockly.JavaScript['find_path_to'] = function(block) {
+        Blockly.JavaScript.forBlock['find_path_to'] = function(block) {
             const target = block.getFieldValue('TARGET');
             return `findPathTo("${target}");\n`;
         };
 
-        Blockly.JavaScript['ai_patrol'] = function(block) {
+        Blockly.JavaScript.forBlock['ai_patrol'] = function(block) {
             const x1 = block.getFieldValue('X1');
             const x2 = block.getFieldValue('X2');
             return `aiPatrol(${x1}, ${x2});\n`;
         };
 
-        Blockly.JavaScript['ai_chase'] = function(block) {
+        Blockly.JavaScript.forBlock['ai_chase'] = function(block) {
             const target = block.getFieldValue('TARGET');
             const speed = block.getFieldValue('SPEED');
             return `aiChase("${target}", ${speed});\n`;
         };
 
-        Blockly.JavaScript['ai_flee'] = function(block) {
+        Blockly.JavaScript.forBlock['ai_flee'] = function(block) {
             const target = block.getFieldValue('TARGET');
             const speed = block.getFieldValue('SPEED');
             return `aiFlee("${target}", ${speed});\n`;
         };
 
-        Blockly.JavaScript['ai_init_state'] = function(block) {
+        Blockly.JavaScript.forBlock['ai_init_state'] = function(block) {
             const entity = Blockly.JavaScript.valueToCode(block, 'ENTITY', Blockly.JavaScript.ORDER_NONE) || 'null';
             const defaultState = block.getFieldValue('DEFAULT_STATE');
             return `aiInitState(${entity}, "${defaultState}");\n`;
         };
 
-        Blockly.JavaScript['ai_set_state'] = function(block) {
+        Blockly.JavaScript.forBlock['ai_set_state'] = function(block) {
             const entity = Blockly.JavaScript.valueToCode(block, 'ENTITY', Blockly.JavaScript.ORDER_NONE) || 'null';
             const newState = block.getFieldValue('NEW_STATE');
             return `aiSetState(${entity}, "${newState}");\n`;
         };
 
-        Blockly.JavaScript['ai_is_in_state'] = function(block) {
+        Blockly.JavaScript.forBlock['ai_is_in_state'] = function(block) {
             const entity = Blockly.JavaScript.valueToCode(block, 'ENTITY', Blockly.JavaScript.ORDER_NONE) || 'null';
             const stateName = block.getFieldValue('STATE_NAME');
             return [`aiIsInState(${entity}, "${stateName}")`, Blockly.JavaScript.ORDER_FUNCTION_CALL];
         };
 
-        Blockly.JavaScript['jump_buffered'] = function(block) {
+        Blockly.JavaScript.forBlock['jump_buffered'] = function(block) {
             const force = block.getFieldValue('FORCE');
             const buffer = block.getFieldValue('BUFFER');
             return `jumpBuffered(${force}, ${buffer});\n`;
         };
 
-        Blockly.JavaScript['dash'] = function(block) {
+        Blockly.JavaScript.forBlock['dash'] = function(block) {
             const direction = block.getFieldValue('DIRECTION');
             const distance = block.getFieldValue('DISTANCE');
             return `dash("${direction}", ${distance});\n`;
         };
 
-        Blockly.JavaScript['knockback'] = function(block) {
+        Blockly.JavaScript.forBlock['knockback'] = function(block) {
             const force = block.getFieldValue('FORCE');
             const angle = block.getFieldValue('ANGLE');
             return `knockback(${force}, ${angle});\n`;
         };
 
-        Blockly.JavaScript['set_ai_type'] = function(block) {
+        Blockly.JavaScript.forBlock['set_ai_type'] = function(block) {
             const entity = Blockly.JavaScript.valueToCode(block, 'ENTITY', Blockly.JavaScript.ORDER_NONE) || 'null';
             const aiType = block.getFieldValue('AI_TYPE');
             const targetTag = block.getFieldValue('TARGET_TAG');
@@ -7138,14 +7602,14 @@ dependencies {
             return `${entity}.aiMetadata = ${metadataStr};\n`;
         };
 
-        Blockly.JavaScript['tilemap_create'] = function(block) {
+        Blockly.JavaScript.forBlock['tilemap_create'] = function(block) {
             const width = block.getFieldValue('WIDTH');
             const height = block.getFieldValue('HEIGHT');
             const tileSize = block.getFieldValue('TILE_SIZE');
             return [`createTilemap(${width}, ${height}, ${tileSize}, ${tileSize})`, Blockly.JavaScript.ORDER_FUNCTION_CALL];
         };
 
-        Blockly.JavaScript['tilemap_set_tile'] = function(block) {
+        Blockly.JavaScript.forBlock['tilemap_set_tile'] = function(block) {
             const tilemapId = Blockly.JavaScript.valueToCode(block, 'TILEMAP_ID', Blockly.JavaScript.ORDER_ATOMIC) || '""';
             const x = block.getFieldValue('X');
             const y = block.getFieldValue('Y');
@@ -7154,53 +7618,53 @@ dependencies {
             return `setTile(${tilemapId}, ${x}, ${y}, ${tileId}, "${layer}");\n`;
         };
 
-        Blockly.JavaScript['inventory_get_count'] = function(block) {
+        Blockly.JavaScript.forBlock['inventory_get_count'] = function(block) {
             const itemId = block.getFieldValue('ITEM_ID');
             return [`inventoryGetCount("${itemId}")`, Blockly.JavaScript.ORDER_FUNCTION_CALL];
         };
 
-        Blockly.JavaScript['inventory_swap_slots'] = function(block) {
+        Blockly.JavaScript.forBlock['inventory_swap_slots'] = function(block) {
             const slot1 = block.getFieldValue('SLOT1');
             const slot2 = block.getFieldValue('SLOT2');
             return `inventorySwapSlots(${slot1}, ${slot2});\n`;
         };
 
         // === SNIPPET 4 CODE GENERATORS ===
-        Blockly.JavaScript['inventory_add'] = function(block) {
+        Blockly.JavaScript.forBlock['inventory_add'] = function(block) {
             const item = block.getFieldValue('ITEM');
             const quantity = block.getFieldValue('QUANTITY');
             return `inventoryAdd("${item}", ${quantity});\n`;
         };
 
-        Blockly.JavaScript['inventory_remove'] = function(block) {
+        Blockly.JavaScript.forBlock['inventory_remove'] = function(block) {
             const item = block.getFieldValue('ITEM');
             const quantity = block.getFieldValue('QUANTITY');
             return `inventoryRemove("${item}", ${quantity});\n`;
         };
 
-        Blockly.JavaScript['inventory_has'] = function(block) {
+        Blockly.JavaScript.forBlock['inventory_has'] = function(block) {
             const item = block.getFieldValue('ITEM');
             return [`inventoryHas("${item}")`, Blockly.JavaScript.ORDER_FUNCTION_CALL];
         };
 
-        Blockly.JavaScript['apply_powerup'] = function(block) {
+        Blockly.JavaScript.forBlock['apply_powerup'] = function(block) {
             const type = block.getFieldValue('TYPE');
             const duration = block.getFieldValue('DURATION');
             return `applyPowerup("${type}", ${duration});\n`;
         };
 
-        Blockly.JavaScript['apply_debuff'] = function(block) {
+        Blockly.JavaScript.forBlock['apply_debuff'] = function(block) {
             const type = block.getFieldValue('TYPE');
             const duration = block.getFieldValue('DURATION');
             return `applyDebuff("${type}", ${duration});\n`;
         };
 
-        Blockly.JavaScript['has_buff'] = function(block) {
+        Blockly.JavaScript.forBlock['has_buff'] = function(block) {
             const buff = block.getFieldValue('BUFF');
             return [`hasBuff("${buff}")`, Blockly.JavaScript.ORDER_FUNCTION_CALL];
         };
 
-        Blockly.JavaScript['pickup_create'] = function(block) {
+        Blockly.JavaScript.forBlock['pickup_create'] = function(block) {
             const type = block.getFieldValue('TYPE');
             const x = block.getFieldValue('X');
             const y = block.getFieldValue('Y');
@@ -7208,7 +7672,7 @@ dependencies {
         };
 
         // === SNIPPET 1 CODE GENERATORS ===
-        Blockly.JavaScript['switch_case'] = function(block) {
+        Blockly.JavaScript.forBlock['switch_case'] = function(block) {
             const value = Blockly.JavaScript.valueToCode(block, 'VALUE', Blockly.JavaScript.ORDER_NONE) || '0';
             const match0 = block.getFieldValue('MATCH0');
             const case0 = Blockly.JavaScript.statementToCode(block, 'CASE0');
@@ -7216,58 +7680,58 @@ dependencies {
             return `switch(${value}) {\n  case ${match0}:\n${case0}\n    break;\n  default:\n${defaultCase}\n}\n`;
         };
 
-        Blockly.JavaScript['while_loop'] = function(block) {
+        Blockly.JavaScript.forBlock['while_loop'] = function(block) {
             const condition = Blockly.JavaScript.valueToCode(block, 'CONDITION', Blockly.JavaScript.ORDER_NONE) || 'false';
             const statements = Blockly.JavaScript.statementToCode(block, 'DO');
             return `while(${condition}) {\n${statements}}\n`;
         };
 
-        Blockly.JavaScript['repeat_until'] = function(block) {
+        Blockly.JavaScript.forBlock['repeat_until'] = function(block) {
             const condition = Blockly.JavaScript.valueToCode(block, 'CONDITION', Blockly.JavaScript.ORDER_NONE) || 'true';
             const statements = Blockly.JavaScript.statementToCode(block, 'DO');
             return `do {\n${statements}} while(!(${condition}));\n`;
         };
 
-        Blockly.JavaScript['loop_break'] = function(block) {
+        Blockly.JavaScript.forBlock['loop_break'] = function(block) {
             return 'break;\n';
         };
 
-        Blockly.JavaScript['loop_continue'] = function(block) {
+        Blockly.JavaScript.forBlock['loop_continue'] = function(block) {
             return 'continue;\n';
         };
 
-        Blockly.JavaScript['delay'] = function(block) {
+        Blockly.JavaScript.forBlock['delay'] = function(block) {
             const seconds = block.getFieldValue('SECONDS');
             const statements = Blockly.JavaScript.statementToCode(block, 'THEN');
             return `delay(${seconds}, () => {\n${statements}});\n`;
         };
 
-        Blockly.JavaScript['cooldown'] = function(block) {
+        Blockly.JavaScript.forBlock['cooldown'] = function(block) {
             const name = block.getFieldValue('NAME');
             const duration = block.getFieldValue('DURATION');
             const statements = Blockly.JavaScript.statementToCode(block, 'DO');
             return `cooldown("${name}", ${duration}, () => {\n${statements}});\n`;
         };
 
-        Blockly.JavaScript['random_choice'] = function(block) {
+        Blockly.JavaScript.forBlock['random_choice'] = function(block) {
             const min = block.getFieldValue('MIN');
             const max = block.getFieldValue('MAX');
             return [`randomInt(${min}, ${max})`, Blockly.JavaScript.ORDER_FUNCTION_CALL];
         };
 
-        Blockly.JavaScript['weighted_random'] = function(block) {
+        Blockly.JavaScript.forBlock['weighted_random'] = function(block) {
             const weight1 = Blockly.JavaScript.valueToCode(block, 'WEIGHT1', Blockly.JavaScript.ORDER_NONE) || '1';
             const weight2 = Blockly.JavaScript.valueToCode(block, 'WEIGHT2', Blockly.JavaScript.ORDER_NONE) || '1';
             return [`weightedRandom([${weight1}, ${weight2}])`, Blockly.JavaScript.ORDER_FUNCTION_CALL];
         };
 
-        Blockly.JavaScript['define_function'] = function(block) {
+        Blockly.JavaScript.forBlock['define_function'] = function(block) {
             const name = block.getFieldValue('NAME');
             const statements = Blockly.JavaScript.statementToCode(block, 'DO');
             return `function ${name}() {\n${statements}}\n`;
         };
 
-        Blockly.JavaScript['call_function'] = function(block) {
+        Blockly.JavaScript.forBlock['call_function'] = function(block) {
             const name = block.getFieldValue('NAME');
             return `${name}();\n`;
         };
@@ -7275,160 +7739,160 @@ dependencies {
         // ============ PHASE 1: NEW GENERATORS (INPUT, ENTITY, LOGIC) ============
 
         // === INPUT & CONTROLS GENERATORS ===
-        Blockly.JavaScript['when_key_pressed'] = function(block) {
+        Blockly.JavaScript.forBlock['when_key_pressed'] = function(block) {
             const key = block.getFieldValue('KEY');
             const statements = Blockly.JavaScript.statementToCode(block, 'DO');
             return `onKeyPressed("${key}", () => {\n${statements}});\n`;
         };
 
-        Blockly.JavaScript['when_key_released'] = function(block) {
+        Blockly.JavaScript.forBlock['when_key_released'] = function(block) {
             const key = block.getFieldValue('KEY');
             const statements = Blockly.JavaScript.statementToCode(block, 'DO');
             return `onKeyReleased("${key}", () => {\n${statements}});\n`;
         };
 
-        Blockly.JavaScript['while_key_held'] = function(block) {
+        Blockly.JavaScript.forBlock['while_key_held'] = function(block) {
             const key = block.getFieldValue('KEY');
             const statements = Blockly.JavaScript.statementToCode(block, 'DO');
             return `whileKeyHeld("${key}", () => {\n${statements}});\n`;
         };
 
-        Blockly.JavaScript['when_mouse_button_pressed'] = function(block) {
+        Blockly.JavaScript.forBlock['when_mouse_button_pressed'] = function(block) {
             const button = block.getFieldValue('BUTTON');
             const statements = Blockly.JavaScript.statementToCode(block, 'DO');
             return `onMouseButtonPressed("${button}", () => {\n${statements}});\n`;
         };
 
-        Blockly.JavaScript['when_mouse_button_released'] = function(block) {
+        Blockly.JavaScript.forBlock['when_mouse_button_released'] = function(block) {
             const button = block.getFieldValue('BUTTON');
             const statements = Blockly.JavaScript.statementToCode(block, 'DO');
             return `onMouseButtonReleased("${button}", () => {\n${statements}});\n`;
         };
 
-        Blockly.JavaScript['get_mouse_x'] = function(block) {
+        Blockly.JavaScript.forBlock['get_mouse_x'] = function(block) {
             return ['getMouseX()', Blockly.JavaScript.ORDER_FUNCTION_CALL];
         };
 
-        Blockly.JavaScript['get_mouse_y'] = function(block) {
+        Blockly.JavaScript.forBlock['get_mouse_y'] = function(block) {
             return ['getMouseY()', Blockly.JavaScript.ORDER_FUNCTION_CALL];
         };
 
-        Blockly.JavaScript['lock_cursor'] = function(block) {
+        Blockly.JavaScript.forBlock['lock_cursor'] = function(block) {
             return 'lockCursor();\n';
         };
 
-        Blockly.JavaScript['unlock_cursor'] = function(block) {
+        Blockly.JavaScript.forBlock['unlock_cursor'] = function(block) {
             return 'unlockCursor();\n';
         };
 
-        Blockly.JavaScript['enable_input'] = function(block) {
+        Blockly.JavaScript.forBlock['enable_input'] = function(block) {
             return 'enableInput();\n';
         };
 
-        Blockly.JavaScript['disable_input'] = function(block) {
+        Blockly.JavaScript.forBlock['disable_input'] = function(block) {
             return 'disableInput();\n';
         };
 
-        Blockly.JavaScript['is_input_enabled'] = function(block) {
+        Blockly.JavaScript.forBlock['is_input_enabled'] = function(block) {
             return ['isInputEnabled()', Blockly.JavaScript.ORDER_FUNCTION_CALL];
         };
 
-        Blockly.JavaScript['set_input_context'] = function(block) {
+        Blockly.JavaScript.forBlock['set_input_context'] = function(block) {
             const context = block.getFieldValue('CONTEXT');
             return `setInputContext("${context}");\n`;
         };
 
-        Blockly.JavaScript['is_key_pressed'] = function(block) {
+        Blockly.JavaScript.forBlock['is_key_pressed'] = function(block) {
             const key = block.getFieldValue('KEY');
             return [`isKeyPressed("${key}")`, Blockly.JavaScript.ORDER_FUNCTION_CALL];
         };
 
         // === ENTITY & TAG LOGIC GENERATORS ===
-        Blockly.JavaScript['for_each_with_tag'] = function(block) {
+        Blockly.JavaScript.forBlock['for_each_with_tag'] = function(block) {
             const tag = block.getFieldValue('TAG');
             const varName = block.getFieldValue('VAR');
             const statements = Blockly.JavaScript.statementToCode(block, 'DO');
             return `forEachWithTag("${tag}", (${varName}) => {\n${statements}});\n`;
         };
 
-        Blockly.JavaScript['count_with_tag'] = function(block) {
+        Blockly.JavaScript.forBlock['count_with_tag'] = function(block) {
             const tag = block.getFieldValue('TAG');
             return [`countWithTag("${tag}")`, Blockly.JavaScript.ORDER_FUNCTION_CALL];
         };
 
-        Blockly.JavaScript['destroy_all_with_tag'] = function(block) {
+        Blockly.JavaScript.forBlock['destroy_all_with_tag'] = function(block) {
             const tag = block.getFieldValue('TAG');
             return `destroyAllWithTag("${tag}");\n`;
         };
 
-        Blockly.JavaScript['clone_with_tag'] = function(block) {
+        Blockly.JavaScript.forBlock['clone_with_tag'] = function(block) {
             const tag = block.getFieldValue('TAG');
             const x = block.getFieldValue('X');
             const y = block.getFieldValue('Y');
             return `cloneWithTag("${tag}", ${x}, ${y});\n`;
         };
 
-        Blockly.JavaScript['add_tag'] = function(block) {
+        Blockly.JavaScript.forBlock['add_tag'] = function(block) {
             const tag = block.getFieldValue('TAG');
             const entity = Blockly.JavaScript.valueToCode(block, 'ENTITY', Blockly.JavaScript.ORDER_NONE) || 'null';
             return `addTag(${entity}, "${tag}");\n`;
         };
 
-        Blockly.JavaScript['remove_tag'] = function(block) {
+        Blockly.JavaScript.forBlock['remove_tag'] = function(block) {
             const tag = block.getFieldValue('TAG');
             const entity = Blockly.JavaScript.valueToCode(block, 'ENTITY', Blockly.JavaScript.ORDER_NONE) || 'null';
             return `removeTag(${entity}, "${tag}");\n`;
         };
 
-        Blockly.JavaScript['has_tag'] = function(block) {
+        Blockly.JavaScript.forBlock['has_tag'] = function(block) {
             const tag = block.getFieldValue('TAG');
             const entity = Blockly.JavaScript.valueToCode(block, 'ENTITY', Blockly.JavaScript.ORDER_NONE) || 'null';
             return [`hasTag(${entity}, "${tag}")`, Blockly.JavaScript.ORDER_FUNCTION_CALL];
         };
 
-        Blockly.JavaScript['get_nearest_with_tag'] = function(block) {
+        Blockly.JavaScript.forBlock['get_nearest_with_tag'] = function(block) {
             const tag = block.getFieldValue('TAG');
             const from = Blockly.JavaScript.valueToCode(block, 'FROM', Blockly.JavaScript.ORDER_NONE) || 'null';
             return [`getNearestWithTag(${from}, "${tag}")`, Blockly.JavaScript.ORDER_FUNCTION_CALL];
         };
 
-        Blockly.JavaScript['get_random_with_tag'] = function(block) {
+        Blockly.JavaScript.forBlock['get_random_with_tag'] = function(block) {
             const tag = block.getFieldValue('TAG');
             return [`getRandomWithTag("${tag}")`, Blockly.JavaScript.ORDER_FUNCTION_CALL];
         };
 
-        Blockly.JavaScript['get_all_with_tag'] = function(block) {
+        Blockly.JavaScript.forBlock['get_all_with_tag'] = function(block) {
             const tag = block.getFieldValue('TAG');
             return [`getAllWithTag("${tag}")`, Blockly.JavaScript.ORDER_FUNCTION_CALL];
         };
 
-        Blockly.JavaScript['distance_to_nearest'] = function(block) {
+        Blockly.JavaScript.forBlock['distance_to_nearest'] = function(block) {
             const tag = block.getFieldValue('TAG');
             const from = Blockly.JavaScript.valueToCode(block, 'FROM', Blockly.JavaScript.ORDER_NONE) || 'null';
             return [`distanceToNearest(${from}, "${tag}")`, Blockly.JavaScript.ORDER_FUNCTION_CALL];
         };
 
-        Blockly.JavaScript['get_entity_position'] = function(block) {
+        Blockly.JavaScript.forBlock['get_entity_position'] = function(block) {
             const axis = block.getFieldValue('AXIS');
             const entity = Blockly.JavaScript.valueToCode(block, 'ENTITY', Blockly.JavaScript.ORDER_NONE) || 'null';
             return [`getEntityPosition(${entity}, "${axis}")`, Blockly.JavaScript.ORDER_FUNCTION_CALL];
         };
 
-        Blockly.JavaScript['set_entity_position'] = function(block) {
+        Blockly.JavaScript.forBlock['set_entity_position'] = function(block) {
             const entity = Blockly.JavaScript.valueToCode(block, 'ENTITY', Blockly.JavaScript.ORDER_NONE) || 'null';
             const x = Blockly.JavaScript.valueToCode(block, 'X', Blockly.JavaScript.ORDER_NONE) || '0';
             const y = Blockly.JavaScript.valueToCode(block, 'Y', Blockly.JavaScript.ORDER_NONE) || '0';
             return `setEntityPosition(${entity}, ${x}, ${y});\n`;
         };
 
-        Blockly.JavaScript['on_tag_collision'] = function(block) {
+        Blockly.JavaScript.forBlock['on_tag_collision'] = function(block) {
             const tag1 = block.getFieldValue('TAG1');
             const tag2 = block.getFieldValue('TAG2');
             const statements = Blockly.JavaScript.statementToCode(block, 'DO');
             return `onTagCollision("${tag1}", "${tag2}", () => {\n${statements}});\n`;
         };
 
-        Blockly.JavaScript['tag_collision_exit'] = function(block) {
+        Blockly.JavaScript.forBlock['tag_collision_exit'] = function(block) {
             const tag1 = block.getFieldValue('TAG1');
             const tag2 = block.getFieldValue('TAG2');
             const statements = Blockly.JavaScript.statementToCode(block, 'DO');
@@ -7436,7 +7900,7 @@ dependencies {
         };
 
         // === LOGIC & FLOW GENERATORS ===
-        Blockly.JavaScript['for_loop'] = function(block) {
+        Blockly.JavaScript.forBlock['for_loop'] = function(block) {
             const varName = block.getFieldValue('VAR');
             const from = Blockly.JavaScript.valueToCode(block, 'FROM', Blockly.JavaScript.ORDER_NONE) || '0';
             const to = Blockly.JavaScript.valueToCode(block, 'TO', Blockly.JavaScript.ORDER_NONE) || '10';
@@ -7444,18 +7908,18 @@ dependencies {
             return `for (let ${varName} = ${from}; ${varName} <= ${to}; ${varName}++) {\n${statements}}\n`;
         };
 
-        Blockly.JavaScript['repeat_n_times'] = function(block) {
+        Blockly.JavaScript.forBlock['repeat_n_times'] = function(block) {
             const times = Blockly.JavaScript.valueToCode(block, 'TIMES', Blockly.JavaScript.ORDER_NONE) || '1';
             const statements = Blockly.JavaScript.statementToCode(block, 'DO');
             return `for (let _i = 0; _i < ${times}; _i++) {\n${statements}}\n`;
         };
 
-        Blockly.JavaScript['random_percent'] = function(block) {
+        Blockly.JavaScript.forBlock['random_percent'] = function(block) {
             const percent = Blockly.JavaScript.valueToCode(block, 'PERCENT', Blockly.JavaScript.ORDER_NONE) || '50';
             return [`(Math.random() * 100 < ${percent})`, Blockly.JavaScript.ORDER_LOGICAL_NOT];
         };
 
-        Blockly.JavaScript['weighted_choice'] = function(block) {
+        Blockly.JavaScript.forBlock['weighted_choice'] = function(block) {
             const option1 = Blockly.JavaScript.valueToCode(block, 'OPTION1', Blockly.JavaScript.ORDER_NONE) || 'null';
             const weight1 = Blockly.JavaScript.valueToCode(block, 'WEIGHT1', Blockly.JavaScript.ORDER_NONE) || '1';
             const option2 = Blockly.JavaScript.valueToCode(block, 'OPTION2', Blockly.JavaScript.ORDER_NONE) || 'null';
@@ -7463,46 +7927,46 @@ dependencies {
             return [`weightedChoice([${option1}, ${option2}], [${weight1}, ${weight2}])`, Blockly.JavaScript.ORDER_FUNCTION_CALL];
         };
 
-        Blockly.JavaScript['cooldown_check'] = function(block) {
+        Blockly.JavaScript.forBlock['cooldown_check'] = function(block) {
             const name = block.getFieldValue('NAME');
             return [`isCooldownReady("${name}")`, Blockly.JavaScript.ORDER_FUNCTION_CALL];
         };
 
-        Blockly.JavaScript['set_cooldown'] = function(block) {
+        Blockly.JavaScript.forBlock['set_cooldown'] = function(block) {
             const name = block.getFieldValue('NAME');
             const duration = Blockly.JavaScript.valueToCode(block, 'DURATION', Blockly.JavaScript.ORDER_NONE) || '1';
             return `setCooldown("${name}", ${duration});\n`;
         };
 
-        Blockly.JavaScript['state_machine_init'] = function(block) {
+        Blockly.JavaScript.forBlock['state_machine_init'] = function(block) {
             const name = block.getFieldValue('NAME');
             const states = block.getFieldValue('STATES');
             return `const ${name} = initStateMachine([${states.split(',').map(s => `"${s.trim()}"`).join(', ')}]);\n`;
         };
 
-        Blockly.JavaScript['state_machine_set'] = function(block) {
+        Blockly.JavaScript.forBlock['state_machine_set'] = function(block) {
             const name = block.getFieldValue('NAME');
             const state = block.getFieldValue('STATE');
             return `setState(${name}, "${state}");\n`;
         };
 
-        Blockly.JavaScript['state_machine_get'] = function(block) {
+        Blockly.JavaScript.forBlock['state_machine_get'] = function(block) {
             const name = block.getFieldValue('NAME');
             return [`getState(${name})`, Blockly.JavaScript.ORDER_FUNCTION_CALL];
         };
 
-        Blockly.JavaScript['state_machine_is'] = function(block) {
+        Blockly.JavaScript.forBlock['state_machine_is'] = function(block) {
             const name = block.getFieldValue('NAME');
             const state = block.getFieldValue('STATE');
             return [`isState(${name}, "${state}")`, Blockly.JavaScript.ORDER_FUNCTION_CALL];
         };
 
-        Blockly.JavaScript['log_to_console'] = function(block) {
+        Blockly.JavaScript.forBlock['log_to_console'] = function(block) {
             const value = Blockly.JavaScript.valueToCode(block, 'VALUE', Blockly.JavaScript.ORDER_NONE) || 'null';
             return `console.log(${value});\n`;
         };
 
-        Blockly.JavaScript['debug_assert'] = function(block) {
+        Blockly.JavaScript.forBlock['debug_assert'] = function(block) {
             const condition = Blockly.JavaScript.valueToCode(block, 'CONDITION', Blockly.JavaScript.ORDER_NONE) || 'true';
             const message = Blockly.JavaScript.valueToCode(block, 'MESSAGE', Blockly.JavaScript.ORDER_NONE) || '"Assertion failed"';
             return `if (!(${condition})) console.error(${message});\n`;
@@ -7511,39 +7975,39 @@ dependencies {
         // ============ PRIORITY GENERATORS: AUDIO, PHYSICS, VISUAL EFFECTS ============
 
         // === AUDIO GENERATORS ===
-        Blockly.JavaScript['play_sound'] = function(block) {
+        Blockly.JavaScript.forBlock['play_sound'] = function(block) {
             const soundId = block.getFieldValue('SOUND');
             const volume = block.getFieldValue('VOLUME');
             const loop = block.getFieldValue('LOOP') === 'TRUE';
             return `playSound("${soundId}", ${volume}, ${loop});\n`;
         };
 
-        Blockly.JavaScript['stop_sound'] = function(block) {
+        Blockly.JavaScript.forBlock['stop_sound'] = function(block) {
             const soundId = block.getFieldValue('SOUND');
             return `stopSound("${soundId}");\n`;
         };
 
-        Blockly.JavaScript['play_music'] = function(block) {
+        Blockly.JavaScript.forBlock['play_music'] = function(block) {
             const musicId = block.getFieldValue('MUSIC');
             const fadeTime = block.getFieldValue('FADE');
             return `playMusic("${musicId}", ${fadeTime});\n`;
         };
 
         // === PHYSICS GENERATORS ===
-        Blockly.JavaScript['apply_force'] = function(block) {
+        Blockly.JavaScript.forBlock['apply_force'] = function(block) {
             const entity = Blockly.JavaScript.valueToCode(block, 'ENTITY', Blockly.JavaScript.ORDER_NONE) || 'null';
             const forceX = Blockly.JavaScript.valueToCode(block, 'FORCE_X', Blockly.JavaScript.ORDER_NONE) || '0';
             const forceY = Blockly.JavaScript.valueToCode(block, 'FORCE_Y', Blockly.JavaScript.ORDER_NONE) || '0';
             return `applyForce(${entity}, ${forceX}, ${forceY});\n`;
         };
 
-        Blockly.JavaScript['is_grounded'] = function(block) {
+        Blockly.JavaScript.forBlock['is_grounded'] = function(block) {
             const entity = Blockly.JavaScript.valueToCode(block, 'ENTITY', Blockly.JavaScript.ORDER_NONE) || 'null';
             const distance = block.getFieldValue('DISTANCE');
             return [`isGrounded(${entity}, ${distance})`, Blockly.JavaScript.ORDER_FUNCTION_CALL];
         };
 
-        Blockly.JavaScript['raycast'] = function(block) {
+        Blockly.JavaScript.forBlock['raycast'] = function(block) {
             const fromX = Blockly.JavaScript.valueToCode(block, 'FROM_X', Blockly.JavaScript.ORDER_NONE) || '0';
             const fromY = Blockly.JavaScript.valueToCode(block, 'FROM_Y', Blockly.JavaScript.ORDER_NONE) || '0';
             const toX = Blockly.JavaScript.valueToCode(block, 'TO_X', Blockly.JavaScript.ORDER_NONE) || '0';
@@ -7553,57 +8017,57 @@ dependencies {
         };
 
         // === VISUAL EFFECTS GENERATORS ===
-        Blockly.JavaScript['set_opacity'] = function(block) {
+        Blockly.JavaScript.forBlock['set_opacity'] = function(block) {
             const entity = Blockly.JavaScript.valueToCode(block, 'ENTITY', Blockly.JavaScript.ORDER_NONE) || 'null';
             const opacity = Blockly.JavaScript.valueToCode(block, 'OPACITY', Blockly.JavaScript.ORDER_NONE) || '1';
             return `setOpacity(${entity}, ${opacity});\n`;
         };
 
-        Blockly.JavaScript['flip_sprite'] = function(block) {
+        Blockly.JavaScript.forBlock['flip_sprite'] = function(block) {
             const entity = Blockly.JavaScript.valueToCode(block, 'ENTITY', Blockly.JavaScript.ORDER_NONE) || 'null';
             const direction = block.getFieldValue('DIRECTION');
             return `flipSprite(${entity}, "${direction}");\n`;
         };
 
-        Blockly.JavaScript['camera_shake'] = function(block) {
+        Blockly.JavaScript.forBlock['camera_shake'] = function(block) {
             const intensity = block.getFieldValue('INTENSITY');
             const duration = block.getFieldValue('DURATION');
             return `cameraShake(${intensity}, ${duration});\n`;
         };
 
         // === GAME STATE GENERATORS ===
-        Blockly.JavaScript['pause_game'] = function(block) {
+        Blockly.JavaScript.forBlock['pause_game'] = function(block) {
             return `pauseGame();\n`;
         };
 
-        Blockly.JavaScript['resume_game'] = function(block) {
+        Blockly.JavaScript.forBlock['resume_game'] = function(block) {
             return `resumeGame();\n`;
         };
 
-        Blockly.JavaScript['load_scene'] = function(block) {
+        Blockly.JavaScript.forBlock['load_scene'] = function(block) {
             const sceneName = Blockly.JavaScript.valueToCode(block, 'SCENE_NAME', Blockly.JavaScript.ORDER_NONE) || '""';
             const preserve = block.getFieldValue('PRESERVE_STATE') === 'TRUE';
             return `loadScene(${sceneName}, ${preserve});\n`;
         };
 
-        Blockly.JavaScript['game_over'] = function(block) {
+        Blockly.JavaScript.forBlock['game_over'] = function(block) {
             const showScore = block.getFieldValue('SHOW_SCORE') === 'TRUE';
             return `gameOver(${showScore});\n`;
         };
 
-        Blockly.JavaScript['restart_level'] = function(block) {
+        Blockly.JavaScript.forBlock['restart_level'] = function(block) {
             return `restartLevel();\n`;
         };
 
         // === COMBAT GENERATORS ===
-        Blockly.JavaScript['deal_damage'] = function(block) {
+        Blockly.JavaScript.forBlock['deal_damage'] = function(block) {
             const target = Blockly.JavaScript.valueToCode(block, 'TARGET', Blockly.JavaScript.ORDER_NONE) || 'null';
             const damage = Blockly.JavaScript.valueToCode(block, 'DAMAGE', Blockly.JavaScript.ORDER_NONE) || '0';
             const knockback = block.getFieldValue('KNOCKBACK') === 'TRUE';
             return `dealDamage(${target}, ${damage}, ${knockback});\n`;
         };
 
-        Blockly.JavaScript['create_hitbox'] = function(block) {
+        Blockly.JavaScript.forBlock['create_hitbox'] = function(block) {
             const entity = Blockly.JavaScript.valueToCode(block, 'ENTITY', Blockly.JavaScript.ORDER_NONE) || 'null';
             const width = Blockly.JavaScript.valueToCode(block, 'WIDTH', Blockly.JavaScript.ORDER_NONE) || '32';
             const height = Blockly.JavaScript.valueToCode(block, 'HEIGHT', Blockly.JavaScript.ORDER_NONE) || '32';
@@ -7614,14 +8078,14 @@ dependencies {
         };
 
         // === ADDITIONAL ESSENTIAL GENERATORS ===
-        Blockly.JavaScript['set_z_layer'] = function(block) {
+        Blockly.JavaScript.forBlock['set_z_layer'] = function(block) {
             const entity = Blockly.JavaScript.valueToCode(block, 'ENTITY', Blockly.JavaScript.ORDER_NONE) || 'null';
             const layer = Blockly.JavaScript.valueToCode(block, 'LAYER', Blockly.JavaScript.ORDER_NONE) || '0';
             return `setZLayer(${entity}, ${layer});\n`;
         };
 
         // === UI GENERATORS ===
-        Blockly.JavaScript['ui_button'] = function(block) {
+        Blockly.JavaScript.forBlock['ui_button'] = function(block) {
             const text = block.getFieldValue('TEXT');
             const x = Blockly.JavaScript.valueToCode(block, 'X', Blockly.JavaScript.ORDER_NONE) || '100';
             const y = Blockly.JavaScript.valueToCode(block, 'Y', Blockly.JavaScript.ORDER_NONE) || '100';
@@ -7631,7 +8095,7 @@ dependencies {
             return `createUIButton("${text}", ${x}, ${y}, ${width}, ${height}, () => {\n${onClickStatements}});\n`;
         };
 
-        Blockly.JavaScript['ui_text'] = function(block) {
+        Blockly.JavaScript.forBlock['ui_text'] = function(block) {
             const content = block.getFieldValue('CONTENT');
             const x = Blockly.JavaScript.valueToCode(block, 'X', Blockly.JavaScript.ORDER_NONE) || '100';
             const y = Blockly.JavaScript.valueToCode(block, 'Y', Blockly.JavaScript.ORDER_NONE) || '100';
@@ -7640,7 +8104,7 @@ dependencies {
             return `createUIText("${content}", ${x}, ${y}, ${fontSize}, "${color}");\n`;
         };
 
-        Blockly.JavaScript['ui_dialog'] = function(block) {
+        Blockly.JavaScript.forBlock['ui_dialog'] = function(block) {
             const title = block.getFieldValue('TITLE');
             const message = Blockly.JavaScript.valueToCode(block, 'MESSAGE', Blockly.JavaScript.ORDER_NONE) || '""';
             const buttons = block.getFieldValue('BUTTONS');
@@ -7648,7 +8112,7 @@ dependencies {
             return `showUIDialog("${title}", ${message}, "${buttons}", (buttonIndex) => {\n${onButtonClickStatements}});\n`;
         };
 
-        Blockly.JavaScript['ui_hud_element'] = function(block) {
+        Blockly.JavaScript.forBlock['ui_hud_element'] = function(block) {
             const hudType = block.getFieldValue('TYPE');
             const x = Blockly.JavaScript.valueToCode(block, 'X', Blockly.JavaScript.ORDER_NONE) || '20';
             const y = Blockly.JavaScript.valueToCode(block, 'Y', Blockly.JavaScript.ORDER_NONE) || '20';
@@ -7658,25 +8122,25 @@ dependencies {
             return `createHUDElement("${hudType}", ${x}, ${y}, ${width}, ${height}, "${variableName}");\n`;
         };
 
-        Blockly.JavaScript['ui_menu'] = function(block) {
+        Blockly.JavaScript.forBlock['ui_menu'] = function(block) {
             const title = block.getFieldValue('TITLE');
             const items = block.getFieldValue('ITEMS');
             const onItemSelectStatements = Blockly.JavaScript.statementToCode(block, 'ON_ITEM_SELECT');
             return `createUIMenu("${title}", "${items}", (itemIndex) => {\n${onItemSelectStatements}});\n`;
         };
 
-        Blockly.JavaScript['ui_get_input_value'] = function(block) {
+        Blockly.JavaScript.forBlock['ui_get_input_value'] = function(block) {
             const name = block.getFieldValue('NAME');
             return [`getUIInputValue("${name}")`, Blockly.JavaScript.ORDER_FUNCTION_CALL];
         };
 
-        Blockly.JavaScript['ui_show_notification'] = function(block) {
+        Blockly.JavaScript.forBlock['ui_show_notification'] = function(block) {
             const message = block.getFieldValue('MESSAGE');
             const seconds = Blockly.JavaScript.valueToCode(block, 'SECONDS', Blockly.JavaScript.ORDER_NONE) || '3';
             return `showUINotification("${message}", ${seconds});\n`;
         };
 
-        Blockly.JavaScript['ui_inventory_display'] = function(block) {
+        Blockly.JavaScript.forBlock['ui_inventory_display'] = function(block) {
             const x = Blockly.JavaScript.valueToCode(block, 'X', Blockly.JavaScript.ORDER_NONE) || '500';
             const y = Blockly.JavaScript.valueToCode(block, 'Y', Blockly.JavaScript.ORDER_NONE) || '20';
             const slotCount = Blockly.JavaScript.valueToCode(block, 'SLOT_COUNT', Blockly.JavaScript.ORDER_NONE) || '10';
@@ -7685,62 +8149,40 @@ dependencies {
         };
 
         // === TOUCH & GESTURE GENERATORS ===
-        Blockly.JavaScript['on_touch_start'] = function(block) {
+        Blockly.JavaScript.forBlock['on_touch_start'] = function(block) {
             const statements = Blockly.JavaScript.statementToCode(block, 'DO');
             return `onTouchStart((touch) => {\n${statements}});\n`;
         };
 
-        Blockly.JavaScript['on_swipe'] = function(block) {
+        Blockly.JavaScript.forBlock['on_swipe'] = function(block) {
             const direction = block.getFieldValue('DIRECTION');
             const statements = Blockly.JavaScript.statementToCode(block, 'DO');
             const dirCheck = direction === 'any' ? 'true' : `direction === '${direction}'`;
             return `onSwipe((direction, velocity) => {\n  if (${dirCheck}) {\n${statements}  }\n});\n`;
         };
 
-        Blockly.JavaScript['on_pinch'] = function(block) {
+        Blockly.JavaScript.forBlock['on_pinch'] = function(block) {
             const statements = Blockly.JavaScript.statementToCode(block, 'DO');
             return `onPinch((scale, center) => {\n${statements}});\n`;
         };
 
-        Blockly.JavaScript['on_double_tap'] = function(block) {
+        Blockly.JavaScript.forBlock['on_double_tap'] = function(block) {
             const statements = Blockly.JavaScript.statementToCode(block, 'DO');
             return `onDoubleTap((position) => {\n${statements}});\n`;
         };
 
-        Blockly.JavaScript['get_touch_count'] = function(block) {
+        Blockly.JavaScript.forBlock['get_touch_count'] = function(block) {
             return [`getTouchCount()`, Blockly.JavaScript.ORDER_FUNCTION_CALL];
         };
 
-        Blockly.JavaScript['get_touch_position'] = function(block) {
+        Blockly.JavaScript.forBlock['get_touch_position'] = function(block) {
             const axis = block.getFieldValue('AXIS');
             const index = block.getFieldValue('INDEX');
             return [`getTouchPosition(${index}).${axis}`, Blockly.JavaScript.ORDER_MEMBER];
         };
 
-        // === EXPORT GENERATORS ===
-        Blockly.JavaScript['export_desktop'] = function(block) {
-            const platform = block.getFieldValue('PLATFORM');
-            const optimize = block.getFieldValue('OPTIMIZE') === 'TRUE';
-            return `exportDesktop("${platform}", { optimize: ${optimize} });\n`;
-        };
 
-        Blockly.JavaScript['export_web'] = function(block) {
-            const optimize = block.getFieldValue('OPTIMIZE') === 'TRUE';
-            return `exportWeb({ optimize: ${optimize} });\n`;
-        };
-
-        Blockly.JavaScript['set_game_title'] = function(block) {
-            const title = block.getFieldValue('TITLE');
-            return `setGameTitle("${title}");\n`;
-        };
-
-        Blockly.JavaScript['set_game_version'] = function(block) {
-            const version = block.getFieldValue('VERSION');
-            return `setGameVersion("${version}");\n`;
-        };
-
-        // Initialize Blockly workspace
-        let workspace;
+        // Initialize Blockly workspace (workspace already declared above)
         const STORAGE_KEY = 'lupiforge_project_' + (window.LUPIFORGE_CURRENT_USER && window.LUPIFORGE_CURRENT_USER.id ? window.LUPIFORGE_CURRENT_USER.id : 'guest');
 
         // Utility functions
@@ -7941,266 +8383,6 @@ dependencies {
             }, 5000);
         }
 
-        // Leaderboard Manager
-        const LeaderboardManager = {
-            currentPeriod: 'daily',
-            scores: [],
-
-            init() {
-                this.generateMockData();
-                this.attachEvents();
-            },
-
-            attachEvents() {
-                document.getElementById('leaderboardBtn').addEventListener('click', () => this.show());
-                document.getElementById('closeLeaderboard').addEventListener('click', () => {
-                    document.getElementById('leaderboardModal').classList.remove('show');
-                });
-                document.querySelectorAll('.filter-btn').forEach(btn => {
-                    btn.addEventListener('click', (e) => {
-                        document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
-                        e.target.classList.add('active');
-                        this.currentPeriod = e.target.dataset.period;
-                        this.loadLeaderboard();
-                    });
-                });
-            },
-
-            show() {
-                document.getElementById('leaderboardModal').classList.add('show');
-                this.loadLeaderboard();
-            },
-
-            loadLeaderboard() {
-                console.log('Loading leaderboard for period:', this.currentPeriod);
-                console.log('API Endpoint: GET /games/api/leaderboard/?period=' + this.currentPeriod);
-                this.render();
-            },
-
-            generateMockData() {
-                const names = ['Alex', 'Jordan', 'Sam', 'Casey', 'Morgan', 'Taylor', 'Riley', 'Avery', 'Quinn', 'Skyler'];
-                const games = ['Space Invaders', 'Platformer Pro', 'Puzzle Master', 'Racing Game', 'Adventure Quest'];
-                for (let i = 0; i < 50; i++) {
-                    this.scores.push({
-                        rank: i + 1,
-                        player: names[Math.floor(Math.random() * names.length)] + Math.floor(Math.random() * 100),
-                        game: games[Math.floor(Math.random() * games.length)],
-                        score: Math.floor(Math.random() * 10000) + 1000,
-                        date: new Date(Date.now() - Math.random() * 7 * 24 * 60 * 60 * 1000).toLocaleDateString(),
-                        isCurrentUser: i === 15
-                    });
-                }
-            },
-
-            render() {
-                const tbody = document.getElementById('leaderboardTableBody');
-                const topScores = this.scores.slice(0, 100);
-                tbody.innerHTML = topScores.map(score => {
-                    const rankDisplay = score.rank <= 3 ? 
-                        `<span class="rank-medal">${['🥇', '🥈', '🥉'][score.rank - 1]}</span>` : 
-                        `#${score.rank}`;
-                    const rowClass = score.isCurrentUser ? 'style="background: rgba(231, 76, 60, 0.2);"' : '';
-                    return `<tr ${rowClass}><td>${rankDisplay}</td><td>${score.player}${score.isCurrentUser ? ' 👤' : ''}</td><td>${score.game}</td><td><strong>${score.score.toLocaleString()}</strong></td><td>${score.date}</td></tr>`;
-                }).join('');
-                const userScore = this.scores.find(s => s.isCurrentUser);
-                if (userScore) {
-                    document.getElementById('userRank').textContent = `#${userScore.rank}`;
-                    document.getElementById('userBest').textContent = userScore.score.toLocaleString();
-                }
-            }
-        };
-
-
-
-        // Dashboard Manager with Enhanced Analytics
-        const DashboardManager = {
-            stats: {totalGames: 0, totalPlays: 0, totalFollowers: 0, totalRevenue: 0, avgPlays: 0, conversionRate: 0},
-            games: [],
-            revenue: [],
-            chart: null,
-            playTrends: [],
-
-            init() {
-                this.generateMockData();
-                this.attachEvents();
-            },
-
-            attachEvents() {
-                document.getElementById('dashboardBtn').addEventListener('click', () => this.show());
-                document.getElementById('closeDashboard').addEventListener('click', () => {
-                    document.getElementById('dashboardModal').classList.remove('show');
-                });
-            },
-
-            show() {
-                document.getElementById('dashboardModal').classList.add('show');
-                this.loadDashboard();
-            },
-
-            loadDashboard() {
-                console.log('Loading creator dashboard');
-                console.log('API Endpoint: GET /games/api/creator/dashboard/');
-                this.calculateAnalytics();
-                this.renderStats();
-                this.renderGames();
-                this.renderRevenue();
-                this.renderChart();
-            },
-
-            calculateAnalytics() {
-                if (this.games.length > 0) {
-                    const totalPlays = this.games.reduce((sum, g) => sum + g.plays, 0);
-                    const totalLikes = this.games.reduce((sum, g) => sum + g.likes, 0);
-                    this.stats.avgPlays = Math.floor(totalPlays / this.games.length);
-                    this.stats.conversionRate = this.games.length > 0 ? Math.round((totalLikes / totalPlays) * 100) : 0;
-                    this.stats.publicGames = this.games.filter(g => g.status === 'public').length;
-                    this.stats.totalLikes = totalLikes;
-                }
-            },
-
-            generateMockData() {
-                this.stats.totalGames = Math.floor(Math.random() * 20) + 5;
-                this.stats.totalPlays = Math.floor(Math.random() * 10000) + 1000;
-                this.stats.totalFollowers = Math.floor(Math.random() * 500) + 50;
-                this.stats.totalRevenue = Math.floor(Math.random() * 1000) + 100;
-                
-                const gameNames = ['Space Adventure', 'Platform Hero', 'Puzzle Quest', 'Racing Thunder', 'Battle Royale'];
-                const statuses = ['public', 'pending', 'draft'];
-                for (let i = 0; i < 8; i++) {
-                    this.games.push({
-                        id: i + 1,
-                        title: gameNames[i % gameNames.length] + ' ' + (i + 1),
-                        plays: Math.floor(Math.random() * 1000),
-                        likes: Math.floor(Math.random() * 100),
-                        status: statuses[Math.floor(Math.random() * statuses.length)],
-                        created: new Date(Date.now() - Math.random() * 30 * 24 * 60 * 60 * 1000).toLocaleDateString()
-                    });
-                }
-                for (let i = 0; i < 5; i++) {
-                    this.revenue.push({game: gameNames[i], amount: Math.floor(Math.random() * 200) + 50});
-                }
-                this.playTrends = [120, 190, 150, 220, 280, 310, 290];
-            },
-
-            renderStats() {
-                document.getElementById('totalGames').textContent = this.stats.totalGames;
-                document.getElementById('totalPlays').textContent = this.stats.totalPlays.toLocaleString();
-                document.getElementById('totalFollowers').textContent = this.stats.totalFollowers;
-                document.getElementById('totalRevenue').textContent = '$' + this.stats.totalRevenue;
-                
-                const statsExtended = document.getElementById('statsExtended');
-                if (statsExtended) {
-                    statsExtended.innerHTML = `
-                        <div class="stat-card">
-                            <div class="stat-icon">📊</div>
-                            <div class="stat-label">Avg Plays/Game</div>
-                            <div class="stat-value">${this.stats.avgPlays || 0}</div>
-                        </div>
-                        <div class="stat-card">
-                            <div class="stat-icon">💯</div>
-                            <div class="stat-label">Conversion Rate</div>
-                            <div class="stat-value">${this.stats.conversionRate || 0}%</div>
-                        </div>
-                        <div class="stat-card">
-                            <div class="stat-icon">✅</div>
-                            <div class="stat-label">Published Games</div>
-                            <div class="stat-value">${this.stats.publicGames || 0}</div>
-                        </div>
-                        <div class="stat-card">
-                            <div class="stat-icon">❤️</div>
-                            <div class="stat-label">Total Likes</div>
-                            <div class="stat-value">${this.stats.totalLikes || 0}</div>
-                        </div>
-                    `;
-                }
-            },
-
-            renderGames() {
-                const container = document.getElementById('gamesList');
-                if (!container) return;
-                
-                const sortedGames = [...this.games].sort((a, b) => b.plays - a.plays);
-                container.innerHTML = sortedGames.map(game => {
-                    const engagementRate = game.plays > 0 ? Math.round((game.likes / game.plays) * 100) : 0;
-                    return `
-                        <div class="game-card">
-                            <div class="game-title">${game.title}</div>
-                            <div class="game-stats">
-                                <span>▶️ ${game.plays} plays</span>
-                                <span>❤️ ${game.likes} likes</span>
-                                <span>📈 ${engagementRate}% engagement</span>
-                            </div>
-                            <div>
-                                <span class="game-status status-${game.status}">
-                                    ${game.status.toUpperCase()}
-                                </span>
-                                <span style="font-size: 11px; color: #95a5a6; margin-left: 10px;">Created: ${game.created}</span>
-                            </div>
-                        </div>
-                    `;
-                }).join('');
-            },
-
-            renderRevenue() {
-                const container = document.getElementById('revenueList');
-                if (!container) return;
-                
-                const sortedRevenue = [...this.revenue].sort((a, b) => b.amount - a.amount);
-                const totalRevenue = sortedRevenue.reduce((sum, item) => sum + item.amount, 0);
-                
-                container.innerHTML = sortedRevenue.map(item => {
-                    const percentage = Math.round((item.amount / totalRevenue) * 100);
-                    return `
-                        <div class="revenue-item">
-                            <div class="revenue-game">${item.game}</div>
-                            <div style="flex: 1; margin: 0 10px; background: #0f3460; height: 20px; border-radius: 3px; overflow: hidden;">
-                                <div style="background: linear-gradient(90deg, #667eea 0%, #764ba2 100%); width: ${percentage}%; height: 100%;"></div>
-                            </div>
-                            <div class="revenue-amount">$${item.amount} (${percentage}%)</div>
-                        </div>
-                    `;
-                }).join('');
-            },
-
-            renderChart() {
-                const canvas = document.getElementById('playsChart');
-                if (!canvas) return;
-                
-                const ctx = canvas.getContext('2d');
-                ctx.clearRect(0, 0, canvas.width, canvas.height);
-                const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-                const data = this.playTrends;
-                const maxValue = Math.max(...data);
-                const barWidth = canvas.width / days.length - 20;
-                const scale = (canvas.height - 40) / maxValue;
-                
-                ctx.strokeStyle = '#667eea';
-                ctx.lineWidth = 2;
-                ctx.beginPath();
-                data.forEach((value, i) => {
-                    const x = i * (barWidth + 20) + 20 + barWidth / 2;
-                    const height = value * scale;
-                    const y = canvas.height - height - 20;
-                    if (i === 0) ctx.moveTo(x, y);
-                    else ctx.lineTo(x, y);
-                });
-                ctx.stroke();
-                
-                data.forEach((value, i) => {
-                    const x = i * (barWidth + 20) + 20;
-                    const height = value * scale;
-                    const y = canvas.height - height - 20;
-                    ctx.fillStyle = '#667eea';
-                    ctx.fillRect(x, y, barWidth, height);
-                    ctx.fillStyle = 'white';
-                    ctx.font = 'bold 12px Arial';
-                    ctx.textAlign = 'center';
-                    ctx.fillText(value, x + barWidth / 2, y - 8);
-                    ctx.font = '11px Arial';
-                    ctx.fillText(days[i], x + barWidth / 2, canvas.height - 5);
-                });
-            }
-        };
 
         // Moderation Manager
         const ModerationManager = {
@@ -8367,184 +8549,6 @@ dependencies {
 
 
 
-        // Settings Manager
-        const SettingsManager = {
-            settings: {profile: {}, preferences: {}, privacy: {}, account: {}},
-
-            init() {
-                this.loadSettings();
-                this.attachEvents();
-            },
-
-            attachEvents() {
-                document.getElementById('settingsBtn').addEventListener('click', () => this.show());
-                document.getElementById('closeSettings').addEventListener('click', () => {
-                    document.getElementById('settingsModal').classList.remove('show');
-                });
-                document.querySelectorAll('.settings-tab').forEach(tab => {
-                    tab.addEventListener('click', (e) => {
-                        document.querySelectorAll('.settings-tab').forEach(t => t.classList.remove('active'));
-                        e.target.classList.add('active');
-                        document.querySelectorAll('.settings-tab-content').forEach(c => c.classList.remove('active'));
-                        const tabName = e.target.dataset.tab;
-                        document.getElementById(tabName + 'Tab').classList.add('active');
-                    });
-                });
-                document.querySelectorAll('.save-settings-btn').forEach(btn => {
-                    btn.addEventListener('click', (e) => {
-                        const section = e.target.closest('.settings-tab-content').id.replace('Tab', '');
-                        this.saveSettings(section);
-                    });
-                });
-                document.querySelector('.change-avatar-btn').addEventListener('click', () => {
-                    const avatars = ['👤', '🎮', '⚡', '🌟', '💎', '🔥', '🚀', '⭐'];
-                    const random = avatars[Math.floor(Math.random() * avatars.length)];
-                    document.querySelector('.profile-avatar-large').textContent = random;
-                    showToast('✅ Avatar changed!');
-                });
-                document.getElementById('userRole').addEventListener('change', (e) => {
-                    localStorage.setItem('user_role', e.target.value);
-                    showToast(`Role changed to ${e.target.value}`);
-                    if (e.target.value === 'moderator' || e.target.value === 'admin') {
-                        ModerationManager.checkModeratorRole();
-                        ModerationManager.init();
-                    }
-                });
-                document.querySelector('.danger-btn').addEventListener('click', () => {
-                    if (confirm('⚠️ Are you sure you want to delete your account? This cannot be undone!')) {
-                        if (confirm('⚠️ FINAL WARNING: All your games, scores, and data will be permanently deleted!')) {
-                            this.deleteAccount();
-                        }
-                    }
-                });
-            },
-
-            show() {
-                document.getElementById('settingsModal').classList.add('show');
-                this.populateFields();
-            },
-
-            loadSettings() {
-                const saved = localStorage.getItem('lupiforge_settings');
-                if (saved) {
-                    try { this.settings = JSON.parse(saved); } catch(e){ this.settings = {}; }
-                } else {
-                    this.settings = {
-                        profile: {username: '', bio: '', role: 'player'},
-                        preferences: {theme: 'dark', animations: true, notifyGames: true, notifyFollowers: true, notifyComments: true, autoSaveInterval: 30, snapToGrid: true},
-                        privacy: {profileVisibility: 'public', showStats: true, allowMessages: true, showOnline: false},
-                        account: {email: ''}
-                    };
-                }
-
-                // If user is authenticated, attempt to load real profile & settings from server
-                try {
-                    const me = window.LUPIFORGE_CURRENT_USER || {};
-                    if (me.is_authenticated) {
-                        fetch('/games/api/creator/dashboard/')
-                            .then(resp => {
-                                if (!resp.ok) throw new Error('Network response was not ok');
-                                return resp.json();
-                            })
-                            .then(data => {
-                                this.settings.profile.username = me.username || data.username || this.settings.profile.username;
-                                this.settings.profile.bio = data.bio || this.settings.profile.bio || '';
-                                this.settings.profile.role = data.role || this.settings.profile.role || 'player';
-
-                                // Merge preferences/privacy if provided by API
-                                if (data.preferences) this.settings.preferences = Object.assign(this.settings.preferences || {}, data.preferences);
-                                if (data.privacy) this.settings.privacy = Object.assign(this.settings.privacy || {}, data.privacy);
-
-                                this.settings.account.email = me.email || data.email || this.settings.account.email || '';
-                                try { localStorage.setItem('lupiforge_settings', JSON.stringify(this.settings)); } catch(e){}
-                                try { this.populateFields(); } catch(e){}
-                            })
-                            .catch(err => { console.warn('Could not load creator dashboard data', err); });
-                    }
-                } catch(e) { /* ignore */ }
-            },
-
-            populateFields() {
-                document.getElementById('username').value = this.settings.profile.username || '';
-                document.getElementById('bio').value = this.settings.profile.bio || '';
-                document.getElementById('userRole').value = localStorage.getItem('user_role') || 'player';
-                document.getElementById('theme').value = this.settings.preferences.theme || 'dark';
-                document.getElementById('animations').checked = this.settings.preferences.animations !== false;
-                document.getElementById('notifyGames').checked = this.settings.preferences.notifyGames !== false;
-                document.getElementById('notifyFollowers').checked = this.settings.preferences.notifyFollowers !== false;
-                document.getElementById('notifyComments').checked = this.settings.preferences.notifyComments !== false;
-                document.getElementById('autoSaveInterval').value = this.settings.preferences.autoSaveInterval || 30;
-                document.getElementById('snapToGrid').checked = this.settings.preferences.snapToGrid !== false;
-                document.getElementById('profileVisibility').value = this.settings.privacy.profileVisibility || 'public';
-                document.getElementById('showStats').checked = this.settings.privacy.showStats !== false;
-                document.getElementById('allowMessages').checked = this.settings.privacy.allowMessages !== false;
-                document.getElementById('showOnline').checked = this.settings.privacy.showOnline === true;
-                document.getElementById('email').value = this.settings.account.email || '';
-            },
-
-            saveSettings(section) {
-                switch(section) {
-                    case 'profile':
-                        this.settings.profile = {
-                            username: document.getElementById('username').value,
-                            bio: document.getElementById('bio').value,
-                            role: document.getElementById('userRole').value
-                        };
-                        break;
-                    case 'preferences':
-                        this.settings.preferences = {
-                            theme: document.getElementById('theme').value,
-                            animations: document.getElementById('animations').checked,
-                            notifyGames: document.getElementById('notifyGames').checked,
-                            notifyFollowers: document.getElementById('notifyFollowers').checked,
-                            notifyComments: document.getElementById('notifyComments').checked,
-                            autoSaveInterval: parseInt(document.getElementById('autoSaveInterval').value),
-                            snapToGrid: document.getElementById('snapToGrid').checked
-                        };
-                        break;
-                    case 'privacy':
-                        this.settings.privacy = {
-                            profileVisibility: document.getElementById('profileVisibility').value,
-                            showStats: document.getElementById('showStats').checked,
-                            allowMessages: document.getElementById('allowMessages').checked,
-                            showOnline: document.getElementById('showOnline').checked
-                        };
-                        break;
-                    case 'account':
-                        const currentPassword = document.getElementById('currentPassword').value;
-                        const newPassword = document.getElementById('newPassword').value;
-                        const confirmPassword = document.getElementById('confirmPassword').value;
-                        if (newPassword && newPassword !== confirmPassword) {
-                            showToast('❌ Passwords do not match!', true);
-                            return;
-                        }
-                        this.settings.account.email = document.getElementById('email').value;
-                        if (newPassword) {
-                            console.log('Changing password');
-                            console.log('API Endpoint: POST /games/api/change-password/');
-                            showToast('🔒 Password changed successfully!');
-                            document.getElementById('currentPassword').value = '';
-                            document.getElementById('newPassword').value = '';
-                            document.getElementById('confirmPassword').value = '';
-                        }
-                        break;
-                }
-                localStorage.setItem('lupiforge_settings', JSON.stringify(this.settings));
-                console.log('Settings saved:', section, this.settings[section]);
-                console.log('API Endpoint: POST /games/api/settings/', {section, data: this.settings[section]});
-                showToast('✅ Settings saved!');
-            },
-
-            deleteAccount() {
-                console.log('Deleting account');
-                console.log('API Endpoint: DELETE /games/api/account/');
-                localStorage.clear();
-                showToast('Account deleted. Redirecting...');
-                setTimeout(() => {
-                    window.location.href = '/logout/';
-                }, 2000);
-            }
-        };
 
         // === AUTOSAVE MANAGER ===
         const AutosaveManager = {
@@ -8603,6 +8607,10 @@ dependencies {
                 this.indicator.classList.remove('show');
             }
         };
+
+            console.log('✅ Custom Blockly blocks defined');
+            return true;
+        } // End defineCustomBlocks()
 
         // === DEBUG CONSOLE ===
         const EnhancedDebugConsole = {
@@ -8893,8 +8901,10 @@ document.addEventListener('click', (e) => {
     }
 });
 
-        // === DEBUG OVERLAY SYSTEM ===
-        class DebugOverlaySystem {
+        // === DEBUG OVERLAY SYSTEM (First instance - commented out, using second one) ===
+        /*
+        if (typeof DebugOverlaySystem === 'undefined') {
+        window.DebugOverlaySystem = class DebugOverlaySystem {
           constructor(renderSystem, entityManager, canvas) {
             this.enabled = false;
             this.showHitboxes = true;
@@ -9242,6 +9252,10 @@ document.addEventListener('click', (e) => {
             this.ctx.restore();
           }
         }
+        } else {
+            console.warn('⚠️ DebugOverlaySystem already declared. Using existing instance.');
+        }
+        */
 
         // Initialize global DebugOverlaySystem instance
         window.debugOverlaySystem = null;
@@ -11333,14 +11347,38 @@ document.addEventListener('click', (e) => {
                 return Array.from(allTags);
             }
 
+            getAssetNames() {
+                return this.assetManager?.assets?.sprites?.map(s => s.name) || [];
+            }
+
             getAssetOptions() {
                 const tags = this.getAllTags();
+                const options = [["-- Select --", ""]];
+                
+                // Tags (no HEADER)
+                tags.forEach(tag => {
+                    options.push([`🏷️ ${tag}`, `tag:${tag}`]);
+                });
+                
+                return options;
+            }
+            
+            getAssetDropdownOptions() {
+                const tags = this.getAllTags();
+                const names = this.getAssetNames();
                 const options = [["-- Select Asset --", ""]];
                 
+                // Add tags as real options (not headers)
                 if (tags.length > 0) {
-                    options.push(["----- BY TAG -----", "HEADER"]);
                     tags.forEach(tag => {
                         options.push([`🏷️ ${tag}`, `tag:${tag}`]);
+                    });
+                }
+                
+                // Add names as real options (not headers)
+                if (names.length > 0) {
+                    names.forEach(name => {
+                        options.push([`📦 ${name}`, name.toLowerCase()]);
                     });
                 }
                 
@@ -11561,7 +11599,7 @@ document.addEventListener('click', (e) => {
             }
 
             updateBlockTagDropdowns(block) {
-                const options = this.getAssetOptions();
+                const options = this.getAssetDropdownOptions();
                 const field = block.getField('ASSET') || block.getField('TAG') || block.getField('SPRITE');
                 
                 if (field && field.setOptions) {
@@ -11630,18 +11668,17 @@ document.addEventListener('click', (e) => {
             getAssetDropdownOptions() {
                 const tags = this.getAllTags();
                 const names = this.getAssetNames();
-                
                 const options = [["-- Select Asset --", ""]];
                 
+                // Add tags as real options (not headers)
                 if (tags.length > 0) {
-                    options.push(["----- BY TAG -----", "HEADER"]);
                     tags.forEach(tag => {
                         options.push([`🏷️ ${tag}`, `tag:${tag}`]);
                     });
                 }
                 
+                // Add names as real options (not headers)
                 if (names.length > 0) {
-                    options.push(["----- BY NAME -----", "HEADER"]);
                     names.forEach(name => {
                         options.push([`📦 ${name}`, name.toLowerCase()]);
                     });
@@ -11653,7 +11690,6 @@ document.addEventListener('click', (e) => {
             updateBlocklyDropdowns() {
                 const options = this.getAssetDropdownOptions();
                 const workspace = Blockly.getMainWorkspace();
-                
                 if (workspace) {
                     const blocks = workspace.getAllBlocks(false);
                     blocks.forEach(block => {
@@ -12213,7 +12249,8 @@ document.addEventListener('click', (e) => {
         }
 
         // === DEBUG OVERLAY SYSTEM ===
-        class DebugOverlaySystem {
+        if (typeof DebugOverlaySystem === 'undefined') {
+        window.DebugOverlaySystem = class DebugOverlaySystem {
             constructor(renderSystem, entityManager, canvas) {
                 this.enabled = false;
                 this.showHitboxes = true;
@@ -12637,6 +12674,9 @@ document.addEventListener('click', (e) => {
                 if (console) console.remove();
                 this.logs = [];
             }
+        }
+        } else {
+            console.warn('⚠️ DebugOverlaySystem already declared. Using existing instance.');
         }
 
         let stateStore = null;
@@ -13751,149 +13791,351 @@ document.addEventListener('click', (e) => {
             console.log(`📐 Set Z-Layer to ${layer}`);
         }
         
-        // === LUPISCRIPT V1 METHODS ===
-        parseLupiScript(code) {
-            const lines = code.split('\n').filter(l => l.trim() && !l.trim().startsWith('//'));
-            if (lines.length === 0) return null;
-            
-            const block = { fields: [], inputs: [], outputs: null, code: '' };
-            const blockMatch = lines[0].match(/^block\s+(\w+)\s+"([^"]+)"/i);
-            
-            if (!blockMatch) throw new Error('Line 1: Block definition required');
-            
-            block.id = blockMatch[1];
-            block.name = blockMatch[2];
-            
-            for (let i = 1; i < lines.length; i++) {
-                const line = lines[i].trim();
-                if (line.startsWith('category')) {
-                    const catMatch = line.match(/category\s+"([^"]+)"(?:\s+color\s+"([^"]+)")?/);
-                    block.category = catMatch[1];
-                    block.color = catMatch[2] || '#FF6B6B';
-                } else if (line.startsWith('field')) {
-                    const fieldMatch = line.match(/field\s+(\w+)\s+(\w+)(?:\s+(\d+))?/);
-                    if (fieldMatch) {
-                        block.fields.push({
-                            name: fieldMatch[1],
-                            type: fieldMatch[2],
-                            default: fieldMatch[3] || ''
-                        });
+        // === LUPISCRIPT V1 ENGINE ===
+        const LupiScript = {
+            // ✅ PARSE: Convert human text → block definition
+            parse(code) {
+                const lines = code.trim().split('\n').filter(l => l.trim() && !l.trim().startsWith('//'));
+                if (lines.length === 0) throw new Error("Empty script");
+
+                // Line 1: block name "Display [field]"
+                const blockLine = lines[0].match(/^block\s+(\S+)\s+"(.+)"$/);
+                if (!blockLine) throw new Error("Line 1: Use 'block name \"Display text\"'");
+                
+                const block = {
+                    id: blockLine[1],
+                    displayName: blockLine[2],
+                    category: "🧱 Custom Blocks",
+                    color: "#FF6B6B",
+                    fields: [],
+                    inputs: [],
+                    output: null,
+                    codeTemplate: "",
+                    icon: "",
+                    tooltip: ""
+                };
+
+                // Parse remaining lines
+                for (let i = 1; i < lines.length; i++) {
+                    const line = lines[i].trim();
+                    
+                    if (line.startsWith('category ')) {
+                        block.category = line.substring(9).trim().replace(/^["']|["']$/g, '');
+                    } 
+                    else if (line.startsWith('color ')) {
+                        block.color = line.substring(6).trim();
+                    } 
+                    else if (line.startsWith('icon ')) {
+                        block.icon = line.substring(5).trim();
+                    } 
+                    else if (line.startsWith('tooltip ')) {
+                        block.tooltip = line.substring(8).trim();
+                    } 
+                    else if (line.startsWith('field ')) {
+                        const fieldParts = line.substring(6).trim().split(/\s+/);
+                        const id = fieldParts[0];
+                        const type = fieldParts[1];
+                        const defaultValue = fieldParts[2] || '';
+                        
+                        const field = { id, type, defaultValue, constraints: {} };
+                        
+                        // Parse constraints (min, max, choices)
+                        for (let j = 3; j < fieldParts.length; j++) {
+                            if (fieldParts[j] === 'min' && fieldParts[j + 1]) {
+                                field.constraints.min = parseFloat(fieldParts[j + 1]);
+                                j++;
+                            } else if (fieldParts[j] === 'max' && fieldParts[j + 1]) {
+                                field.constraints.max = parseFloat(fieldParts[j + 1]);
+                                j++;
+                            } else if (type === 'choice') {
+                                // For choice fields: field name choice label1 value1 label2 value2
+                                if (!field.constraints.choices) field.constraints.choices = [];
+                                field.constraints.choices.push([fieldParts[j], fieldParts[j + 1] || fieldParts[j]]);
+                                j++;
+                            }
+                        }
+                        
+                        block.fields.push(field);
+                    } 
+                    else if (line.startsWith('input ')) {
+                        const match = line.match(/input\s+(\S+)\s+(\S+)(?:\s+"([^"]+)")?/);
+                        if (match) {
+                            block.inputs.push({ 
+                                id: match[1], 
+                                type: match[2], 
+                                label: match[3] || match[1]
+                            });
+                        }
+                    } 
+                    else if (line.startsWith('output ')) {
+                        block.output = line.substring(7).trim();
+                    } 
+                    else if (line.startsWith('code ')) {
+                        block.codeTemplate = line.substring(5).trim();
                     }
-                } else if (line.startsWith('code')) {
-                    block.code = line.substring(5).trim();
                 }
-            }
-            
-            if (!block.category) block.category = 'Custom';
-            if (!block.code) block.code = `// [${block.name}]`;
-            
-            return block;
-        },
-        
-        generateBlockPreview(blockDef) {
-            return `
-                <div style="color: #2ecc71;">
-                    <strong>${blockDef.name}</strong> <span style="color: #95a5a6;">(${blockDef.id})</span><br>
-                    Category: <span style="color: #3498db;">${blockDef.category}</span><br>
-                    Fields: ${blockDef.fields.length} | Code template ready
-                </div>
-            `;
-        },
-        
-        submitLupiScript() {
-            const code = this.lupiEditor?.value.trim();
-            if (!code) {
-                showToast('⚠️ LupiScript editor is empty', true);
-                return;
-            }
-            
-            try {
-                const blockDef = this.parseLupiScript(code);
-                if (!blockDef) throw new Error('Invalid LupiScript syntax');
+
+                if (!block.codeTemplate) throw new Error("Missing 'code' line");
+                return block;
+            },
+
+            // ✅ REGISTER: Turn parsed block into real Blockly block
+            register(blockDef) {
+                if (typeof Blockly === 'undefined') {
+                    throw new Error('Blockly is not loaded yet');
+                }
+
+                // Block definition
+                Blockly.Blocks[blockDef.id] = {
+                    init: function() {
+                        // Build the display text by replacing [field] placeholders
+                        let displayText = blockDef.displayName;
+                        const dummyInput = this.appendDummyInput();
+                        
+                        // Add icon if specified
+                        if (blockDef.icon) {
+                            dummyInput.appendField(blockDef.icon);
+                        }
+                        
+                        // Split display text and insert fields
+                        const parts = displayText.split(/(\[[^\]]+\])/);
+                        parts.forEach(part => {
+                            if (part.startsWith('[') && part.endsWith(']')) {
+                                const fieldName = part.slice(1, -1);
+                                const field = blockDef.fields.find(f => f.id === fieldName);
+                                
+                                if (field) {
+                                    if (field.type === 'number') {
+                                        const numField = new Blockly.FieldNumber(
+                                            parseFloat(field.defaultValue) || 0,
+                                            field.constraints.min,
+                                            field.constraints.max
+                                        );
+                                        dummyInput.appendField(numField, fieldName);
+                                    } 
+                                    else if (field.type === 'checkbox') {
+                                        const checkField = new Blockly.FieldCheckbox(
+                                            field.defaultValue === 'true' || field.defaultValue === '1'
+                                        );
+                                        dummyInput.appendField(checkField, fieldName);
+                                    } 
+                                    else if (field.type === 'color') {
+                                        const colorField = new Blockly.FieldColour(field.defaultValue || '#ff0000');
+                                        dummyInput.appendField(colorField, fieldName);
+                                    }
+                                    else if (field.type === 'choice') {
+                                        const choices = field.constraints.choices || [[field.defaultValue, field.defaultValue]];
+                                        const dropdown = new Blockly.FieldDropdown(choices);
+                                        dummyInput.appendField(dropdown, fieldName);
+                                    }
+                                    else if (field.type.startsWith('asset:')) {
+                                        const assetType = field.type.split(':')[1];
+                                        const assets = window.LUPIFORGE?.assets?.[assetType + 's'] || [];
+                                        const options = assets.length > 0 
+                                            ? assets.map(a => [a.name || a.id, a.id])
+                                            : [['-- No ' + assetType + 's --', '']];
+                                        const dropdown = new Blockly.FieldDropdown(options);
+                                        dummyInput.appendField(dropdown, fieldName);
+                                    }
+                                    else if (field.type.startsWith('tags:')) {
+                                        const tags = ['player', 'enemy', 'collectible', 'obstacle', 'npc'];
+                                        const options = tags.map(t => [t, t]);
+                                        const dropdown = new Blockly.FieldDropdown(options);
+                                        dummyInput.appendField(dropdown, fieldName);
+                                    }
+                                    else {
+                                        // Default: text input
+                                        const textField = new Blockly.FieldTextInput(field.defaultValue || '');
+                                        dummyInput.appendField(textField, fieldName);
+                                    }
+                                } else {
+                                    dummyInput.appendField(part);
+                                }
+                            } else if (part.trim()) {
+                                dummyInput.appendField(part);
+                            }
+                        });
+
+                        // Add inputs (for connecting other blocks)
+                        blockDef.inputs.forEach(input => {
+                            if (input.type.toLowerCase() === 'statement') {
+                                this.appendStatementInput(input.id)
+                                    .setCheck(null)
+                                    .appendField(input.label);
+                            } else {
+                                this.appendValueInput(input.id)
+                                    .setCheck(input.type)
+                                    .appendField(input.label);
+                            }
+                        });
+
+                        // Set output or statement connections
+                        if (blockDef.output) {
+                            this.setOutput(true, blockDef.output);
+                        } else {
+                            this.setPreviousStatement(true);
+                            this.setNextStatement(true);
+                        }
+                        
+                        this.setColour(blockDef.color);
+                        
+                        if (blockDef.tooltip) {
+                            this.setTooltip(blockDef.tooltip);
+                        }
+                    }
+                };
+
+                // Code generator
+                Blockly.JavaScript.forBlock[blockDef.id] = function(block) {
+                    let code = blockDef.codeTemplate;
+                    
+                    // Replace [field_id] with actual values
+                    blockDef.fields.forEach(field => {
+                        const value = block.getFieldValue(field.id);
+                        if (field.type === 'number') {
+                            code = code.replaceAll(`[${field.id}]`, value);
+                        } else if (field.type === 'checkbox') {
+                            code = code.replaceAll(`[${field.id}]`, value === 'TRUE' ? 'true' : 'false');
+                        } else {
+                            code = code.replaceAll(`[${field.id}]`, `"${value}"`);
+                        }
+                    });
+
+                    // Replace [input_id] with connected code
+                    blockDef.inputs.forEach(input => {
+                        if (input.type.toLowerCase() === 'statement') {
+                            const statements = Blockly.JavaScript.statementToCode(block, input.id);
+                            code = code.replaceAll(`[${input.id}]`, statements || '');
+                        } else {
+                            const inputValue = Blockly.JavaScript.valueToCode(
+                                block, 
+                                input.id, 
+                                Blockly.JavaScript.ORDER_NONE
+                            ) || 'null';
+                            code = code.replaceAll(`[${input.id}]`, inputValue);
+                        }
+                    });
+
+                    return blockDef.output ? [code, Blockly.JavaScript.ORDER_FUNCTION_CALL] : code + ';\n';
+                };
                 
-                const blockId = `custom_${blockDef.id}_${Date.now()}`;
-                window.registeredBlocks = window.registeredBlocks || [];
-                window.registeredBlocks.push(blockDef);
+                console.log(`✅ LupiScript block "${blockDef.id}" registered`);
+            },
+
+            // ✅ SUBMIT: Parse + register + update toolbox
+            submit() {
+                try {
+                    const code = document.getElementById('lupiEditor').value;
+                    if (!code.trim()) {
+                        throw new Error('Please enter LupiScript code');
+                    }
+                    
+                    const blockDef = this.parse(code);
+                    this.register(blockDef);
+                    
+                    // Add to toolbox
+                    this.addToToolbox(blockDef);
+                    
+                    // Save to localStorage
+                    this.saveBlock(blockDef);
+                    
+                    // Update workspace to refresh toolbox
+                    if (window.workspace) {
+                        window.workspace.updateToolbox(document.getElementById('toolbox'));
+                    }
+                    
+                    document.getElementById('lupiStatus').innerHTML = 
+                        `✅ Block <strong>"${blockDef.id}"</strong> created in category "${blockDef.category}"`;
+                    document.getElementById('lupiStatus').style.color = '#2ecc71';
+                    
+                    // Show preview
+                    this.showPreview(blockDef);
+                    
+                } catch (e) {
+                    document.getElementById('lupiStatus').textContent = `❌ ${e.message}`;
+                    document.getElementById('lupiStatus').style.color = '#e74c3c';
+                    console.error('LupiScript error:', e);
+                }
+            },
+            
+            // Add block to toolbox
+            addToToolbox(blockDef) {
+                const toolbox = document.getElementById('toolbox');
+                let category = toolbox.querySelector(`category[name="${blockDef.category}"]`);
                 
-                localStorage.setItem('lupi_user_blocks', JSON.stringify(window.registeredBlocks || []));
-                
-                const resultEl = document.getElementById('lupiResultStatus');
-                if (resultEl) {
-                    resultEl.textContent = `✅ Block "${blockDef.name}" created successfully!`;
-                    resultEl.style.background = '#27ae60';
+                // Create category if it doesn't exist
+                if (!category) {
+                    category = document.createElement('category');
+                    category.setAttribute('name', blockDef.category);
+                    category.setAttribute('colour', blockDef.color);
+                    toolbox.appendChild(category);
                 }
                 
-                showToast(`🧱 Created custom block: ${blockDef.name}`);
-                this.log(`🧱 LupiScript block created: ${blockDef.name}`, 'success');
+                // Check if block already exists
+                const existing = category.querySelector(`block[type="${blockDef.id}"]`);
+                if (!existing) {
+                    const blockXML = document.createElement('block');
+                    blockXML.setAttribute('type', blockDef.id);
+                    category.appendChild(blockXML);
+                }
+            },
+            
+            // Save block definition to localStorage
+            saveBlock(blockDef) {
+                const savedBlocks = JSON.parse(localStorage.getItem('lupiforge_custom_blocks') || '[]');
+                const existing = savedBlocks.findIndex(b => b.id === blockDef.id);
                 
-                setTimeout(() => {
-                    if (this.lupiEditor) this.lupiEditor.value = '';
-                }, 2000);
+                if (existing >= 0) {
+                    savedBlocks[existing] = blockDef;
+                } else {
+                    savedBlocks.push(blockDef);
+                }
                 
-            } catch (error) {
-                const resultEl = document.getElementById('lupiResultStatus');
-                if (resultEl) {
-                    resultEl.textContent = `❌ ${error.message}`;
-                    resultEl.style.background = '#e74c3c';
-                }
-                showToast(`❌ ${error.message}`, true);
-            }
-        },
-        
-        loadExample() {
-            if (!this.lupiEditor) return;
-            this.lupiEditor.value = `block play_sound "Play Sound"
-  category audio
-  field sound text
-  field volume number 100
-  code playSound("[sound]", [volume])`;
-            this.handleLupiEditorInput({ target: this.lupiEditor });
-        },
-        
-        clearLupiEditor() {
-            if (this.lupiEditor) {
-                this.lupiEditor.value = '';
-                const resultEl = document.getElementById('lupiResultStatus');
-                if (resultEl) {
-                    resultEl.textContent = 'Ready to create blocks';
-                    resultEl.style.background = '#1a1a2e';
-                }
-            }
-        },
-        
-        handleLupiEditorInput(e) {
-            const code = e.target.value.trim();
-            const preview = document.getElementById('lupiPreview');
-            const status = document.getElementById('lupiSyntaxStatus');
+                localStorage.setItem('lupiforge_custom_blocks', JSON.stringify(savedBlocks));
+            },
             
-            if (!preview || !status) return;
-            
-            if (!code) {
-                preview.textContent = 'Block preview will appear here';
-                preview.style.color = '#7f8c8d';
-                status.textContent = 'Waiting for input...';
-                status.style.color = '#7f8c8d';
-                return;
-            }
-            
-            try {
-                const blockDef = this.parseLupiScript(code);
-                if (blockDef) {
-                    const previewText = this.generateBlockPreview(blockDef);
-                    preview.innerHTML = previewText;
-                    preview.style.color = '#2ecc71';
-                    status.textContent = '✅ Syntax valid';
-                    status.style.color = '#2ecc71';
-                    return;
+            // Load saved blocks on startup
+            loadSavedBlocks() {
+                try {
+                    const savedBlocks = JSON.parse(localStorage.getItem('lupiforge_custom_blocks') || '[]');
+                    savedBlocks.forEach(blockDef => {
+                        try {
+                            this.register(blockDef);
+                            this.addToToolbox(blockDef);
+                        } catch (e) {
+                            console.error(`Failed to load block ${blockDef.id}:`, e);
+                        }
+                    });
+                    
+                    if (savedBlocks.length > 0) {
+                        console.log(`✅ Loaded ${savedBlocks.length} custom LupiScript blocks`);
+                    }
+                } catch (e) {
+                    console.error('Failed to load saved blocks:', e);
                 }
-            } catch (error) {
-                preview.textContent = `❌ Error: ${error.message}`;
-                preview.style.color = '#e74c3c';
-                status.textContent = '❌ Syntax error';
-                status.style.color = '#e74c3c';
+            },
+            
+            // Show block preview
+            showPreview(blockDef) {
+                const preview = document.getElementById('lupiPreview');
+                preview.innerHTML = `
+                    <div style="color:#4ec9b0; font-weight:bold; margin-bottom:8px;">📦 Block Preview</div>
+                    <div style="background:${blockDef.color}; color:white; padding:8px; border-radius:4px; margin-bottom:8px;">
+                        ${blockDef.icon} ${blockDef.displayName}
+                    </div>
+                    <div style="font-size:11px; color:#95a5a6;">
+                        <strong>ID:</strong> ${blockDef.id}<br>
+                        <strong>Category:</strong> ${blockDef.category}<br>
+                        <strong>Fields:</strong> ${blockDef.fields.length}<br>
+                        <strong>Inputs:</strong> ${blockDef.inputs.length}<br>
+                        ${blockDef.output ? `<strong>Output:</strong> ${blockDef.output}<br>` : ''}
+                        ${blockDef.tooltip ? `<strong>Tooltip:</strong> ${blockDef.tooltip}` : ''}
+                    </div>
+                `;
             }
-        }
-        // End LupiScript V1
+        };
+        
+        window.LupiScript = LupiScript;
 
         // Game Preview Manager
         const EnhancedPreviewManager = {
@@ -15010,142 +15252,15 @@ document.addEventListener('click', (e) => {
         KeyframeManager.init();
         AssetTagSystem.init();
 
-        // Level Editor Integration
-        window.LevelEditorManager = {
-            levelEditor: null,
-            
-            async init() {
-                try {
-                    const canvas = document.getElementById('levelEditorCanvas');
-                    if (!canvas) {
-                        console.warn('Level editor canvas not found');
-                        return;
-                    }
-
-                    const projectData = {
-                        id: window.LUPIFORGE_PROJECT_ID || `project_${Date.now()}`,
-                        name: document.getElementById('projectName')?.value || 'My Awesome Game',
-                        levels: []
-                    };
-
-                    if (window.LevelEditor) {
-                        this.levelEditor = new window.LevelEditor(projectData, canvas);
-                        console.log('✅ LevelEditor initialized successfully');
-                    } else {
-                        console.warn('LevelEditor class not found');
-                    }
-                } catch (error) {
-                    console.error('Failed to initialize LevelEditor:', error);
-                }
-            },
-
-            toggleLevelEditor() {
-                const canvas = document.getElementById('levelEditorCanvas');
-                const blocklyDiv = document.getElementById('blocklyDiv');
-                
-                if (canvas.style.display === 'none') {
-                    canvas.style.display = 'block';
-                    blocklyDiv.style.display = 'none';
-                } else {
-                    canvas.style.display = 'none';
-                    blocklyDiv.style.display = 'block';
-                }
-            }
-        };
-
-        // Add Level Editor button to header
-        const headerButtonGroup = document.querySelector('.button-group');
-        if (headerButtonGroup) {
-            const levelEditorBtn = document.createElement('button');
-            levelEditorBtn.id = 'levelEditorBtn';
-            levelEditorBtn.className = 'header-icon-btn';
-            levelEditorBtn.title = 'Level Editor';
-            levelEditorBtn.textContent = '🗺️';
-            levelEditorBtn.addEventListener('click', () => {
-                window.LevelEditorManager.toggleLevelEditor();
-            });
-            headerButtonGroup.insertBefore(levelEditorBtn, headerButtonGroup.firstChild);
-        }
-
-        // Auto-save level to project data
-        window.addEventListener('beforeunload', (e) => {
-            if (window.LevelEditorManager.levelEditor) {
-                const levelData = window.LevelEditorManager.levelEditor.exportLevel();
-                localStorage.setItem('lupiforge_autosave_level', JSON.stringify(levelData));
-            }
-        });
+        // === LEVEL EDITOR REMOVED (Not part of V1) ===
     </script>
     
-    <!-- Level Editor Script -->
-    <script type="module">
-        // Mock registerBlock function for block registration
-        if (typeof registerBlock === 'undefined') {
-            window.registerBlock = function(blockDef) {
-                console.log('📦 Registered block:', blockDef.id);
-                if (!window.registeredBlocks) {
-                    window.registeredBlocks = [];
-                }
-                window.registeredBlocks.push(blockDef);
-            };
-        }
-
-        // Create stub implementations for dependencies if needed
-        if (typeof window.AssetManager === 'undefined') {
-            window.AssetManager = {
-                getAssetsByType: (type) => [],
-                getAssetById: (id) => null,
-                saveAssets: () => {},
-                showSpriteSheetConfig: () => {}
-            };
-        }
-
-        if (typeof window.SceneManager === 'undefined') {
-            window.SceneManager = class {
-                getFPS() {
-                    return Math.round(1000 / 16.67);
-                }
-            };
-        }
-
-        if (typeof window.Entity === 'undefined') {
-            window.Entity = class {
-                constructor(config) {
-                    Object.assign(this, config);
-                }
-            };
-        }
-
-        // Try to import LevelEditor module
-        try {
-            const LevelEditorModule = await import('/static/js/LevelEditor.js').catch(() => {
-                console.warn('LevelEditor.js not found at /static/js');
-                return null;
-            });
-            
-            if (LevelEditorModule && LevelEditorModule.default) {
-                window.LevelEditor = LevelEditorModule.default;
-            }
-        } catch (error) {
-            console.warn('Failed to import LevelEditor module:', error.message);
-        }
-
-        // Queue LevelEditor initialization for after other components are ready
-        if (window.LUPIFORGE && window.LUPIFORGE.initQueue) {
-            window.LUPIFORGE.initQueue.push(() => {
-                if (window.LevelEditor && window.LevelEditorManager) {
-                    window.LevelEditorManager.init();
-                    console.log('✅ LevelEditor initialized');
-                } else {
-                    console.warn('⚠️ LevelEditor not available');
-                }
-            });
-        }
-    </script>
+    <!-- === LEVEL EDITOR SCRIPT REMOVED (Not part of V1) === -->
     
-    <!-- Fixed JavaScript Classes -->
-    <script src="/static/js/ai_suggestion_system.js"></script>
-    <script src="/static/js/mobile_exporter.js"></script>
-    <script src="/static/js/asset_tagging_system.js"></script>
-    <script src="/static/js/state_store.js"></script>
+    <!-- Fixed JavaScript Classes - NOTE: These are already loaded earlier via Django static tags -->
+    <!-- <script src="/static/js/ai_suggestion_system.js"></script> -->
+    <!-- <script src="/static/js/mobile_exporter.js"></script> -->
+    <!-- <script src="/static/js/asset_tagging_system.js"></script> -->
+    <!-- <script src="/static/js/state_store.js"></script> -->
 </body>
 </html>

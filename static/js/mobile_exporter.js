@@ -1,64 +1,70 @@
-// FIXED MOBILE EXPORTER
-class MobileExporter {
-  constructor(projectData) {
-    this.projectData = projectData;
-    this.assetManager = window.assetManager || {
-      getAssetBlob: async (id) => new Blob(),
-      getAssetsByType: (type) => []
-    };
-  }
+// Prevent duplicate declarations
+if (typeof MobileExporter !== 'undefined') {
+  console.log('⚠️ MobileExporter already defined, skipping redeclaration');
+  return;
+}
 
-  async export(platform, exportOptions = {}) {
-    try {
-      this.validateProject();
-      const files = await this.generateProjectFiles(platform, exportOptions);
-      return await this.packageFiles(files, platform);
-    } catch (error) {
-      console.error(`Mobile export failed: ${error.message}`);
-      throw new Error(`Export failed: ${error.message}`);
-    }
-  }
+(function() {
 
-  validateProject() {
-    if (!this.projectData || !this.projectData.blocks || this.projectData.blocks.length === 0) {
-      throw new Error('Project has no blocks. Add game logic before exporting.');
+  class MobileExporter {
+    constructor(projectData) {
+      this.projectData = projectData;
+      this.assetManager = window.assetManager || {
+        getAssetBlob: async (id) => new Blob(),
+        getAssetsByType: (type) => []
+      };
     }
-    if (!this.projectData.gameTitle || this.projectData.gameTitle.trim() === '') {
-      throw new Error('Game title is required for export.');
-    }
-  }
 
-  async generateProjectFiles(platform, options) {
-    const gameTitle = this.projectData.gameTitle.replace(/[^\w\s-]/g, '').trim();
-    const safeGameTitle = gameTitle.replace(/\s+/g, '_');
-    const version = this.projectData.version || '1.0.0';
-    
-    const files = {
-      'game.js': this.generateGameFile(options)
-    };
-    
-    if (platform === 'android') {
-      files['AndroidManifest.xml'] = this.generateAndroidManifest(gameTitle, safeGameTitle, version);
-      files['build.gradle'] = this.generateGradleFile(safeGameTitle, version);
-    } else if (platform === 'ios') {
-      files['Info.plist'] = this.generateIOSPlist(gameTitle, safeGameTitle, version);
-      files['AppDelegate.m'] = this.generateAppDelegate(safeGameTitle);
+    async export(platform, exportOptions = {}) {
+      try {
+        this.validateProject();
+        const files = await this.generateProjectFiles(platform, exportOptions);
+        return await this.packageFiles(files, platform);
+      } catch (error) {
+        console.error(`Mobile export failed: ${error.message}`);
+        throw new Error(`Export failed: ${error.message}`);
+      }
     }
-    
-    files['config.json'] = this.generateConfigFile(platform, options);
-    
-    // Add assets
-    await this.addAssets(files);
-    
-    return files;
-  }
 
-  generateGameFile(options) {
-    const gameTitle = this.projectData.gameTitle || 'MyGame';
-    const code = this.projectData.code || '';
-    const optimizedCode = options.optimize ? this.optimizeCode(code) : code;
-    
-    return `// Lupiforge Mobile Game - Auto-generated
+    validateProject() {
+      if (!this.projectData || !this.projectData.blocks || this.projectData.blocks.length === 0) {
+        throw new Error('Project has no blocks. Add game logic before exporting.');
+      }
+      if (!this.projectData.gameTitle || this.projectData.gameTitle.trim() === '') {
+        throw new Error('Game title is required for export.');
+      }
+    }
+
+    async generateProjectFiles(platform, options) {
+      const gameTitle = this.projectData.gameTitle.replace(/[^\w\s-]/g, '').trim();
+      const safeGameTitle = gameTitle.replace(/\s+/g, '_');
+      const version = this.projectData.version || '1.0.0';
+      
+      const files = {
+        'game.js': this.generateGameFile(options)
+      };
+      
+      if (platform === 'android') {
+        files['AndroidManifest.xml'] = this.generateAndroidManifest(gameTitle, safeGameTitle, version);
+        files['build.gradle'] = this.generateGradleFile(safeGameTitle, version);
+      } else if (platform === 'ios') {
+        files['Info.plist'] = this.generateIOSPlist(gameTitle, safeGameTitle, version);
+        files['AppDelegate.m'] = this.generateAppDelegate(safeGameTitle);
+      }
+      
+      files['config.json'] = this.generateConfigFile(platform, options);
+      
+      await this.addAssets(files);
+      
+      return files;
+    }
+
+    generateGameFile(options) {
+      const gameTitle = this.projectData.gameTitle || 'MyGame';
+      const code = this.projectData.code || '';
+      const optimizedCode = options.optimize ? this.optimizeCode(code) : code;
+      
+      return `// Lupiforge Mobile Game - Auto-generated
 // Game: ${gameTitle}
 // Version: ${this.projectData.version || '1.0.0'}
 // Exported: ${new Date().toISOString()}
@@ -81,24 +87,24 @@ ${optimizedCode}
 if (typeof startGame === 'function') {
   startGame();
 }`;
-  }
+    }
 
-  generateConfigFile(platform, options) {
-    return JSON.stringify({
-      platform: platform,
-      title: this.projectData.gameTitle,
-      version: this.projectData.version || '1.0.0',
-      orientation: options.orientation || 'landscape',
-      touchConfig: {
-        enableMultiTouch: options.touchConfig?.enableMultiTouch !== false,
-        swipeSensitivity: options.touchConfig?.swipeSensitivity || 0.5
-      },
-      exportDate: new Date().toISOString()
-    }, null, 2);
-  }
+    generateConfigFile(platform, options) {
+      return JSON.stringify({
+        platform: platform,
+        title: this.projectData.gameTitle,
+        version: this.projectData.version || '1.0.0',
+        orientation: options.orientation || 'landscape',
+        touchConfig: {
+          enableMultiTouch: options.touchConfig?.enableMultiTouch !== false,
+          swipeSensitivity: options.touchConfig?.swipeSensitivity || 0.5
+        },
+        exportDate: new Date().toISOString()
+      }, null, 2);
+    }
 
-  generateAndroidManifest(gameTitle, packageName, version) {
-    return `<?xml version="1.0" encoding="utf-8"?>
+    generateAndroidManifest(gameTitle, packageName, version) {
+      return `<?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.lupiforge.${packageName.toLowerCase()}">
 
@@ -124,10 +130,10 @@ if (typeof startGame === 'function') {
         </activity>
     </application>
 </manifest>`;
-  }
+    }
 
-  generateGradleFile(packageName, version) {
-    return `apply plugin: 'com.android.application'
+    generateGradleFile(packageName, version) {
+      return `apply plugin: 'com.android.application'
 
 android {
     compileSdkVersion 33
@@ -152,10 +158,10 @@ dependencies {
     implementation 'androidx.appcompat:appcompat:1.6.1'
     implementation 'androidx.webkit:webkit:1.8.0'
 }`;
-  }
+    }
 
-  generateIOSPlist(gameTitle, packageName, version) {
-    return `<?xml version="1.0" encoding="UTF-8"?>
+    generateIOSPlist(gameTitle, packageName, version) {
+      return `<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
@@ -182,10 +188,10 @@ dependencies {
     <true/>
 </dict>
 </plist>`;
-  }
+    }
 
-  generateAppDelegate(appName) {
-    return `#import <UIKit/UIKit.h>
+    generateAppDelegate(appName) {
+      return `#import <UIKit/UIKit.h>
 #import <WebKit/WebKit.h>
 
 @interface AppDelegate : UIResponder <UIApplicationDelegate>
@@ -214,37 +220,39 @@ dependencies {
 }
 
 @end`;
+    }
+
+    async addAssets(files) {
+      files['assets.json'] = JSON.stringify({
+        sprites: [],
+        sounds: [],
+        backgrounds: []
+      }, null, 2);
+    }
+
+    optimizeCode(code) {
+      return code
+        .replace(/\s+/g, ' ')
+        .replace(/\/\/.*$/gm, '')
+        .replace(/\/\*[\s\S]*?\*\//g, '');
+    }
+
+    async packageFiles(files, platform) {
+      const gameTitle = this.projectData.gameTitle.replace(/[^\w\s-]/g, '').trim();
+      const safeGameTitle = gameTitle.replace(/\s+/g, '_');
+      const version = this.projectData.version || '1.0.0';
+      
+      const zipContent = JSON.stringify(files);
+      const blob = new Blob([zipContent], { type: platform === 'ios' ? 'application/octet-stream' : 'application/vnd.android.package-archive' });
+      
+      blob.name = `${safeGameTitle}_v${version}.${platform === 'ios' ? 'ipa' : 'apk'}`;
+      return blob;
+    }
   }
 
-  async addAssets(files) {
-    // Add placeholder for asset handling
-    files['assets.json'] = JSON.stringify({
-      sprites: [],
-      sounds: [],
-      backgrounds: []
-    }, null, 2);
-  }
-
-  optimizeCode(code) {
-    return code
-      .replace(/\s+/g, ' ')
-      .replace(/\/\/.*$/gm, '')
-      .replace(/\/\*[\s\S]*?\*\//g, '');
-  }
-
-  async packageFiles(files, platform) {
-    const gameTitle = this.projectData.gameTitle.replace(/[^\w\s-]/g, '').trim();
-    const safeGameTitle = gameTitle.replace(/\s+/g, '_');
-    const version = this.projectData.version || '1.0.0';
-    
-    // Create a simple zip blob for demonstration
-    const zipContent = JSON.stringify(files);
-    const blob = new Blob([zipContent], { type: platform === 'ios' ? 'application/octet-stream' : 'application/vnd.android.package-archive' });
-    
-    blob.name = `${safeGameTitle}_v${version}.${platform === 'ios' ? 'ipa' : 'apk'}`;
-    return blob;
-  }
-}
+  window.MobileExporter = MobileExporter;
+  console.log('✅ MobileExporter loaded');
+})();
 
 // Export function
 window.exportMobileGame = async (projectData, platform, options = {}) => {

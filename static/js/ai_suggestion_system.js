@@ -1,6 +1,10 @@
 // FIXED AI SUGGESTION SYSTEM
 class AISuggestionSystem {
   constructor(workspace) {
+    if (!workspace) {
+      console.warn('⚠️ AISuggestionSystem: workspace is null or undefined');
+      return;
+    }
     this.workspace = workspace;
     this.suggestions = [];
     this.lastAnalysisTime = 0;
@@ -108,7 +112,7 @@ class AISuggestionSystem {
   }
 
   analyzeWorkspace() {
-    if (!this.enabled) return;
+    if (!this.enabled || !this.workspace) return;
     const now = Date.now();
     if (now - this.lastSuggestionTime < this.suggestionCooldown) return;
     this.lastSuggestionTime = now;
@@ -181,6 +185,7 @@ class AISuggestionSystem {
   }
 
   insertBlock(type, x, y) {
+    if (!this.workspace) return;
     if (this.workspace.newBlock) {
       const block = this.workspace.newBlock(type);
       block.initSvg?.();
@@ -221,7 +226,22 @@ class AISuggestionSystem {
   }
 }
 
-// Initialize on page load
-if (typeof workspace !== 'undefined') {
-  window.aiSuggestionSystem = new AISuggestionSystem(workspace);
-}
+// Fixed AI initialization
+document.addEventListener('workspaceReady', function() {
+  if (typeof AISuggestionSystem === 'undefined') {
+    console.log('⚠️ AISuggestionSystem not available');
+    return;
+  }
+  
+  if (typeof workspace === 'undefined' || workspace === null) {
+    console.log('⚠️ Workspace not available yet');
+    return;
+  }
+  
+  try {
+    window.aiSuggestionSystem = new AISuggestionSystem(workspace);
+    console.log('✅ AI Suggestion System initialized');
+  } catch (e) {
+    console.error('❌ AI Suggestion System initialization failed:', e);
+  }
+});

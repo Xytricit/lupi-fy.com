@@ -1,34 +1,41 @@
-// FIXED GAME STATE MANAGEMENT
-class StateStore {
-  constructor() {
-    this.gameState = {
-      // Core game state
-      score: 0,
-      health: 100,
-      lives: 3,
-      level: 1,
-      
-      // Camera state
-      camera: {
-        x: 0,
-        y: 0,
-        targetX: 0,
-        targetY: 0,
-        zoom: 1,
-        smooth: 0.1
-      },
-      
-      // Inventory system
-      inventory: {
-        slots: Array(20).fill(null),  // Fixed-size inventory
-        maxWeight: 100,               // Max weight the player can carry
-        gold: 0                      // In-game currency
-      },
-      
-      // Buffs/debuffs
-      buffs: {
-        // Example: { 'speed_boost': { power: 1.5, expires: 1234567890 } }
-      },
+// Prevent duplicate declarations
+if (typeof StateStore !== 'undefined') {
+  console.log('⚠️ StateStore already defined, skipping redeclaration');
+  return;
+}
+
+(function() {
+
+  class StateStore {
+    constructor() {
+      this.gameState = {
+        // Core game state
+        score: 0,
+        health: 100,
+        lives: 3,
+        level: 1,
+        
+        // Camera state
+        camera: {
+          x: 0,
+          y: 0,
+          targetX: 0,
+          targetY: 0,
+          zoom: 1,
+          smooth: 0.1
+        },
+        
+        // Inventory system
+        inventory: {
+          slots: Array(20).fill(null),  // Fixed-size inventory
+          maxWeight: 100,               // Max weight the player can carry
+          gold: 0                      // In-game currency
+        },
+        
+        // Buffs/debuffs
+        buffs: {
+          // Example: { 'speed_boost': { power: 1.5, expires: 1234567890 } }
+        },
       
       // Cooldowns
       cooldowns: {
@@ -584,10 +591,16 @@ class StateStore {
   }
 }
 
-// Create a singleton instance
-window.stateStore = new StateStore();
+  window.StateStore = StateStore;
+  console.log('✅ StateStore loaded');
+  
+  // Create a singleton instance
+  if (typeof window.stateStore === 'undefined') {
+    window.stateStore = new StateStore();
+  }
+})();
 
 // Expose for CommonJS/Node.js
-if (typeof module !== 'undefined' && module.exports) {
+if (typeof module !== 'undefined' && module.exports && typeof StateStore !== 'undefined') {
   module.exports = StateStore;
 }
