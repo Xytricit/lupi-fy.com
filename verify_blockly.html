@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Blockly Init Test</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/blockly/10.4.3/blockly_compressed.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/blockly/10.4.3/blocks_compressed.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/blockly/10.4.3/msg/en.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/blockly/10.4.3/javascript_compressed.min.js"></script>
+</head>
+<body>
+    <h1>Blockly Initialization Test</h1>
+    <div id="blocklyDiv" style="height: 500px; width: 100%;"></div>
+    <xml id="toolbox" style="display: none">
+        <category name="Logic" colour="210">
+            <block type="controls_if"></block>
+            <block type="logic_compare"></block>
+        </category>
+    </xml>
+
+    <script>
+        let workspace = null;
+        let attempts = 0;
+
+        function startInit() {
+            attempts++;
+            console.log(`Attempt ${attempts}: Checking if Blockly is loaded...`);
+            
+            if (typeof Blockly === 'undefined') {
+                if (attempts < 10) {
+                    console.log('Blockly not ready, retrying in 100ms...');
+                    setTimeout(startInit, 100);
+                } else {
+                    document.body.innerHTML += '<h2 style="color:red;">❌ FAILED: Blockly never loaded!</h2>';
+                }
+                return;
+            }
+
+            console.log('✅ Blockly is loaded! Initializing workspace...');
+            try {
+                const toolboxEl = document.getElementById('toolbox');
+                if (!toolboxEl) {
+                    throw new Error('Toolbox element not found!');
+                }
+
+                workspace = Blockly.inject('blocklyDiv', {
+                    toolbox: toolboxEl,
+                    scrollbars: true,
+                    trashcan: true
+                });
+
+                if (workspace) {
+                    document.body.innerHTML += '<h2 style="color:green;">✅ SUCCESS: Blockly workspace initialized!</h2>';
+                    console.log('✅ Workspace created successfully!');
+                } else {
+                    document.body.innerHTML += '<h2 style="color:red;">❌ FAILED: Workspace is null!</h2>';
+                }
+            } catch (error) {
+                document.body.innerHTML += `<h2 style="color:red;">❌ ERROR: ${error.message}</h2>`;
+                console.error('Error:', error);
+            }
+        }
+
+        // Start initialization
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', startInit);
+        } else {
+            startInit();
+        }
+    </script>
+</body>
+</html>

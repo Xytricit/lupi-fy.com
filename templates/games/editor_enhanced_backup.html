@@ -1,4 +1,3 @@
-{% load static %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -6,1421 +5,148 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>LupiForge Block Editor</title>
     <!-- Blockly Core -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/blockly/10.4.3/blockly_compressed.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/blockly/10.4.3/blocks_compressed.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/blockly/10.4.3/msg/en.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/blockly/10.4.3/javascript_compressed.min.js"></script>
+    <script src="https://www.gstatic.com/blockly/blockly/blockly_compressed.js"></script>
+    <script src="https://www.gstatic.com/blockly/blockly/blocks_compressed.js"></script>
+    <script src="https://www.gstatic.com/blockly/blockly/msg/js/en.js"></script>
+    <script src="https://www.gstatic.com/blockly/blockly/javascript_compressed.js"></script>
     
     <script>
-    // === LUPIFORGE GLOBAL STATE ===
-    window.LUPIFORGE = window.LUPIFORGE || {
-        isInitialized: false,
-        initQueue: [],
-        assets: { sprites: [], sounds: [], backgrounds: [], animations: [] },
-        gameState: {}
-    };
-
-    // === MEMORY MANAGEMENT SYSTEM ===
-    class MemoryManager {
-        constructor() {
-            this.activeAnimations = new Map();
-            this.eventListeners = new WeakMap();
-            this.assetCache = new LRUCache({ maxSize: 50 });
-            this.memoryStats = { lastCleanup: 0, totalCleanups: 0 };
-        }
-        
-        static getInstance() {
-            if (!MemoryManager.instance) {
-                MemoryManager.instance = new MemoryManager();
-                MemoryManager.instance.startMonitoring();
-            }
-            return MemoryManager.instance;
-        }
-        
-        registerAnimationFrame(id, frameId) {
-            this.activeAnimations.set(id, frameId);
-        }
-        
-        cancelAnimation(id) {
-            const frameId = this.activeAnimations.get(id);
-            if (frameId) {
-                cancelAnimationFrame(frameId);
-                this.activeAnimations.delete(id);
-            }
-        }
-        
-        addEventListener(element, event, handler, options = {}) {
-            element.addEventListener(event, handler, options);
-            
-            const elementHandlers = this.eventListeners.get(element) || new Map();
-            if (!elementHandlers.has(event)) {
-                elementHandlers.set(event, []);
-            }
-            elementHandlers.get(event).push(handler);
-            this.eventListeners.set(element, elementHandlers);
-        }
-        
-        removeAllListeners(element) {
-            const elementHandlers = this.eventListeners.get(element);
-            if (elementHandlers) {
-                elementHandlers.forEach((handlers, event) => {
-                    handlers.forEach(handler => {
-                        element.removeEventListener(event, handler);
-                    });
-                });
-                this.eventListeners.delete(element);
-            }
-        }
-        
-        cleanupAssets() {
-            const now = Date.now();
-            const processedKeys = new Set();
-            let cleanedCount = 0;
-            
-            Object.keys(localStorage).forEach(key => {
-                if (!key.startsWith('lupiforge_asset_') || processedKeys.has(key)) return;
-                
-                try {
-                    const asset = JSON.parse(localStorage.getItem(key));
-                    if (!asset.uploadedAt) {
-                        localStorage.removeItem(key);
-                        cleanedCount++;
-                        processedKeys.add(key);
-                        return;
-                    }
-                    
-                    const assetAge = now - new Date(asset.uploadedAt).getTime();
-                    if (assetAge > 30 * 24 * 60 * 60 * 1000) {
-                        localStorage.removeItem(key);
-                        console.log(`🧹 Cleaned up old asset: ${key}`);
-                        cleanedCount++;
-                    }
-                } catch (e) {
-                    console.warn(`⚠️ Error processing asset ${key}:`, e.message);
-                    try {
-                        localStorage.removeItem(key);
-                        cleanedCount++;
-                    } catch (removeError) {
-                        console.error(`Failed to remove corrupted asset ${key}:`, removeError.message);
-                    }
-                } finally {
-                    processedKeys.add(key);
-                }
-            });
-            
-            this.activeAnimations.forEach((frameId, id) => {
-                try {
-                    cancelAnimationFrame(frameId);
-                    this.activeAnimations.delete(id);
-                } catch (e) {
-                    console.warn(`Failed to cancel animation ${id}:`, e.message);
-                }
-            });
-            
-            const activeAssetIds = new Set();
-            if (window.AssetManager?.assets) {
-                Object.values(window.AssetManager.assets).forEach(typeAssets => {
-                    if (Array.isArray(typeAssets)) {
-                        typeAssets.forEach(asset => {
-                            if (asset && asset.id) activeAssetIds.add(asset.id);
-                        });
-                    }
-                });
-            }
-            
-            this.assetCache.keys().forEach(id => {
-                if (!activeAssetIds.has(id)) {
-                    this.assetCache.delete(id);
-                }
-            });
-            
-            this.memoryStats.lastCleanup = now;
-            this.memoryStats.totalCleanups++;
-            console.log(`✅ Memory cleanup completed. Cleaned ${cleanedCount} assets. Total cleanups: ${this.memoryStats.totalCleanups}`);
-        }
-        
-        startMonitoring() {
-            setInterval(() => {
-                if (performance.memory && performance.memory.usedJSHeapSize > 300 * 1024 * 1024) {
-                    console.warn('⚠️ MemoryWarning: Memory usage high, triggering cleanup');
-                    this.cleanupAssets();
-                }
-            }, 300000);
-            
-            document.addEventListener('visibilitychange', () => {
-                if (document.hidden) {
-                    console.log('📄 Page hidden - performing cleanup');
-                    this.cleanupAssets();
-                }
-            });
-        }
-    }
-
-    class LRUCache {
-        constructor(options = {}) {
-            this.maxSize = options.maxSize || 10;
-            this.cache = new Map();
-        }
-        
-        get(key) {
-            const item = this.cache.get(key);
-            if (item) {
-                this.cache.delete(key);
-                this.cache.set(key, item);
-                return item.value;
-            }
-            return undefined;
-        }
-        
-        set(key, value) {
-            if (this.cache.has(key)) {
-                this.cache.delete(key);
-            } else if (this.cache.size >= this.maxSize) {
-                this.cache.delete(this.cache.keys().next().value);
-            }
-            this.cache.set(key, { value, timestamp: Date.now() });
-        }
-        
-        delete(key) {
-            return this.cache.delete(key);
-        }
-        
-        keys() {
-            return this.cache.keys();
-        }
-    }
-
-    // === DEPENDENCY MANAGEMENT SYSTEM ===
-    class DependencyManager {
-        static dependencies = {
-            'ai_suggestion_system': ['/static/js/ai_suggestion_system.js', 'https://cdn.lupiforge.com/js/ai_suggestion_system.js'],
-            'mobile_exporter': ['/static/js/mobile_exporter.js', 'https://cdn.lupiforge.com/js/mobile_exporter.js'],
-            'asset_tagging_system': ['/static/js/asset_tagging_system.js', 'https://cdn.lupiforge.com/js/asset_tagging_system.js'],
-            'state_store': ['/static/js/state_store.js', 'https://cdn.lupiforge.com/js/state_store.js'],
-            'level_editor': ['/static/js/LevelEditor.js', '/static/built/LevelEditor.js', 'https://cdn.lupiforge.com/js/LevelEditor.js']
+    // Function to load scripts with fallback
+    function loadScript(url, callback) {
+        const script = document.createElement('script');
+        script.src = url;
+        script.onerror = function() {
+            console.error('Failed to load script:', url);
+            if (callback) callback(false);
         };
-        
-        static loaded = new Map();
-        static successfulPaths = {};
-        
-        static async load(name, critical = false) {
-            if (this.loaded.has(name)) {
-                return this.loaded.get(name);
-            }
-            
-            const paths = this.dependencies[name];
-            if (!paths) {
-                console.warn(`⚠️ Unknown dependency: ${name}`);
-                return this.createStub(name);
-            }
-            
-            const pathList = Array.isArray(paths) ? paths : [paths];
-            let lastError = null;
-            
-            for (const path of pathList) {
-                try {
-                    console.log(`📦 Loading ${name} from ${path}...`);
-                    await this.loadScript(path);
-                    console.log(`✅ Successfully loaded ${name} from ${path}`);
-                    this.successfulPaths[name] = path;
-                    this.loaded.set(name, true);
-                    return true;
-                } catch (error) {
-                    lastError = error;
-                    console.warn(`⚠️ Failed to load ${name} from ${path}: ${error.message}`);
-                }
-            }
-            
-            console.error(`❌ All paths failed for ${name}. Last error: ${lastError?.message}`);
-            
-            if (critical) {
-                throw new Error(`Critical dependency failed: ${name}. ${lastError?.message}`);
-            }
-            
-            const stub = this.createStub(name);
-            this.loaded.set(name, stub);
-            return stub;
-        }
-        
-        static loadScript(url, timeout = 10000) {
-            return new Promise((resolve, reject) => {
-                const script = document.createElement('script');
-                script.src = url;
-                script.async = true;
-                script.type = 'text/javascript';
-                
-                const timeoutId = setTimeout(() => {
-                    script.onerror = null;
-                    script.onload = null;
-                    if (script.parentNode) {
-                        script.parentNode.removeChild(script);
-                    }
-                    reject(new Error(`Script load timeout after ${timeout}ms`));
-                }, timeout);
-                
-                script.onload = () => {
-                    clearTimeout(timeoutId);
-                    resolve();
-                };
-                
-                script.onerror = (error) => {
-                    clearTimeout(timeoutId);
-                    if (script.parentNode) {
-                        script.parentNode.removeChild(script);
-                    }
-                    reject(new Error(`Script load failed: ${error?.message || 'Unknown error'}`));
-                };
-                
-                document.head.appendChild(script);
-            });
-        }
-        
-        static createStub(name) {
-            console.warn(`🔧 Creating stub for missing dependency: ${name}`);
-            
-            switch(name) {
-                case 'ai_suggestion_system':
-                    return class AISuggestionSystem {
-                        constructor(workspace) {
-                            this.workspace = workspace;
-                            console.log('⚠️ Using AI Suggestion System stub - limited functionality');
-                        }
-                        analyze() { 
-                            console.log('AI suggestion system stub - no suggestions available');
-                            return [];
-                        }
-                        scheduleAnalysis() {}
-                        analyzeWorkspace() {}
-                    };
-                
-                case 'level_editor':
-                    return class LevelEditor {
-                        constructor() {
-                            console.log('⚠️ Using LevelEditor stub - limited functionality');
-                        }
-                        init() { 
-                            console.warn('LevelEditor stub initialized - import LevelEditor.js for full functionality');
-                        }
-                        save() { 
-                            return { warning: 'Using stub implementation', data: null };
-                        }
-                        export() {
-                            return { warning: 'Using stub implementation', data: null };
-                        }
-                    };
-                
-                case 'mobile_exporter':
-                    return {
-                        init: function() { console.log('⚠️ Mobile Exporter stub initialized'); },
-                        export: function() { return { warning: 'Mobile export not available' }; },
-                        stub: true
-                    };
-                
-                case 'asset_tagging_system':
-                    return {
-                        init: function() { console.log('⚠️ Asset Tagging System stub initialized'); },
-                        tag: function(asset, tag) { console.warn('Asset tagging not available'); },
-                        getTags: function() { return []; },
-                        stub: true
-                    };
-                
-                case 'state_store':
-                    return {
-                        init: function() { console.log('⚠️ State Store stub initialized'); },
-                        save: function(key, value) { console.warn('State persistence not available'); },
-                        load: function(key) { return null; },
-                        stub: true
-                    };
-                
-                default:
-                    return {
-                        init: function() { console.log(`⚠️ Stub ${name} initialized`); },
-                        stub: true,
-                        warning: `This is a stub implementation of ${name}`
-                    };
-            }
-        }
+        script.onload = function() {
+            console.log('Successfully loaded:', url);
+            if (callback) callback(true);
+        };
+        document.head.appendChild(script);
     }
-
-    // === SECURITY-FOCUSED GAME RUNTIME ===
-    class SecureGameRuntime {
-        constructor() {
-            this.sandbox = null;
-            this.initialized = false;
-            this.worker = null;
-            this.executionTimeout = 5000;
-        }
-        
-        async initialize(canvas, ctx, code) {
-            const sanitizedCode = this.sanitizeUserCode(code);
-            
-            try {
-                if (window.Worker && typeof Worker !== 'undefined') {
-                    console.log('🔒 Executing code in Web Worker for true isolation');
-                    await this.executeInWorker(sanitizedCode, { canvas, ctx });
-                } else {
-                    console.log('🔒 Executing code in iframe sandbox (Worker not available)');
-                    this.sandbox = this.createIframeSandbox(canvas, ctx);
-                    await this.executeInIframe(sanitizedCode);
-                }
-                
-                this.initialized = true;
-                console.log('✅ Game runtime initialized in secure sandbox');
-            } catch (error) {
-                console.error('❌ Sandbox execution failed:', error);
-                throw new Error('Game initialization failed due to security constraints');
-            }
-        }
-        
-        sanitizeUserCode(code) {
-            const dangerousPatterns = [
-                /new\s+Function\s*\(/g,
-                /eval\s*\(/g,
-                /setTimeout\s*\([^,]+,\s*['"`]/g,
-                /setInterval\s*\([^,]+,\s*['"`]/g,
-                /document\.write/g,
-                /localStorage\.setItem/g,
-                /indexedDB\.open/g,
-                /window\.location/g,
-                /parent\./g,
-                /top\./g,
-                /iframe/g,
-                /<script>/g,
-                /document\.cookie/g,
-                /fetch\s*\(/g,
-                /XMLHttpRequest/g
-            ];
-            
-            let sanitized = code;
-            dangerousPatterns.forEach(pattern => {
-                sanitized = sanitized.replace(pattern, '// SECURITY BLOCKED: $&');
-            });
-            
-            if (/eval|Function|Worker/.test(sanitized)) {
-                console.warn('⚠️ Potentially unsafe code pattern detected. Code sanitized.');
-            }
-            
-            return sanitized;
-        }
-        
-        async executeInWorker(code, context = {}) {
-            return new Promise((resolve, reject) => {
-                try {
-                    const workerCode = `
-                        self.onmessage = function(e) {
-                            try {
-                                const context = e.data.context;
-                                ${code}
-                                self.postMessage({ success: true, message: 'Code executed successfully' });
-                            } catch (error) {
-                                self.postMessage({ success: false, error: error.message, stack: error.stack });
-                            }
-                        };
-                    `;
-                    
-                    const blob = new Blob([workerCode], { type: 'application/javascript' });
-                    this.worker = new Worker(URL.createObjectURL(blob));
-                    
-                    this.worker.onmessage = (e) => {
-                        if (e.data.success) {
-                            console.log(`✅ Worker execution: ${e.data.message}`);
-                            resolve(e.data);
-                        } else {
-                            console.error(`❌ Worker execution failed: ${e.data.error}`);
-                            reject(new Error(e.data.error));
-                        }
-                        this.cleanupWorker();
-                    };
-                    
-                    this.worker.onerror = (error) => {
-                        console.error(`❌ Worker error: ${error.message}`);
-                        this.cleanupWorker();
-                        reject(new Error(`Worker error: ${error.message}`));
-                    };
-                    
-                    const timeoutId = setTimeout(() => {
-                        this.cleanupWorker();
-                        reject(new Error(`Code execution timed out after ${this.executionTimeout}ms`));
-                    }, this.executionTimeout);
-                    
-                    this.worker.__timeoutId = timeoutId;
-                    this.worker.postMessage({ context });
-                } catch (error) {
-                    console.error('Failed to create worker:', error);
-                    this.cleanupWorker();
-                    reject(error);
-                }
-            });
-        }
-        
-        cleanupWorker() {
-            if (this.worker) {
-                if (this.worker.__timeoutId) {
-                    clearTimeout(this.worker.__timeoutId);
-                }
-                this.worker.terminate();
-                this.worker = null;
-            }
-        }
-        
-        createIframeSandbox(canvas, ctx) {
-            const iframe = document.createElement('iframe');
-            iframe.setAttribute('sandbox', 'allow-scripts');
-            iframe.style.display = 'none';
-            document.body.appendChild(iframe);
-            
-            const safeAPI = {
-                console: {
-                    log: console.log.bind(console),
-                    warn: console.warn.bind(console),
-                    error: console.error.bind(console)
-                },
-                requestAnimationFrame: window.requestAnimationFrame.bind(window),
-                cancelAnimationFrame: window.cancelAnimationFrame.bind(window),
-                Date: Date,
-                Math: Math,
-                performance: { now: performance.now.bind(performance) }
-            };
-            
-            return {
-                window: iframe.contentWindow,
-                document: iframe.contentDocument,
-                api: safeAPI,
-                canvas: canvas,
-                context: ctx,
-                iframe: iframe,
-                cleanup: () => {
-                    if (iframe.parentNode) {
-                        iframe.parentNode.removeChild(iframe);
-                    }
-                }
-            };
-        }
-        
-        async executeInIframe(code) {
-            if (!this.sandbox) {
-                throw new Error('Sandbox environment not initialized');
-            }
-            
-            return new Promise((resolve, reject) => {
-                const timeoutId = setTimeout(() => {
-                    reject(new Error(`Code execution timed out after ${this.executionTimeout}ms`));
-                }, this.executionTimeout);
-                
-                try {
-                    const wrappedCode = `
-                        (async function() {
-                            try {
-                                ${code}
-                                window.parent.postMessage({ success: true, source: 'sandbox' }, '*');
-                            } catch (error) {
-                                window.parent.postMessage({ success: false, error: error.message, source: 'sandbox' }, '*');
-                            }
-                        })();
-                    `;
-                    
-                    const messageHandler = (event) => {
-                        if (event.data?.source === 'sandbox') {
-                            window.removeEventListener('message', messageHandler);
-                            clearTimeout(timeoutId);
-                            
-                            if (event.data.success) {
-                                resolve();
-                            } else {
-                                reject(new Error(event.data.error));
-                            }
-                        }
-                    };
-                    
-                    window.addEventListener('message', messageHandler);
-                    
-                    const script = this.sandbox.document.createElement('script');
-                    script.textContent = wrappedCode;
-                    this.sandbox.document.body.appendChild(script);
-                } catch (error) {
-                    clearTimeout(timeoutId);
-                    reject(error);
-                }
-            });
-        }
-        
-        destroy() {
-            this.cleanupWorker();
-            if (this.sandbox?.cleanup) {
-                this.sandbox.cleanup();
-            }
-            this.initialized = false;
-        }
-    }
-
-    // === UNIFIED INITIALIZATION FLOW ===
-    let workspace = null;
-    let initializationAttempts = 0;
-    const MAX_INIT_ATTEMPTS = 5;
-
-    async function loadDependencies() {
-        try {
-            await Promise.all([
-                DependencyManager.load('ai_suggestion_system'),
-                DependencyManager.load('asset_tagging_system'),
-                DependencyManager.load('state_store')
-            ]);
-            console.log('✅ All critical dependencies loaded');
-        } catch (error) {
-            console.error('⚠️ Some dependencies failed:', error);
-        }
-    }
-
-    async function initializeCoreComponents() {
-        console.log('🔧 Initializing core components...');
-        
-        if (window.EnhancedTerminalManager) {
-            window.EnhancedTerminalManager.setupEditor();
-            console.log('  ✅ Terminal manager initialized');
-        }
-        
-        if (window.EnhancedAssetManager) {
-            window.EnhancedAssetManager.init();
-            console.log('  ✅ Asset manager initialized');
-        }
-    }
-
-    async function initializeLupiForge() {
-        if (window.LUPIFORGE.isInitialized) return;
-        
-        try {
-            console.log('🚀 === LUPIFORGE INITIALIZATION SEQUENCE ===');
-            
-            await loadDependencies();
-            
-            console.log('🎮 Initializing Blockly editor...');
-            initializeEditor();
-            
-            await initializeCoreComponents();
-            
-            window.LUPIFORGE.isInitialized = true;
-            console.log('✅ LupiForge fully initialized');
-            
-            window.LUPIFORGE.initQueue.forEach(fn => fn());
-            window.LUPIFORGE.initQueue = [];
-            
-        } catch (error) {
-            console.error('❌ Initialization error:', error);
-            setTimeout(initializeLupiForge, 2000);
-        }
-    }
-
-    // === CRITICAL FIX 1: PROPER BLOCKLY INITIALIZATION ===
-
-    function initializeEditor() {
-        initializationAttempts++;
-        console.log(`🚀 Attempting to initialize LupiForge... (Attempt ${initializationAttempts}/${MAX_INIT_ATTEMPTS})`);
-        
-        // Wait for DOM to be fully loaded
-        if (document.readyState !== 'complete') {
-            console.log('⏳ Waiting for DOM to fully load...');
-            if (initializationAttempts === 1) {
-                document.addEventListener('DOMContentLoaded', initializeEditor);
-            }
-            return;
-        }
-        
-        // Check if Blockly is loaded
+    
+    // Check if Blockly is loaded
+    function checkBlocklyLoaded() {
         if (typeof Blockly === 'undefined') {
-            console.error('❌ Blockly is not loaded!');
-            if (initializationAttempts < MAX_INIT_ATTEMPTS) {
-                console.log('⏳ Retrying in 500ms...');
-                setTimeout(initializeEditor, 500);
-                return;
-            } else {
-                showFatalError('Blockly failed to load after multiple attempts. Please refresh the page.');
-                return;
-            }
-        }
-        
-        // Check for required DOM elements
-        const blocklyDiv = document.getElementById('blocklyDiv');
-        const toolbox = document.getElementById('toolbox');
-        
-        if (!blocklyDiv) {
-            console.error('❌ blocklyDiv not found!');
-            if (initializationAttempts < MAX_INIT_ATTEMPTS) {
-                setTimeout(initializeEditor, 500);
-                return;
-            }
-            showFatalError('Editor container not found. Please refresh the page.');
-            return;
-        }
-        
-        if (!toolbox) {
-            console.error('❌ toolbox not found!');
-            if (initializationAttempts < MAX_INIT_ATTEMPTS) {
-                setTimeout(initializeEditor, 500);
-                return;
-            }
-            showFatalError('Toolbox not found. Please refresh the page.');
-            return;
-        }
-        
-        // Ensure blocklyDiv has proper dimensions
-        blocklyDiv.style.height = '100%';
-        blocklyDiv.style.width = '100%';
-        
-        try {
-            // Register fallback blocks before creating workspace
-            registerFallbackBlocks();
-            
-            // Create workspace with proper configuration
-            workspace = Blockly.inject('blocklyDiv', {
-                toolbox: document.getElementById('toolbox'),
-                zoom: {
-                    controls: true,
-                    wheel: true,
-                    startScale: 1.0,
-                    maxScale: 3,
-                    minScale: 0.3,
-                    scaleSpeed: 1.2
-                },
-                trashcan: true,
-                scrollbars: true,
-                grid: {
-                    spacing: 20,
-                    length: 3,
-                    colour: '#ccc',
-                    snap: true
+            console.error('Blockly not loaded! Trying fallback...');
+            // Try loading from cdnjs as fallback
+            loadScript('https://cdnjs.cloudflare.com/ajax/libs/blockly/10.4.3/blockly_compressed.js', function(success) {
+                if (success) {
+                    loadScript('https://cdnjs.cloudflare.com/ajax/libs/blockly/10.4.3/blocks_compressed.js');
+                    loadScript('https://cdnjs.cloudflare.com/ajax/libs/blockly/10.4.3/msg/js/en.js');
+                    loadScript('https://cdnjs.cloudflare.com/ajax/libs/blockly/10.4.3/javascript_compressed.js', function() {
+                        // If we get here, Blockly should be loaded
+                        if (typeof Blockly !== 'undefined') {
+                            console.log('Blockly loaded successfully from fallback CDN');
+                            initializeEditor();
+                        } else {
+                            showBlocklyError();
+                        }
+                    });
+                } else {
+                    showBlocklyError();
                 }
             });
-            
-            if (!workspace) {
-                throw new Error('Workspace creation failed');
-            }
-            
-            console.log('✅ Blockly workspace initialized successfully!');
-            window.workspace = workspace;
-            
-            // Initialize subsystems after workspace is ready
-            initializeSubsystems();
-            
-            // Load saved project
-            loadProject();
-            
-            // Add starter block if workspace is empty
-            if (workspace.getAllBlocks(false).length === 0) {
-                addStarterBlock();
-            }
-            
-        } catch (error) {
-            console.error('❌ Failed to initialize Blockly:', error);
-            showFatalError(`Initialization error: ${error.message}`);
+        } else {
+            console.log('Blockly loaded successfully from primary CDN');
+            initializeEditor();
         }
     }
-
-    function showFatalError(message) {
+    
+    // Show error message to user
+    function showBlocklyError() {
+        console.error('Blockly failed to load!');
         const errorDiv = document.createElement('div');
         errorDiv.style.cssText = `
             position: fixed;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            background: #e74c3c;
+            top: 10px;
+            left: 10px;
+            right: 10px;
+            background: #ff4444;
             color: white;
-            padding: 30px;
-            border-radius: 10px;
-            z-index: 99999;
-            max-width: 500px;
+            padding: 15px;
+            border-radius: 5px;
+            z-index: 10000;
+            font-family: Arial, sans-serif;
             text-align: center;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.5);
         `;
         errorDiv.innerHTML = `
-            <h2 style="margin: 0 0 15px 0;">⚠️ Initialization Failed</h2>
-            <p style="margin: 0 0 20px 0;">${message}</p>
-            <button onclick="window.location.reload()" style="
-                background: white;
-                color: #e74c3c;
-                border: none;
-                padding: 12px 30px;
-                border-radius: 5px;
-                cursor: pointer;
-                font-weight: bold;
-                font-size: 16px;
-            ">Reload Page</button>
+            <h3>Error: Failed to load Blockly editor</h3>
+            <p>Please check your internet connection and refresh the page.</p>
+            <p>If the problem persists, please contact support.</p>
+            <div style="margin-top: 10px;">
+                <button onclick="window.location.reload()" style="
+                    background: white;
+                    color: #ff4444;
+                    border: none;
+                    padding: 8px 16px;
+                    margin: 0 5px;
+                    border-radius: 4px;
+                    cursor: pointer;
+                ">Try Again</button>
+                <button onclick="loadLocalBlockly()" style="
+                    background: #fff3cd;
+                    color: #856404;
+                    border: none;
+                    padding: 8px 16px;
+                    margin: 0 5px;
+                    border-radius: 4px;
+                    cursor: pointer;
+                ">Load Local Version</button>
+            </div>
         `;
-        document.body.appendChild(errorDiv);
+        document.body.prepend(errorDiv);
     }
-
-    function registerFallbackBlocks() {
-        const requiredBlockTypes = [
-            'on_game_start', 'spawn_sprite', 'on_key_press', 'on_collision',
-            'move_player', 'set_entity_position', 'ui_button', 'ui_text'
+    
+    // Function to try loading local Blockly files
+    function loadLocalBlockly() {
+        console.log('Attempting to load local Blockly files...');
+        const scripts = [
+            '/static/blockly/blockly_compressed.js',
+            '/static/blockly/blocks_compressed.js',
+            '/static/blockly/msg/js/en.js',
+            '/static/blockly/javascript_compressed.js'
         ];
         
-        requiredBlockTypes.forEach(type => {
-            if (!Blockly.Blocks[type]) {
-                console.warn(`⚠️ Missing block definition: ${type}. Creating fallback.`);
-                Blockly.Blocks[type] = {
-                    init: function() {
-                        this.appendDummyInput()
-                            .appendField(`[MISSING BLOCK: ${type}]`);
-                        this.setColour("#ff0000");
-                        this.setTooltip(`This block is missing in the current configuration`);
-                    }
-                };
-                
-                Blockly.JavaScript[type] = function(block) {
-                    return `// Missing block: ${type}\n`;
-                };
-            }
-        });
-    }
-
-    function addStarterBlock() {
-        try {
-            const xml = Blockly.utils.xml.textToDom(
-                '<xml><block type="on_game_start" x="50" y="50"></block></xml>'
-            );
-            Blockly.Xml.domToWorkspace(xml, workspace);
-            console.log('✅ Added starter block');
-        } catch (error) {
-            console.warn('Could not add starter block:', error);
-        }
-    }
-
-    // === CRITICAL FIX 2: SAFE SUBSYSTEM INITIALIZATION ===
-    function initializeSubsystems() {
-        console.log('📦 Initializing subsystems...');
-        
-        const subsystems = [
-            {
-                name: 'EnhancedAssetManager',
-                init: () => {
-                    if (typeof EnhancedAssetManager !== 'undefined' && EnhancedAssetManager.init) {
-                        EnhancedAssetManager.init();
-                        window.AssetManager = EnhancedAssetManager;
-                        return true;
-                    }
-                    return false;
-                }
-            },
-            {
-                name: 'AssetTagSystem',
-                init: () => {
-                    if (typeof AssetTagSystem !== 'undefined' && AssetTagSystem.init) {
-                        AssetTagSystem.init();
-                        return true;
-                    }
-                    return false;
-                }
-            },
-            {
-                name: 'EnhancedTerminalManager',
-                init: () => {
-                    if (typeof EnhancedTerminalManager !== 'undefined' && EnhancedTerminalManager.init) {
-                        EnhancedTerminalManager.init();
-                        window.TerminalManager = EnhancedTerminalManager;
-                        return true;
-                    }
-                    return false;
-                }
-            },
-            {
-                name: 'EnhancedPreviewManager',
-                init: () => {
-                    if (typeof EnhancedPreviewManager !== 'undefined' && EnhancedPreviewManager.init) {
-                        EnhancedPreviewManager.init();
-                        window.PreviewManager = EnhancedPreviewManager;
-                        return true;
-                    }
-                    return false;
-                }
-            },
-            {
-                name: 'AutosaveManager',
-                init: () => {
-                    if (typeof AutosaveManager !== 'undefined' && AutosaveManager.init) {
-                        AutosaveManager.init();
-                        return true;
-                    }
-                    return false;
-                }
-            },
-            {
-                name: 'EnhancedDebugConsole',
-                init: () => {
-                    if (typeof EnhancedDebugConsole !== 'undefined' && EnhancedDebugConsole.init) {
-                        EnhancedDebugConsole.init();
-                        window.DebugConsole = EnhancedDebugConsole;
-                        return true;
-                    }
-                    return false;
-                }
-            },
-            {
-                name: 'AchievementManager',
-                init: () => {
-                    if (typeof AchievementManager !== 'undefined' && AchievementManager.load) {
-                        AchievementManager.load();
-                        return true;
-                    }
-                    return false;
-                }
-            },
-            {
-                name: 'ScoreManager',
-                init: () => {
-                    if (typeof ScoreManager !== 'undefined' && ScoreManager.init) {
-                        ScoreManager.init();
-                        return true;
-                    }
-                    return false;
-                }
-            },
-            {
-                name: 'NotificationManager',
-                init: () => {
-                    if (typeof NotificationManager !== 'undefined' && NotificationManager.init) {
-                        NotificationManager.init();
-                        return true;
-                    }
-                    return false;
-                }
-            },
-            {
-                name: 'LeaderboardManager',
-                init: () => {
-                    if (typeof LeaderboardManager !== 'undefined' && LeaderboardManager.init) {
-                        LeaderboardManager.init();
-                        return true;
-                    }
-                    return false;
-                }
-            },
-            {
-                name: 'DashboardManager',
-                init: () => {
-                    if (typeof DashboardManager !== 'undefined' && DashboardManager.init) {
-                        DashboardManager.init();
-                        return true;
-                    }
-                    return false;
-                }
-            },
-            {
-                name: 'ModerationManager',
-                init: () => {
-                    if (typeof ModerationManager !== 'undefined' && ModerationManager.init) {
-                        ModerationManager.init();
-                        return true;
-                    }
-                    return false;
-                }
-            },
-            {
-                name: 'SettingsManager',
-                init: () => {
-                    if (typeof SettingsManager !== 'undefined' && SettingsManager.init) {
-                        SettingsManager.init();
-                        return true;
-                    }
-                    return false;
-                }
-            },
-            {
-                name: 'KeyframeManager',
-                init: () => {
-                    if (typeof KeyframeManager !== 'undefined' && KeyframeManager.init) {
-                        KeyframeManager.init();
-                        return true;
-                    }
-                    return false;
-                }
-            },
-            {
-                name: 'AI Suggestion System',
-                init: () => {
-                    try {
-                        if (typeof AISuggestionSystem !== 'undefined' && workspace) {
-                            window.aiSuggestionSystem = new AISuggestionSystem(workspace);
-                            return true;
-                        }
-                    } catch (error) {
-                        console.warn('AI Suggestion System failed:', error);
-                    }
-                    return false;
-                }
-            }
-        ];
-        
-        let successCount = 0;
-        let failCount = 0;
-        
-        subsystems.forEach(subsystem => {
-            try {
-                const success = subsystem.init();
-                if (success) {
-                    console.log(`  ✅ ${subsystem.name}`);
-                    successCount++;
+        function loadScripts(index) {
+            if (index >= scripts.length) {
+                if (typeof Blockly !== 'undefined') {
+                    console.log('Local Blockly loaded successfully');
+                    initializeEditor();
                 } else {
-                    console.warn(`  ⚠️ ${subsystem.name} (not available)`);
-                    failCount++;
+                    console.error('Failed to load local Blockly');
+                    showBlocklyError();
                 }
-            } catch (error) {
-                console.error(`  ❌ ${subsystem.name} failed:`, error);
-                failCount++;
+                return;
             }
-        });
-        
-        console.log(`\n✅ Initialized ${successCount}/${subsystems.length} subsystems`);
-        if (failCount > 0) {
-            console.warn(`⚠️ ${failCount} subsystems unavailable or failed`);
-        }
-        
-        // Setup event listeners after all systems are initialized
-        setupEventListeners();
-    }
-
-    // === CRITICAL FIX 3: SAFE EVENT LISTENER SETUP ===
-    function setupEventListeners() {
-        console.log('🔗 Setting up event listeners...');
-        
-        // Safe button binding helper
-        const bindButton = (id, handler, description) => {
-            const button = document.getElementById(id);
-            if (button) {
-                button.addEventListener('click', handler);
-                console.log(`  ✅ Bound ${description}`);
-                return true;
-            } else {
-                console.warn(`  ⚠️ Button not found: ${id}`);
-                return false;
-            }
-        };
-        
-        // Core editor buttons
-        bindButton('saveBtn', saveProject, 'Save button');
-        bindButton('clearBtn', clearProject, 'Clear button');
-        bindButton('exportBtn', () => {
-            const code = Blockly.JavaScript.workspaceToCode(workspace);
-            const output = document.getElementById('output');
-            if (output) {
-                output.textContent = code || '// No blocks in workspace';
-                output.classList.add('show');
-            }
-        }, 'Export button');
-        bindButton('quickPreviewBtn', () => {
-            if (window.PreviewManager && PreviewManager.play) {
-                PreviewManager.play();
-            } else {
-                showToast('⚠️ Preview system not ready', true);
-            }
-        }, 'Quick Preview button');
-        bindButton('publishBtn', preparePublish, 'Publish button');
-        bindButton('mobileExportBtn', () => {
-            document.getElementById('mobileExportModal')?.classList.add('show');
-        }, 'Mobile Export button');
-        bindButton('terminalBtn', () => {
-            if (window.TerminalManager && TerminalManager.toggle) {
-                TerminalManager.toggle();
-            }
-        }, 'Terminal button');
-        bindButton('aiSuggestionsBtn', () => {
-            if (window.aiSuggestionSystem) {
-                window.aiSuggestionSystem.analyzeWorkspace();
-                const btn = document.getElementById('aiSuggestionsBtn');
-                btn.classList.toggle('active');
-            } else {
-                showToast('⚠️ AI Suggestion System not initialized', true);
-            }
-        }, 'AI Suggestions button');
-        
-        // Modal buttons
-        bindButton('cancelPublish', () => {
-            document.getElementById('publishModal')?.classList.remove('show');
-        }, 'Cancel Publish');
-        bindButton('confirmPublish', publishGame, 'Confirm Publish');
-        
-        // Auto-save on workspace changes (with debouncing)
-        if (workspace) {
-            let saveTimeout;
-            workspace.addChangeListener((event) => {
-                if (event.type === Blockly.Events.UI) return;
-                clearTimeout(saveTimeout);
-                saveTimeout = setTimeout(() => {
-                    if (workspace.getAllBlocks(false).length > 0) {
-                        saveProject();
-                    }
-                }, 2000);
-                
-                // Trigger AI suggestions on block changes
-                if ((event.type === Blockly.Events.BLOCK_CREATE || 
-                     event.type === Blockly.Events.BLOCK_DELETE ||
-                     event.type === Blockly.Events.CHANGE) &&
-                    window.aiSuggestionSystem) {
-                    window.aiSuggestionSystem.scheduleAnalysis();
+            
+            loadScript(scripts[index], function(success) {
+                if (success) {
+                    loadScripts(index + 1);
+                } else {
+                    console.error('Failed to load script:', scripts[index]);
+                    showBlocklyError();
                 }
             });
-            console.log('  ✅ Auto-save listener attached');
-            console.log('  ✅ AI Suggestion listener attached');
         }
         
-        // Auto-save interval (every 30 seconds)
-        setInterval(() => {
-            if (workspace && workspace.getAllBlocks(false).length > 0) {
-                saveProject();
-            }
-        }, 30000);
-        console.log('  ✅ Auto-save interval set');
+        // Remove any existing error messages
+        const existingError = document.querySelector('div[style*="position: fixed"][style*="top: 10px"]');
+        if (existingError) {
+            existingError.remove();
+        }
         
-        console.log('✅ Event listeners setup complete');
+        loadScripts(0);
     }
-
-    // === CRITICAL FIX 4: RESOLVE ASSET MANAGER CONFLICTS ===
-    // Ensure only ONE AssetManager exists
-    if (typeof EnhancedAssetManager !== 'undefined') {
-        window.AssetManager = EnhancedAssetManager;
-        console.log('✅ AssetManager set to EnhancedAssetManager');
-    } else if (typeof AssetManager === 'undefined') {
-        // Create minimal fallback AssetManager
-        window.AssetManager = {
-            assets: { sprites: [], sounds: [], backgrounds: [], animations: [] },
-            currentType: 'sprites',
-            backgroundAsset: null,
-            init: function() {
-                console.warn('⚠️ Using fallback AssetManager');
-            },
-            render: function() {},
-            saveAssets: function() {},
-            loadAssets: function() {}
-        };
-        console.warn('⚠️ Created fallback AssetManager');
-    }
-
-    // Ensure these are aliased correctly
-    window.DebugConsole = window.EnhancedDebugConsole || window.DebugConsole || {
-        log: console.log.bind(console),
-        warn: console.warn.bind(console),
-        error: console.error.bind(console),
-        clear: () => console.clear()
-    };
-
-    window.TerminalManager = window.EnhancedTerminalManager || window.TerminalManager;
-    window.PreviewManager = window.EnhancedPreviewManager || window.PreviewManager;
-
-    // === CRITICAL FIX 5: ESSENTIAL HELPER FUNCTIONS ===
-    function showToast(message, isError = false) {
-        const toast = document.getElementById('toast');
-        if (!toast) {
-            console.log(`Toast: ${message}`);
-            return;
-        }
-        toast.textContent = message;
-        toast.className = 'toast show' + (isError ? ' error' : '');
-        setTimeout(() => toast.classList.remove('show'), 3000);
-    }
-
-    function getProjectData() {
-        if (!workspace) {
-            console.error('Workspace not initialized');
-            return null;
-        }
-        
-        const projectName = document.getElementById('projectName')?.value.trim() || 'Untitled Game';
-        const code = Blockly.JavaScript.workspaceToCode(workspace);
-        const xml = Blockly.Xml.workspaceToDom(workspace);
-        const xmlText = Blockly.Xml.domToText(xml);
-        
-        return {
-            name: projectName,
-            gameTitle: projectName,
-            version: '1.0.0',
-            xml: xmlText,
-            code: code,
-            blocks: workspace.getAllBlocks(false).map(block => ({
-                type: block.type,
-                id: block.id
-            })),
-            settings: {
-                gameTitle: projectName,
-                version: '1.0.0',
-                orientation: 'landscape',
-                resolution: { width: 800, height: 600 }
-            }
-        };
-    }
-
-    function saveProject() {
-        if (!workspace) {
-            console.error('Cannot save: workspace not initialized');
-            return;
-        }
-        
-        const projectName = document.getElementById('projectName')?.value.trim() || 'Untitled Game';
-        const xml = Blockly.Xml.workspaceToDom(workspace);
-        const xmlText = Blockly.Xml.domToText(xml);
-        const code = Blockly.JavaScript.workspaceToCode(workspace);
-        
-        const projectData = {
-            name: projectName,
-            xml: xmlText,
-            code: code,
-            timestamp: new Date().toISOString()
-        };
-        
-        const STORAGE_KEY = 'lupiforge_project_' + 
-            (window.LUPIFORGE_CURRENT_USER?.id || 'guest');
-        
-        try {
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(projectData));
-            updateSaveStatus();
-            showToast('✅ Project saved locally');
-            console.log('✅ Project saved');
-        } catch (error) {
-            console.error('Save failed:', error);
-            showToast('❌ Save failed: ' + error.message, true);
-        }
-    }
-
-    function loadProject() {
-        if (!workspace) {
-            console.error('Cannot load: workspace not initialized');
-            return;
-        }
-        
-        const STORAGE_KEY = 'lupiforge_project_' + 
-            (window.LUPIFORGE_CURRENT_USER?.id || 'guest');
-        
-        const saved = localStorage.getItem(STORAGE_KEY);
-        if (saved) {
-            try {
-                const projectData = JSON.parse(saved);
-                const projectNameEl = document.getElementById('projectName');
-                if (projectNameEl) {
-                    projectNameEl.value = projectData.name;
-                }
-                
-                const xml = Blockly.utils.xml.textToDom(projectData.xml);
-                Blockly.Xml.domToWorkspace(xml, workspace);
-                
-                const savedDate = new Date(projectData.timestamp);
-                const statusEl = document.getElementById('saveStatus');
-                if (statusEl) {
-                    statusEl.textContent = `Loaded from ${savedDate.toLocaleDateString()}`;
-                }
-                
-                console.log('✅ Project loaded');
-                showToast('📂 Project loaded!');
-            } catch (error) {
-                console.error('Load failed:', error);
-                showToast('❌ Failed to load project', true);
-            }
-        }
-    }
-
-    function updateSaveStatus() {
-        const status = document.getElementById('saveStatus');
-        if (status) {
-            const now = new Date();
-            status.textContent = `Saved at ${now.toLocaleTimeString()}`;
-        }
-    }
-
-    function clearProject() {
-        if (!workspace) return;
-        
-        if (confirm('⚠️ Are you sure you want to clear the workspace? This cannot be undone.')) {
-            workspace.clear();
-            const projectNameEl = document.getElementById('projectName');
-            if (projectNameEl) {
-                projectNameEl.value = '';
-            }
-            
-            const STORAGE_KEY = 'lupiforge_project_' + 
-                (window.LUPIFORGE_CURRENT_USER?.id || 'guest');
-            localStorage.removeItem(STORAGE_KEY);
-            
-            const statusEl = document.getElementById('saveStatus');
-            if (statusEl) {
-                statusEl.textContent = 'Never saved';
-            }
-            
-            showToast('🗑️ Workspace cleared');
-        }
-    }
-
-    function preparePublish() {
-        if (!workspace) {
-            showToast('❌ Editor not ready', true);
-            return;
-        }
-        
-        const projectNameEl = document.getElementById('projectName');
-        const projectName = projectNameEl?.value.trim();
-        
-        if (!projectName) {
-            showToast('❌ Please enter a game title first!', true);
-            return;
-        }
-        
-        const blockCount = workspace.getAllBlocks(false).length;
-        if (blockCount === 0) {
-            showToast('❌ Your game needs blocks to publish!', true);
-            return;
-        }
-        
-        const modalTitleEl = document.getElementById('modalGameTitle');
-        if (modalTitleEl) {
-            modalTitleEl.textContent = projectName;
-        }
-        
-        const modal = document.getElementById('publishModal');
-        if (modal) {
-            modal.classList.add('show');
-        }
-    }
-
-    function publishGame() {
-        const projectData = getProjectData();
-        if (!projectData) {
-            showToast('❌ Cannot publish: no project data', true);
-            return;
-        }
-        
-        console.log('📤 Publishing game:', projectData.name);
-        
-        // Close modal
-        const modal = document.getElementById('publishModal');
-        if (modal) {
-            modal.classList.remove('show');
-        }
-        
-        showToast('🚀 Game submitted for review!');
-        
-        // Check achievement
-        if (window.AchievementManager) {
-            AchievementManager.check('first_publish');
-        }
-    }
-
-    // === UNIFIED INITIALIZATION ENTRY POINT ===
-    async function startApplication() {
-        const memoryManager = MemoryManager.getInstance();
-        console.log('✅ Memory manager initialized');
-        
-        await initializeLupiForge();
-        setupCleanupHandlers();
-        startPerformanceMonitoring();
-    }
-
-    function setupCleanupHandlers() {
-        window.addEventListener('beforeunload', () => {
-            MemoryManager.getInstance().activeAnimations.forEach((_, id) => {
-                MemoryManager.getInstance().cancelAnimation(id);
-            });
-            
-            if (window.PreviewManager?.runtime) {
-                MemoryManager.getInstance().removeAllListeners(window.PreviewManager.runtime.canvas);
-            }
-            
-            if (typeof saveProject === 'function') {
-                saveProject();
-            }
-            
-            console.log('🧹 Cleaned up before page unload');
-        });
-        
-        document.addEventListener('visibilitychange', () => {
-            if (document.hidden) {
-                console.log('📄 Page hidden - performing cleanup');
-                MemoryManager.getInstance().cleanupAssets();
-            }
-        });
-    }
-
-    function startPerformanceMonitoring() {
-        let lastMemoryCheck = Date.now();
-        let frameCount = 0;
-        let lastFpsUpdate = Date.now();
-        
-        function monitorPerformance() {
-            frameCount++;
-            
-            const now = Date.now();
-            if (now - lastFpsUpdate >= 1000) {
-                const fps = frameCount;
-                frameCount = 0;
-                lastFpsUpdate = now;
-                
-                if (fps < 30) {
-                    console.warn(`⚠️ Low FPS detected: ${fps}`);
-                }
-            }
-            
-            if (now - lastMemoryCheck >= 30000) {
-                lastMemoryCheck = now;
-                
-                if (performance.memory) {
-                    const usedMB = Math.round(performance.memory.usedJSHeapSize / 1048576);
-                    const totalMB = Math.round(performance.memory.totalJSHeapSize / 1048576);
-                    
-                    console.log(`📊 Memory usage: ${usedMB}/${totalMB} MB`);
-                    
-                    if (usedMB > 300) {
-                        console.warn('⚠️ MemoryWarning: High memory usage detected, triggering cleanup');
-                        MemoryManager.getInstance().cleanupAssets();
-                    }
-                }
-            }
-            
-            requestAnimationFrame(monitorPerformance);
-        }
-        
-        requestAnimationFrame(monitorPerformance);
-    }
-
-    function loadBlocklyDependencies() {
-        return new Promise((resolve, reject) => {
-            const dependencies = [
-                'https://cdnjs.cloudflare.com/ajax/libs/blockly/10.4.3/blockly_compressed.min.js',
-                'https://cdnjs.cloudflare.com/ajax/libs/blockly/10.4.3/blocks_compressed.min.js',
-                'https://cdnjs.cloudflare.com/ajax/libs/blockly/10.4.3/javascript_compressed.min.js',
-                'https://cdnjs.cloudflare.com/ajax/libs/blockly/10.4.3/msg/en.min.js'
-            ];
-            
-            let loadedCount = 0;
-            
-            dependencies.forEach(url => {
-                const script = document.createElement('script');
-                script.src = url;
-                script.async = false;
-                script.onload = function() {
-                    loadedCount++;
-                    if (loadedCount === dependencies.length) {
-                        console.log('✅ All Blockly dependencies loaded');
-                        resolve();
-                    }
-                };
-                script.onerror = function() {
-                    reject(new Error(`Failed to load script: ${url}`));
-                };
-                document.head.appendChild(script);
-            });
-        });
-    }
-
-    // Start initialization when DOM is ready
+    
+    // Start loading process when DOM is ready
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', function() {
-            if (typeof Blockly === 'undefined') {
-                loadBlocklyDependencies().then(startApplication);
-            } else {
-                startApplication();
-            }
+            setTimeout(checkBlocklyLoaded, 100);
         });
     } else {
-        if (typeof Blockly === 'undefined') {
-            loadBlocklyDependencies().then(startApplication);
-        } else {
-            startApplication();
-        }
+        setTimeout(checkBlocklyLoaded, 100);
     }
     </script>
     <style>
@@ -1530,17 +256,6 @@
         #terminalBtn.active {
             background: #0d5c52;
         }
-        #aiSuggestionsBtn {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-        }
-        #aiSuggestionsBtn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
-        }
-        #aiSuggestionsBtn.active {
-            background: linear-gradient(135deg, #764ba2 0%, #667eea 100%);
-        }
         #mobileExportBtn {
             background: #e67e22;
             color: white;
@@ -1559,27 +274,12 @@
             width: 100%;
             height: calc(100vh - 60px);
             background: #f8f9fa;
-            position: relative;
-            z-index: 1;
-            display: block;
-            min-height: 300px;
-        }
-        #blocklyDiv svg {
-            display: block !important;
-            visibility: visible !important;
-            opacity: 1 !important;
-        }
-        #blocklyDiv svg g {
-            display: block !important;
-            visibility: visible !important;
-            opacity: 1 !important;
         }
         .blocklyToolboxDiv {
             max-height: calc(100vh - 80px) !important;
             overflow-y: auto !important;
             overflow-x: hidden !important;
             height: auto !important;
-            display: block !important;
         }
         .blocklyTreeRoot {
             display: flex !important;
@@ -1974,9 +674,6 @@
         #blocklyDiv {
             width: calc(100% - 300px);
             margin-bottom: 0;
-            display: block !important;
-            visibility: visible !important;
-            opacity: 1 !important;
         }
         .asset-panel.collapsed ~ #blocklyDiv {
             width: 100%;
@@ -2061,11 +758,10 @@
             margin: 5px 0;
         }
         #blocklyDiv {
-            height: calc(100vh - 460px) !important;
-            display: block !important;
+            height: calc(100vh - 460px);
         }
         .preview-panel.collapsed ~ #blocklyDiv {
-            height: calc(100vh - 60px) !important;
+            height: calc(100vh - 60px);
         }
         /* Achievement Styles */
         .achievement-overlay {
@@ -3076,7 +1772,6 @@
             <button id="exportBtn">📤 Export Code</button>
             <button id="mobileExportBtn">📱 Mobile Export</button>
             <button id="terminalBtn">⌨️ Terminal</button>
-            <button id="aiSuggestionsBtn" title="AI Suggestions">🤖 AI Suggestions</button>
         </div>
     </div>
     <div id="blocklyDiv"></div>
@@ -3600,7 +2295,7 @@
         </div>
     </div>
 
-    <xml id="toolbox">
+    <xml id="toolbox" style="display: none">
         <category name="Events" colour="#4a90e2">
             <block type="on_game_start"></block>
             <block type="on_scene_load"></block>
@@ -3841,20 +2536,351 @@
         </category>
     </xml>
 
-    <!-- AI Suggestion System is now in an external file -->
-    <script src="{% static 'js/ai_suggestion_system.js' %}"></script>
     <script>
-        // Initialize AI Suggestion System when workspace is ready
-        document.addEventListener('workspaceReady', function() {
-            if (typeof AISuggestionSystem !== 'undefined' && typeof workspace !== 'undefined') {
-                window.aiSuggestionSystem = new AISuggestionSystem(workspace);
-            }
-        });
+        // AI SUGGESTION SYSTEM FOR BLOCK EDITOR
+        class AISuggestionSystem {
+          constructor(workspace) {
+            this.workspace = workspace;
+            this.suggestions = [];
+            this.lastAnalysisTime = 0;
+            this.analysisInterval = 2000;
+            this.suggestionPanel = null;
+            this.enabled = true;
+            this.suggestionHistory = [];
+            this.maxSuggestions = 5;
+            this.lastSuggestionTime = 0;
+            this.suggestionCooldown = 3000;
+            this.suggestionContainer = null;
+            this.init();
+          }
 
-        // Initialize AI Suggestion System if workspace is available
-        if (typeof workspace !== 'undefined') {
-            window.aiSuggestionSystem = new AISuggestionSystem(workspace);
+          init() {
+            this.createSuggestionPanel();
+            this.setupEventListeners();
+            this.scheduleAnalysis();
+          }
+
+          createSuggestionPanel() {
+            this.suggestionPanel = document.createElement('div');
+            this.suggestionPanel.id = 'ai-suggestion-panel';
+            this.suggestionPanel.className = 'ai-suggestion-panel';
+            this.suggestionPanel.style.cssText = `
+              position: fixed;
+              bottom: 80px;
+              right: 20px;
+              background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+              color: white;
+              border-radius: 10px;
+              box-shadow: 0 5px 25px rgba(0,0,0,0.4);
+              padding: 15px;
+              width: 300px;
+              max-height: 400px;
+              overflow-y: auto;
+              z-index: 1000;
+              opacity: 0;
+              transform: translateY(20px);
+              transition: all 0.3s ease;
+              font-family: Arial, sans-serif;
+            `;
+
+            const header = document.createElement('div');
+            header.style.cssText = `
+              display: flex;
+              justify-content: space-between;
+              align-items: center;
+              margin-bottom: 10px;
+              padding-bottom: 8px;
+              border-bottom: 1px solid rgba(255,255,255,0.2);
+            `;
+
+            const title = document.createElement('h3');
+            title.style.cssText = 'margin: 0; font-size: 16px; color: white; display: flex; align-items: center; gap: 8px;';
+            title.innerHTML = '<span>🤖</span> AI Suggestions';
+
+            const closeButton = document.createElement('button');
+            closeButton.innerHTML = '×';
+            closeButton.style.cssText = `
+              background: none;
+              border: none;
+              color: white;
+              font-size: 24px;
+              cursor: pointer;
+              padding: 0;
+              width: 30px;
+              height: 30px;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              transition: transform 0.2s;
+            `;
+            closeButton.addEventListener('click', () => this.hideSuggestions());
+            closeButton.addEventListener('mouseover', () => {
+              closeButton.style.transform = 'scale(1.2)';
+            });
+            closeButton.addEventListener('mouseout', () => {
+              closeButton.style.transform = 'scale(1)';
+            });
+
+            header.appendChild(title);
+            header.appendChild(closeButton);
+
+            this.suggestionContainer = document.createElement('div');
+            this.suggestionContainer.id = 'ai-suggestion-container';
+            this.suggestionContainer.style.cssText = `
+              display: flex;
+              flex-direction: column;
+              gap: 10px;
+            `;
+
+            this.suggestionPanel.appendChild(header);
+            this.suggestionPanel.appendChild(this.suggestionContainer);
+            document.body.appendChild(this.suggestionPanel);
+          }
+
+          setupEventListeners() {
+            if (!this.workspace) return;
+
+            document.addEventListener('blockAdded', () => {
+              this.analyzeSuggestions();
+            });
+
+            document.addEventListener('blockRemoved', () => {
+              this.analyzeSuggestions();
+            });
+
+            document.addEventListener('blockModified', () => {
+              this.analyzeSuggestions();
+            });
+          }
+
+          scheduleAnalysis() {
+            setInterval(() => {
+              if (this.enabled) {
+                this.analyzeSuggestions();
+              }
+            }, this.analysisInterval);
+          }
+
+          analyzeSuggestions() {
+            const now = Date.now();
+            if (now - this.lastAnalysisTime < this.analysisInterval) return;
+            this.lastAnalysisTime = now;
+
+            this.suggestions = [];
+
+            if (this.workspace && this.workspace.getAllBlocks) {
+              this.checkForCommonPatterns();
+              this.checkForOptimizations();
+              this.checkForBestPractices();
+            }
+
+            if (this.suggestions.length > 0 && now - this.lastSuggestionTime > this.suggestionCooldown) {
+              this.displaySuggestions();
+              this.lastSuggestionTime = now;
+            }
+          }
+
+          checkForCommonPatterns() {
+            const blocks = this.workspace.getAllBlocks ? this.workspace.getAllBlocks() : [];
+            
+            if (blocks.length > 0) {
+              const blockTypes = blocks.map(b => b.type);
+              
+              if (blockTypes.includes('move') && blockTypes.includes('check_collision')) {
+                this.suggestions.push({
+                  type: 'pattern',
+                  title: 'Collision Detection Pattern',
+                  description: 'Consider adding collision handling after movement blocks',
+                  severity: 'info',
+                  action: 'Learn more'
+                });
+              }
+
+              if (blockTypes.filter(t => t === 'event').length > 3) {
+                this.suggestions.push({
+                  type: 'pattern',
+                  title: 'Multiple Events Detected',
+                  description: 'You have many event handlers. Consider consolidating related events',
+                  severity: 'warning',
+                  action: 'Optimize'
+                });
+              }
+            }
+          }
+
+          checkForOptimizations() {
+            const blocks = this.workspace.getAllBlocks ? this.workspace.getAllBlocks() : [];
+            
+            if (blocks.length > 10) {
+              this.suggestions.push({
+                type: 'optimization',
+                title: 'Performance Tip',
+                description: 'Consider breaking complex logic into functions or scenes',
+                severity: 'info',
+                action: 'Refactor'
+              });
+            }
+
+            const updateBlocks = blocks.filter(b => b.type === 'update').length;
+            if (updateBlocks > 5) {
+              this.suggestions.push({
+                type: 'optimization',
+                title: 'Update Loop Heavy',
+                description: 'Too many update blocks may impact performance. Consider batching operations',
+                severity: 'warning',
+                action: 'Optimize'
+              });
+            }
+          }
+
+          checkForBestPractices() {
+            const blocks = this.workspace.getAllBlocks ? this.workspace.getAllBlocks() : [];
+            
+            const hasErrorHandling = blocks.some(b => b.type === 'error' || b.type === 'try');
+            if (!hasErrorHandling && blocks.length > 5) {
+              this.suggestions.push({
+                type: 'bestPractice',
+                title: 'Error Handling',
+                description: 'Add error handling blocks to improve game stability',
+                severity: 'info',
+                action: 'Add Now'
+              });
+            }
+
+            const hasComments = blocks.some(b => b.type === 'comment');
+            if (!hasComments && blocks.length > 8) {
+              this.suggestions.push({
+                type: 'bestPractice',
+                title: 'Code Documentation',
+                description: 'Add comments to explain complex logic for future reference',
+                severity: 'info',
+                action: 'Document'
+              });
+            }
+          }
+
+          displaySuggestions() {
+            if (!this.suggestionContainer) return;
+
+            this.suggestionContainer.innerHTML = '';
+
+            this.suggestions.slice(0, this.maxSuggestions).forEach((suggestion) => {
+              const suggestionEl = document.createElement('div');
+              suggestionEl.className = `ai-suggestion-item ai-suggestion-${suggestion.severity}`;
+              suggestionEl.style.cssText = `
+                padding: 12px;
+                background: rgba(255,255,255,0.1);
+                border-radius: 6px;
+                border-left: 3px solid ${this.getSeverityColor(suggestion.severity)};
+                cursor: pointer;
+                transition: all 0.2s;
+              `;
+
+              const titleEl = document.createElement('div');
+              titleEl.style.cssText = 'font-weight: bold; margin-bottom: 5px; font-size: 13px;';
+              titleEl.textContent = suggestion.title;
+
+              const descEl = document.createElement('div');
+              descEl.style.cssText = 'font-size: 12px; opacity: 0.9; margin-bottom: 8px;';
+              descEl.textContent = suggestion.description;
+
+              const actionBtn = document.createElement('button');
+              actionBtn.textContent = suggestion.action;
+              actionBtn.style.cssText = `
+                background: rgba(255,255,255,0.2);
+                border: 1px solid rgba(255,255,255,0.3);
+                color: white;
+                padding: 5px 10px;
+                border-radius: 4px;
+                cursor: pointer;
+                font-size: 11px;
+                transition: all 0.2s;
+              `;
+              actionBtn.addEventListener('mouseover', () => {
+                actionBtn.style.background = 'rgba(255,255,255,0.3)';
+              });
+              actionBtn.addEventListener('mouseout', () => {
+                actionBtn.style.background = 'rgba(255,255,255,0.2)';
+              });
+              actionBtn.addEventListener('click', () => {
+                this.handleSuggestionAction(suggestion);
+              });
+
+              suggestionEl.appendChild(titleEl);
+              suggestionEl.appendChild(descEl);
+              suggestionEl.appendChild(actionBtn);
+
+              this.suggestionContainer.appendChild(suggestionEl);
+            });
+
+            this.showSuggestions();
+            this.suggestionHistory.push({
+              suggestions: this.suggestions,
+              timestamp: Date.now()
+            });
+          }
+
+          getSeverityColor(severity) {
+            const colors = {
+              error: '#ff6b6b',
+              warning: '#ffd93d',
+              info: '#6bcf7f'
+            };
+            return colors[severity] || '#6bcf7f';
+          }
+
+          handleSuggestionAction(suggestion) {
+            console.log('Suggestion action:', suggestion);
+            const event = new CustomEvent('aiSuggestionAction', { detail: suggestion });
+            document.dispatchEvent(event);
+          }
+
+          showSuggestions() {
+            if (this.suggestionPanel) {
+              this.suggestionPanel.style.opacity = '1';
+              this.suggestionPanel.style.transform = 'translateY(0)';
+            }
+          }
+
+          hideSuggestions() {
+            if (this.suggestionPanel) {
+              this.suggestionPanel.style.opacity = '0';
+              this.suggestionPanel.style.transform = 'translateY(20px)';
+            }
+          }
+
+          toggleSuggestions() {
+            if (this.suggestionPanel) {
+              const isVisible = this.suggestionPanel.style.opacity === '1';
+              isVisible ? this.hideSuggestions() : this.showSuggestions();
+            }
+          }
+
+          enable() {
+            this.enabled = true;
+            console.log('AI Suggestion System enabled');
+          }
+
+          disable() {
+            this.enabled = false;
+            this.hideSuggestions();
+            console.log('AI Suggestion System disabled');
+          }
+
+          getSuggestions() {
+            return this.suggestions.slice();
+          }
+
+          getSuggestionHistory() {
+            return this.suggestionHistory.slice();
+          }
+
+          clearHistory() {
+            this.suggestionHistory = [];
+          }
         }
+
+        window.aiSuggestionSystem = null;
 
         class RenderSystem {
             constructor(canvas) {
@@ -10242,7 +9268,346 @@ document.addEventListener('click', (e) => {
             }
         }
 
+        // Main initialization function
+        function initializeEditor() {
+            console.log('🚀 Initializing LupiForge Complete Editor...');
+            
+            // Initialize preview SVG toggle
+            const previewSVG = document.getElementById('previewSVG');
+            if (previewSVG) {
+                previewSVG.addEventListener('click', () => {
+                    const svg = document.getElementById('previewSVG');
+                    const canvas = document.getElementById('debugGameCanvas');
+                    if (canvas.style.display === 'none') {
+                        svg.style.display = 'none';
+                        canvas.style.display = 'block';
+                    } else {
+                        svg.style.display = 'block';
+                        canvas.style.display = 'none';
+                    }
+                });
+            }
+            
+            // Check if a game_id is provided in the URL (from dashboard click)
+            const urlParams = new URLSearchParams(window.location.search);
+            const gameId = urlParams.get('game_id');
+            
+            // Load game data if ID is provided
+            if (gameId) {
+                console.log('📂 Loading game with ID:', gameId);
+                fetch('/games/api/user/games/', {credentials: 'same-origin'})
+                    .then(resp => {
+                        if (!resp.ok) throw new Error('Failed to fetch games');
+                        return resp.json();
+                    })
+                    .then(data => {
+                        const game = (data.games || []).find(g => g.id === gameId);
+                        if (game && game.title) {
+                            const projectName = document.getElementById('projectName');
+                            if (projectName) {
+                                projectName.value = game.title;
+                            }
+                        }
+                    })
+                    .catch(err => console.warn('Could not load game data:', err));
+            }
+            
+            // Initialize Blockly workspace
+            try {
+                const blocklyDiv = document.getElementById('blocklyDiv');
+                const toolbox = document.getElementById('toolbox');
+                
+                if (!blocklyDiv) {
+                    throw new Error('Blockly container (blocklyDiv) not found');
+                }
+                
+                if (!toolbox) {
+                    throw new Error('Toolbox element not found');
+                }
+                
+                // Create the Blockly workspace
+                workspace = Blockly.inject('blocklyDiv', {
+                    toolbox: toolbox,
+                    scrollbars: true,
+                    trashcan: true,
+                    zoom: {
+                        controls: true,
+                        wheel: true,
+                        startScale: 1.0,
+                        maxScale: 3,
+                        minScale: 0.3,
+                        scaleSpeed: 1.2
+                    },
+                    grid: {
+                        spacing: 20,
+                        length: 3,
+                        colour: '#ccc',
+                        snap: true
+                    },
+                    move: {
+                        scrollbars: true,
+                        drag: true,
+                        wheel: true
+                    }
+                });
+                
+                console.log('✅ Blockly workspace initialized successfully');
+                
+                // Style the toolbox after initialization
+                setTimeout(() => {
+                    const toolboxElement = document.querySelector('.blocklyToolboxDiv');
+                    if (toolboxElement) {
+                        toolboxElement.style.maxHeight = 'calc(100vh - 80px)';
+                        toolboxElement.style.overflowY = 'auto';
+                        toolboxElement.style.overflowX = 'hidden';
+                    }
+                    
+                    const treeRoot = document.querySelector('.blocklyTreeRoot');
+                    if (treeRoot) {
+                            treeRoot.style.display = 'flex';
+                        treeRoot.style.flexDirection = 'column';
+                    }
+                    
+                    // Initialize AI Suggestion System if available
+                    if (typeof AISuggestionSystem !== 'undefined') {
+                        window.aiSuggestionSystem = new AISuggestionSystem(workspace);
+                        console.log('✅ AI Suggestion System initialized');
+                    } else {
+                        console.warn('⚠️ AISuggestionSystem not available');
+                    }
+                    
+                    // Initialize other systems as needed
+                    
+                }, 100);
+                
+            } catch (error) {
+                console.error('❌ Failed to initialize Blockly:', error);
+                // Show error to user
+                const errorDiv = document.createElement('div');
+                errorDiv.style.position = 'fixed';
+                errorDiv.style.top = '10px';
+                errorDiv.style.left = '50%';
+                errorDiv.style.transform = 'translateX(-50%)';
+                errorDiv.style.backgroundColor = '#e74c3c';
+                errorDiv.style.color: 'white';
+                errorDiv.style.padding = '10px 20px';
+                errorDiv.style.borderRadius = '5px';
+                errorDiv.style.zIndex = '10000';
+                errorDiv.textContent = `Error initializing editor: ${error.message}`;
+                document.body.appendChild(errorDiv);
+                
+                // Remove error message after 10 seconds
+                setTimeout(() => {
+                    if (document.body.contains(errorDiv)) {
+                        document.body.removeChild(errorDiv);
+                    }
+                }, 10000);
+            }
+        }
+        
+        // Start the editor when the DOM is fully loaded
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initializeEditor);
+        } else {
+            // DOMContentLoaded has already fired
+            initializeEditor();
+        }
 
+            // Load saved project
+            loadProject();
+
+            // If no saved project, add starter block
+            if (workspace.getAllBlocks(false).length === 0) {
+                const xml = Blockly.utils.xml.textToDom(
+                    '<xml><block type="on_game_start" x="50" y="50"></block></xml>'
+                );
+                Blockly.Xml.domToWorkspace(xml, workspace);
+                // If project name is empty, set a helpful default based on the logged-in user
+                try{
+                    const pn = document.getElementById('projectName');
+                    if (pn && !pn.value) {
+                        const me = window.LUPIFORGE_CURRENT_USER || {};
+                        if (me && me.username) pn.value = `${me.username}'s Game`;
+                        else pn.value = 'My Game';
+                    }
+                }catch(e){/* ignore */}
+            }
+
+            // Button event listeners
+            document.getElementById('saveBtn').addEventListener('click', saveProject);
+            document.getElementById('clearBtn').addEventListener('click', clearProject);
+            document.getElementById('quickPreviewBtn').addEventListener('click', () => PreviewManager.play());
+            document.getElementById('publishBtn').addEventListener('click', preparePublish);
+            
+            document.getElementById('exportBtn').addEventListener('click', function() {
+                const code = Blockly.JavaScript.workspaceToCode(workspace);
+                const output = document.getElementById('output');
+                output.textContent = code || '// No blocks in workspace';
+                output.classList.add('show');
+                console.log('Generated code:', code);
+            });
+
+            let selectedMobilePlatform = 'android';
+            
+            document.getElementById('mobileExportBtn').addEventListener('click', function() {
+                document.getElementById('mobileExportModal').classList.add('show');
+            });
+
+            document.getElementById('platformAndroid').addEventListener('click', function() {
+                selectedMobilePlatform = 'android';
+                document.getElementById('platformAndroid').style.background = '#3498db';
+                document.getElementById('platformAndroid').style.borderColor = '#3498db';
+                document.getElementById('platformIOS').style.background = '#95a5a6';
+                document.getElementById('platformIOS').style.borderColor = '#95a5a6';
+            });
+
+            document.getElementById('platformIOS').addEventListener('click', function() {
+                selectedMobilePlatform = 'ios';
+                document.getElementById('platformIOS').style.background = '#27ae60';
+                document.getElementById('platformIOS').style.borderColor = '#27ae60';
+                document.getElementById('platformAndroid').style.background = '#95a5a6';
+                document.getElementById('platformAndroid').style.borderColor = '#95a5a6';
+            });
+
+            document.getElementById('cancelMobileExport').addEventListener('click', function() {
+                document.getElementById('mobileExportModal').classList.remove('show');
+            });
+
+            document.getElementById('startMobileExport').addEventListener('click', async function() {
+                try {
+                    const projectData = getProjectData();
+                    const exportOptions = {
+                        optimize: document.getElementById('optimizeCode').checked,
+                        debug: document.getElementById('includeDebug').checked,
+                        orientation: document.getElementById('exportOrientation').value,
+                        touchConfig: {
+                            enableMultiTouch: document.getElementById('enableMultiTouch').checked
+                        }
+                    };
+
+                    showToast('📱 Exporting to ' + selectedMobilePlatform.toUpperCase() + '...');
+                    
+                    const exporter = new MobileExporter(projectData);
+                    const blob = await exporter.export(selectedMobilePlatform, exportOptions);
+                    
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = blob.name || (selectedMobilePlatform === 'ios' ? 'game.ipa' : 'game.apk');
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(url);
+                    
+                    showToast('✅ Mobile app exported successfully!');
+                    document.getElementById('mobileExportModal').classList.remove('show');
+                } catch (error) {
+                    console.error('Mobile export error:', error);
+                    showToast('❌ Export failed: ' + error.message, true);
+                }
+            });
+
+            // Modal controls
+            document.getElementById('cancelPublish').addEventListener('click', function() {
+                document.getElementById('publishModal').classList.remove('show');
+            });
+            
+            document.getElementById('confirmPublish').addEventListener('click', publishGame);
+
+            // Auto-save every 30 seconds
+            setInterval(function() {
+                if (workspace.getAllBlocks(false).length > 0) {
+                    saveProject();
+                }
+            }, 30000);
+
+            // Save on workspace change (debounced)
+            let saveTimeout;
+            workspace.addChangeListener(function() {
+                clearTimeout(saveTimeout);
+                saveTimeout = setTimeout(saveProject, 2000);
+                
+                // Trigger AI suggestion analysis on block changes
+                if (window.aiSuggestionSystem) {
+                    window.aiSuggestionSystem.analyzeSuggestions();
+                }
+            });
+
+            // Initialize all feature systems
+            console.log('📦 Initializing all feature systems...');
+            
+            console.log('📦 Initializing Enhanced Asset Manager...');
+            EnhancedAssetManager.init();
+            AssetTagSystem.init();
+            
+            console.log('🖥️ Initializing Enhanced Terminal Manager...');
+            EnhancedTerminalManager.init();
+            
+            console.log('🎮 Initializing Enhanced Preview Manager...');
+            EnhancedPreviewManager.init();
+            
+            console.log('💾 Initializing Autosave System...');
+            AutosaveManager.init();
+            
+            console.log('🖥️ Initializing Enhanced Debug Console...');
+            EnhancedDebugConsole.init();
+            
+            console.log('🏆 Initializing Achievement System...');
+            AchievementManager.load();
+            
+            console.log('🎯 Initializing Score Manager...');
+            ScoreManager.init();
+            
+            console.log('🔔 Initializing Notifications...');
+            NotificationManager.init();
+            
+            console.log('📊 Initializing Leaderboard...');
+            LeaderboardManager.init();
+            
+            console.log('📈 Initializing Dashboard...');
+            DashboardManager.init();
+            
+            console.log('🛡️ Initializing Moderation...');
+            ModerationManager.init();
+            
+            console.log('⚙️ Initializing Settings...');
+            SettingsManager.init();
+
+            console.log('✅ ALL SYSTEMS OPERATIONAL!');
+            console.log('📋 Features Available:');
+            console.log('  - ✅ PHASE 1: 45+ New Blocks');
+            console.log('    • 🎮 Input & Controls (15): key events, mouse, cursor control, input context');
+            console.log('    • 🏷️ Entity & Tags (15): for-each, count, destroy, clone, tag management');
+            console.log('    • 🧠 Logic & Flow (15+): loops, state machines, cooldowns, debug tools');
+            console.log('  - ✅ PRIORITY BLOCKS: 17 New Blocks');
+            console.log('    • 🔊 Audio (3): play_sound, stop_sound, play_music with fade');
+            console.log('    • ⚙️ Physics (3): apply_force, is_grounded, raycast with collision');
+            console.log('    • 🎨 Visual Effects (4): set_opacity, flip_sprite, camera_shake, set_z_layer');
+            console.log('    • 🎮 Game State (5): pause, resume, load_scene, game_over, restart_level');
+            console.log('    • 💥 Combat (2): deal_damage, create_hitbox');
+            console.log('  - ✅ Terminal System (Bottom Resizable Panel)');
+            console.log('    • Output Mode: View generated JavaScript code');
+            console.log('    • Input Mode: Paste/type JavaScript code');
+            console.log('    • Code Parser: Forgiving syntax, reconstructs supported blocks');
+            console.log('    • Bidirectional Sync: JS ↔ Blockly (preparation)');
+            console.log('  - ✅ Dynamic Tag System: All entity blocks use real tags from AssetTagSystem');
+            console.log('  - ✅ Blockly Editor with 70+ total custom blocks (45+ Phase 1 + 17 Priority + Existing)');
+            console.log('  - ✅ Asset Manager (upload sprites/sounds/backgrounds with preview)');
+            console.log('  - ✅ Game Preview Panel with GameRuntime engine');
+            console.log('  - ✅ Real-time Autosave with visual indicator');
+            console.log('  - ✅ Debug Console with error tracking');
+            console.log('  - ✅ Debug Overlays (bounding boxes, entity count)');
+            console.log('  - ✅ Save & Publish to Moderation');
+            console.log('  - ✅ Achievement System');
+            console.log('  - ✅ Score Submission');
+            console.log('  - ✅ Global Leaderboard');
+            console.log('  - ✅ Social Features (Follow/Remix)');
+            console.log('  - ✅ Creator Dashboard with Analytics');
+            console.log('  - ✅ Moderation Queue (Moderators only)');
+            console.log('  - ✅ Multiplayer Lobby');
+            console.log('  - ✅ Profile & Settings');
+            console.log('  - ✅ Notification System');
+        });
 
         // Asset Manager Functions
         const EnhancedAssetManager = {
@@ -12974,35 +12339,21 @@ document.addEventListener('click', (e) => {
         this.editor = jsField;
         this.cssEditor = cssField;
         this.htmlEditor = htmlField;
-        this.lupiEditor = document.getElementById('lupiEditor');
         
-        if (jsField) {
-            jsField.addEventListener('keydown', (e) => this.handleEditorKeydown(e));
-            jsField.addEventListener('input', (e) => this.handleEditorInput(e));
-        }
+        jsField.addEventListener('keydown', (e) => this.handleEditorKeydown(e));
+        jsField.addEventListener('input', (e) => this.handleEditorInput(e));
         
-        if (this.lupiEditor) {
-            this.lupiEditor.addEventListener('input', (e) => this.handleLupiEditorInput(e));
-        }
+        document.getElementById('terminalClearForms').addEventListener('click', () => {
+            jsField.value = '';
+            cssField.value = '';
+            htmlField.value = '';
+            this.log('Forms cleared', 'info');
+        });
         
-        const clearBtn = document.getElementById('terminalClearForms');
-        if (clearBtn) {
-            clearBtn.addEventListener('click', () => {
-                if (jsField) jsField.value = '';
-                if (cssField) cssField.value = '';
-                if (htmlField) htmlField.value = '';
-                this.log('Forms cleared', 'info');
-            });
-        }
-        
-        const previewBtn = document.getElementById('previewConvertBtn');
-        if (previewBtn) {
-            previewBtn.addEventListener('click', () => {
-                const modal = document.getElementById('structurePreviewModal');
-                if (modal) modal.style.display = 'none';
-                this.submitCode();
-            });
-        }
+        document.getElementById('previewConvertBtn').addEventListener('click', () => {
+            document.getElementById('structurePreviewModal').style.display = 'none';
+            this.submitCode();
+        });
     },
     
     handleEditorKeydown(e) {
@@ -13750,150 +13101,6 @@ document.addEventListener('click', (e) => {
             entity.zLayer = layer;
             console.log(`📐 Set Z-Layer to ${layer}`);
         }
-        
-        // === LUPISCRIPT V1 METHODS ===
-        parseLupiScript(code) {
-            const lines = code.split('\n').filter(l => l.trim() && !l.trim().startsWith('//'));
-            if (lines.length === 0) return null;
-            
-            const block = { fields: [], inputs: [], outputs: null, code: '' };
-            const blockMatch = lines[0].match(/^block\s+(\w+)\s+"([^"]+)"/i);
-            
-            if (!blockMatch) throw new Error('Line 1: Block definition required');
-            
-            block.id = blockMatch[1];
-            block.name = blockMatch[2];
-            
-            for (let i = 1; i < lines.length; i++) {
-                const line = lines[i].trim();
-                if (line.startsWith('category')) {
-                    const catMatch = line.match(/category\s+"([^"]+)"(?:\s+color\s+"([^"]+)")?/);
-                    block.category = catMatch[1];
-                    block.color = catMatch[2] || '#FF6B6B';
-                } else if (line.startsWith('field')) {
-                    const fieldMatch = line.match(/field\s+(\w+)\s+(\w+)(?:\s+(\d+))?/);
-                    if (fieldMatch) {
-                        block.fields.push({
-                            name: fieldMatch[1],
-                            type: fieldMatch[2],
-                            default: fieldMatch[3] || ''
-                        });
-                    }
-                } else if (line.startsWith('code')) {
-                    block.code = line.substring(5).trim();
-                }
-            }
-            
-            if (!block.category) block.category = 'Custom';
-            if (!block.code) block.code = `// [${block.name}]`;
-            
-            return block;
-        },
-        
-        generateBlockPreview(blockDef) {
-            return `
-                <div style="color: #2ecc71;">
-                    <strong>${blockDef.name}</strong> <span style="color: #95a5a6;">(${blockDef.id})</span><br>
-                    Category: <span style="color: #3498db;">${blockDef.category}</span><br>
-                    Fields: ${blockDef.fields.length} | Code template ready
-                </div>
-            `;
-        },
-        
-        submitLupiScript() {
-            const code = this.lupiEditor?.value.trim();
-            if (!code) {
-                showToast('⚠️ LupiScript editor is empty', true);
-                return;
-            }
-            
-            try {
-                const blockDef = this.parseLupiScript(code);
-                if (!blockDef) throw new Error('Invalid LupiScript syntax');
-                
-                const blockId = `custom_${blockDef.id}_${Date.now()}`;
-                window.registeredBlocks = window.registeredBlocks || [];
-                window.registeredBlocks.push(blockDef);
-                
-                localStorage.setItem('lupi_user_blocks', JSON.stringify(window.registeredBlocks || []));
-                
-                const resultEl = document.getElementById('lupiResultStatus');
-                if (resultEl) {
-                    resultEl.textContent = `✅ Block "${blockDef.name}" created successfully!`;
-                    resultEl.style.background = '#27ae60';
-                }
-                
-                showToast(`🧱 Created custom block: ${blockDef.name}`);
-                this.log(`🧱 LupiScript block created: ${blockDef.name}`, 'success');
-                
-                setTimeout(() => {
-                    if (this.lupiEditor) this.lupiEditor.value = '';
-                }, 2000);
-                
-            } catch (error) {
-                const resultEl = document.getElementById('lupiResultStatus');
-                if (resultEl) {
-                    resultEl.textContent = `❌ ${error.message}`;
-                    resultEl.style.background = '#e74c3c';
-                }
-                showToast(`❌ ${error.message}`, true);
-            }
-        },
-        
-        loadExample() {
-            if (!this.lupiEditor) return;
-            this.lupiEditor.value = `block play_sound "Play Sound"
-  category audio
-  field sound text
-  field volume number 100
-  code playSound("[sound]", [volume])`;
-            this.handleLupiEditorInput({ target: this.lupiEditor });
-        },
-        
-        clearLupiEditor() {
-            if (this.lupiEditor) {
-                this.lupiEditor.value = '';
-                const resultEl = document.getElementById('lupiResultStatus');
-                if (resultEl) {
-                    resultEl.textContent = 'Ready to create blocks';
-                    resultEl.style.background = '#1a1a2e';
-                }
-            }
-        },
-        
-        handleLupiEditorInput(e) {
-            const code = e.target.value.trim();
-            const preview = document.getElementById('lupiPreview');
-            const status = document.getElementById('lupiSyntaxStatus');
-            
-            if (!preview || !status) return;
-            
-            if (!code) {
-                preview.textContent = 'Block preview will appear here';
-                preview.style.color = '#7f8c8d';
-                status.textContent = 'Waiting for input...';
-                status.style.color = '#7f8c8d';
-                return;
-            }
-            
-            try {
-                const blockDef = this.parseLupiScript(code);
-                if (blockDef) {
-                    const previewText = this.generateBlockPreview(blockDef);
-                    preview.innerHTML = previewText;
-                    preview.style.color = '#2ecc71';
-                    status.textContent = '✅ Syntax valid';
-                    status.style.color = '#2ecc71';
-                    return;
-                }
-            } catch (error) {
-                preview.textContent = `❌ Error: ${error.message}`;
-                preview.style.color = '#e74c3c';
-                status.textContent = '❌ Syntax error';
-                status.style.color = '#e74c3c';
-            }
-        }
-        // End LupiScript V1
 
         // Game Preview Manager
         const EnhancedPreviewManager = {
@@ -15129,17 +14336,14 @@ document.addEventListener('click', (e) => {
             console.warn('Failed to import LevelEditor module:', error.message);
         }
 
-        // Queue LevelEditor initialization for after other components are ready
-        if (window.LUPIFORGE && window.LUPIFORGE.initQueue) {
-            window.LUPIFORGE.initQueue.push(() => {
-                if (window.LevelEditor && window.LevelEditorManager) {
-                    window.LevelEditorManager.init();
-                    console.log('✅ LevelEditor initialized');
-                } else {
-                    console.warn('⚠️ LevelEditor not available');
-                }
-            });
-        }
+        // Initialize Level Editor after dependencies
+        document.addEventListener('DOMContentLoaded', () => {
+            if (window.LevelEditor) {
+                window.LevelEditorManager.init();
+            } else {
+                console.warn('LevelEditor not available - ensure the module is properly bundled and served');
+            }
+        });
     </script>
     
     <!-- Fixed JavaScript Classes -->

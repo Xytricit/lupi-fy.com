@@ -71,8 +71,9 @@
         let workspace;
         let game;
 
-        // Define custom blocks
-        Blockly.defineBlocksWithJsonArray([
+        function initializeEditor() {
+            // Define custom blocks
+            Blockly.defineBlocksWithJsonArray([
             {
                 "type": "on_start",
                 "message0": "On Start",
@@ -275,6 +276,24 @@
                 }
             }
             return cookieValue;
+        }
+        }  // End of initializeEditor function
+
+        // Wait for Blockly library to load before initializing
+        function startInitialization() {
+            if (typeof Blockly === 'undefined') {
+                console.log('Blockly not loaded yet, waiting...');
+                setTimeout(startInitialization, 100);
+                return;
+            }
+            initializeEditor();
+        }
+
+        // Trigger initialization when DOM is ready
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', startInitialization);
+        } else {
+            startInitialization();
         }
     </script>
 </body>

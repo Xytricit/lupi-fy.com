@@ -12,135 +12,231 @@
             <h1 class="text-2xl font-semibold">Lupi-fy — Game Creator's Guide</h1>
         </div>
     </header>
-    <main class="container mx-auto p-6 max-w-3xl">
-        <div class="space-y-8">
-            <!-- Welcome Section -->
-            <section class="bg-white rounded-lg shadow p-6">
-                <h2 class="text-xl font-semibold mb-3">Welcome to Lupi-fy! 🎮</h2>
+    <main class="container mx-auto p-4 max-w-4xl">
+    <div class="space-y-6">
+        <!-- Getting Started -->
+        <section class="bg-white rounded-lg shadow p-5">
+            <h2 class="text-xl font-bold mb-4 text-lupi-primary flex items-center">
+                <span class="mr-2">🚀</span> Getting Started
+            </h2>
+            <div class="space-y-4">
                 <p class="text-gray-700">
-                    Lupi-fy is a drag-and-drop game creation platform. You can build 2D games entirely in your browser without coding.
-                    This tutorial will walk you through creating your first game.
+                    <strong>1. Open Editor:</strong> Click "Open Editor" to start creating.
                 </p>
-            </section>
-
-            <!-- Step 1 -->
-            <section class="bg-blue-50 border-l-4 border-blue-500 rounded-lg p-6">
-                <h3 class="text-lg font-semibold mb-2">Step 1: Start the Editor</h3>
-                <p class="text-gray-700 mb-4">
-                    Click the button below to open the game editor. This is where you'll design your game visually.
+                <p class="text-gray-700">
+                    <strong>2. Name Your Game:</strong> Give it a descriptive title at the top (e.g., "Space Shooter", "Puzzle Quest").
                 </p>
-                <a href="/games/editor/" class="inline-block px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
+                <p class="text-gray-700">
+                    <strong>3. Core Workflow:</strong> <span class="bg-blue-100 px-1 rounded">Build Logic</span> → <span class="bg-green-100 px-1 rounded">Preview</span> → <span class="bg-purple-100 px-1 rounded">Save</span> → <span class="bg-indigo-100 px-1 rounded">Publish</span>
+                </p>
+                <a href="/games/editor/" class="inline-block px-4 py-2 bg-lupi-primary text-white rounded-lg hover:bg-indigo-800 transition">
                     Open Editor
                 </a>
-            </section>
+            </div>
+        </section>
 
-            <!-- Step 2 -->
-            <section class="bg-green-50 border-l-4 border-green-500 rounded-lg p-6">
-                <h3 class="text-lg font-semibold mb-2">Step 2: Give Your Game a Title</h3>
-                <p class="text-gray-700 mb-4">
-                    At the top of the editor, you'll see an input field. Type in a creative name for your game (e.g., "Flappy Bird Clone", "Dodge The Enemies").
-                </p>
-                <code class="bg-gray-800 text-green-400 p-2 rounded block text-sm mb-2">My Awesome Game</code>
-            </section>
-
-            <!-- Step 3 -->
-            <section class="bg-purple-50 border-l-4 border-purple-500 rounded-lg p-6">
-                <h3 class="text-lg font-semibold mb-2">Step 3: Build Logic with Blocks</h3>
-                <p class="text-gray-700 mb-4">
-                    The editor has a block panel on the right side. Drag blocks into the workspace to define game behavior:
-                </p>
-                <ul class="list-disc list-inside space-y-2 text-gray-700 mb-4">
-                    <li><strong>On Start:</strong> What happens when the game loads?</li>
-                    <li><strong>On Collision:</strong> What happens when two objects touch?</li>
-                    <li><strong>On Key Press:</strong> What happens when the player presses a key?</li>
-                    <li><strong>Move Sprite:</strong> Move a character or object.</li>
-                    <li><strong>Change Health:</strong> Increase or decrease health points.</li>
-                    <li><strong>Destroy Sprite:</strong> Remove an object from the game.</li>
-                    <li><strong>Spawn Sprite:</strong> Create a new object.</li>
-                </ul>
-                <p class="text-sm text-gray-600">
-                    Example: Drag "On Key Press" (for "arrow_left"), then drag "Move Sprite" underneath to move the player left when the arrow key is pressed.
-                </p>
-            </section>
-
-            <!-- Step 4 -->
-            <section class="bg-orange-50 border-l-4 border-orange-500 rounded-lg p-6">
-                <h3 class="text-lg font-semibold mb-2">Step 4: Preview Your Game</h3>
-                <p class="text-gray-700 mb-4">
-                    Click the "Run Preview" button to test your game in the canvas on the left. You'll see your logic in action!
-                </p>
-            </section>
-
-            <!-- Step 5 -->
-            <section class="bg-indigo-50 border-l-4 border-indigo-500 rounded-lg p-6">
-                <h3 class="text-lg font-semibold mb-2">Step 5: Save Your Game</h3>
-                <p class="text-gray-700 mb-4">
-                    Click "Save" to store your game. You can save multiple versions and come back to edit them anytime.
-                    Your game is saved as a <strong>Draft</strong> until you publish it.
-                </p>
-            </section>
-
-            <!-- Step 6 -->
-            <section class="bg-red-50 border-l-4 border-red-500 rounded-lg p-6">
-                <h3 class="text-lg font-semibold mb-2">Step 6: Publish Your Game</h3>
-                <p class="text-gray-700 mb-4">
-                    Once you're happy with your game, click "Publish" to submit it for review.
-                    A moderator will review it and approve it for the public to play.
-                </p>
-                <p class="text-sm text-gray-600">
-                    <strong>Review Criteria:</strong> No offensive content, no malware, playable and fun!
-                </p>
-            </section>
-
-            <!-- Tips -->
-            <section class="bg-gray-100 rounded-lg p-6">
-                <h3 class="text-lg font-semibold mb-3">💡 Pro Tips</h3>
-                <ul class="space-y-2 text-gray-700 list-disc list-inside">
-                    <li>Start simple: make a single-level game with one mechanic (jump, avoid, collect).</li>
-                    <li>Test often: use "Run Preview" to check your game works as expected.</li>
-                    <li>Add feedback: use "Change Health" or "Spawn Sprite" to give players visual feedback.</li>
-                    <li>Name objects clearly: use names like "player", "enemy", "coin" to avoid confusion.</li>
-                    <li>Think about win/lose conditions: how does the player win or lose?</li>
-                </ul>
-            </section>
-
-            <!-- FAQ -->
-            <section class="bg-white rounded-lg shadow p-6">
-                <h3 class="text-lg font-semibold mb-3">❓ FAQ</h3>
-                <div class="space-y-4">
-                    <div>
-                        <strong>Q: Can I upload my own graphics?</strong>
-                        <p class="text-gray-700">A: Asset uploads are coming soon! For now, use simple colored shapes.</p>
-                    </div>
-                    <div>
-                        <strong>Q: Can I make multiplayer games?</strong>
-                        <p class="text-gray-700">A: Multiplayer support is on the roadmap. Currently, focus on single-player games.</p>
-                    </div>
-                    <div>
-                        <strong>Q: How do I earn money from my games?</strong>
-                        <p class="text-gray-700">A: Once your game is public, you can enable monetization (ads, premium content). Lupi-fy takes a 30% cut.</p>
-                    </div>
-                    <div>
-                        <strong>Q: What if my game is rejected?</strong>
-                        <p class="text-gray-700">A: You'll receive feedback on why. Fix the issue and resubmit!</p>
-                    </div>
+        <!-- Core Block Types -->
+        <section class="bg-white rounded-lg shadow p-5">
+            <h2 class="text-xl font-bold mb-4 text-lupi-primary flex items-center">
+                <span class="mr-2">🧩</span> Essential Block Types
+            </h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="bg-blue-50 p-3 rounded-lg border-l-4 border-blue-500">
+                    <h3 class="font-semibold">Events</h3>
+                    <ul class="list-disc list-inside text-gray-700 mt-2 space-y-1 text-sm">
+                        <li>On Game Start</li>
+                        <li>On Key Press</li>
+                        <li>On Collision (Tag vs Tag)</li>
+                        <li>On Timer (every X seconds)</li>
+                        <li>On Scene Load</li>
+                    </ul>
                 </div>
-            </section>
+                <div class="bg-green-50 p-3 rounded-lg border-l-4 border-green-500">
+                    <h3 class="font-semibold">Game Controls</h3>
+                    <ul class="list-disc list-inside text-gray-700 mt-2 space-y-1 text-sm">
+                        <li>Move Player (direction, pixels)</li>
+                        <li>Set Velocity (X/Y axis)</li>
+                        <li>Apply Gravity & Friction</li>
+                        <li>Jump (buffered), Dash, Knockback</li>
+                        <li>Camera Follow & Clamp</li>
+                    </ul>
+                </div>
+                <div class="bg-purple-50 p-3 rounded-lg border-l-4 border-purple-500">
+                    <h3 class="font-semibold">Entities & Tags</h3>
+                    <ul class="list-disc list-inside text-gray-700 mt-2 space-y-1 text-sm">
+                        <li>Spawn Sprite (x, y position)</li>
+                        <li>Add/Remove Tags to entities</li>
+                        <li>For Each Entity with Tag</li>
+                        <li>Count Entities with Tag</li>
+                        <li>Get Nearest Entity with Tag</li>
+                    </ul>
+                </div>
+                <div class="bg-orange-50 p-3 rounded-lg border-l-4 border-orange-500">
+                    <h3 class="font-semibold">Game State</h3>
+                    <ul class="list-disc list-inside text-gray-700 mt-2 space-y-1 text-sm">
+                        <li>Add Score (points)</li>
+                        <li>Set Health (value)</li>
+                        <li>Set Lives (count)</li>
+                        <li>Save/Load Game State</li>
+                        <li>Variables & Arrays</li>
+                    </ul>
+                </div>
+            </div>
+        </section>
 
-            <!-- CTA -->
-            <section class="bg-gradient-to-r from-indigo-600 to-purple-600 rounded-lg text-white p-8 text-center">
-                <h3 class="text-2xl font-semibold mb-4">Ready to Create Your Game?</h3>
-                <a href="/games/editor/" class="inline-block px-6 py-3 bg-white text-indigo-600 font-semibold rounded-lg hover:bg-gray-100">
-                    Open Editor Now
+        <!-- Advanced Features -->
+        <section class="bg-white rounded-lg shadow p-5">
+            <h2 class="text-xl font-bold mb-4 text-lupi-primary flex items-center">
+                <span class="mr-2">⚡</span> Advanced Features
+            </h2>
+            <div class="feature-grid">
+                <div class="feature-card bg-indigo-50 p-4 rounded-lg border-l-4 border-indigo-500">
+                    <h3 class="font-semibold flex items-center">
+                        <span class="mr-1">🎬</span> Keyframes & Animation
+                    </h3>
+                    <p class="text-sm text-gray-700 mt-2">
+                        Create smooth animations with keyframes. Control position, scale, rotation over time. Perfect for cutscenes and visual effects.
+                    </p>
+                </div>
+                <div class="feature-card bg-red-50 p-4 rounded-lg border-l-4 border-red-500">
+                    <h3 class="font-semibold flex items-center">
+                        <span class="mr-1">👾</span> AI Behavior
+                    </h3>
+                    <p class="text-sm text-gray-700 mt-2">
+                        Create AI with patrol, chase, and flee behaviors. Use state machines to control complex NPC interactions.
+                    </p>
+                </div>
+                <div class="feature-card bg-amber-50 p-4 rounded-lg border-l-4 border-amber-500">
+                    <h3 class="font-semibold flex items-center">
+                        <span class="mr-1">🎒</span> Inventory System
+                    </h3>
+                    <p class="text-sm text-gray-700 mt-2">
+                        Add items to inventory, check if player has items, create pickups, and manage slots with visual feedback.
+                    </p>
+                </div>
+                <div class="feature-card bg-teal-50 p-4 rounded-lg border-l-4 border-teal-500">
+                    <h3 class="font-semibold flex items-center">
+                        <span class="mr-1">🔊</span> Audio System
+                    </h3>
+                    <p class="text-sm text-gray-700 mt-2">
+                        Play sounds and music with volume control. Add sound effects for collisions, collectibles, and background music.
+                    </p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Pro Tips -->
+        <section class="bg-gradient-to-r from-lupi-primary to-purple-700 text-white rounded-lg p-6">
+            <h2 class="text-xl font-bold mb-4 flex items-center">
+                <span class="mr-2">💡</span> Pro Tips for Success
+            </h2>
+            <div class="space-y-3">
+                <div class="flex">
+                    <span class="font-bold mr-2">1.</span>
+                    <span>Start with simple mechanics before combining them (movement → collection → enemies)</span>
+                </div>
+                <div class="flex">
+                    <span class="font-bold mr-2">2.</span>
+                    <span>Use the "Debug Overlays" button (Bug icon) to see hitboxes and entity positions</span>
+                </div>
+                <div class="flex">
+                    <span class="font-bold mr-2">3.</span>
+                    <span>Tag your entities consistently (player, enemy, coin) for easier selection and collision handling</span>
+                </div>
+                <div class="flex">
+                    <span class="font-bold mr-2">4.</span>
+                    <span>Preview frequently using the "👁️ Quick Preview" button to catch errors early</span>
+                </div>
+                <div class="flex">
+                    <span class="font-bold mr-2">5.</span>
+                    <span>Use comments in your blocks (right-click → Add Comment) to document complex logic</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- Publishing Guide -->
+        <section class="bg-white rounded-lg shadow p-5">
+            <h2 class="text-xl font-bold mb-4 text-lupi-primary flex items-center">
+                <span class="mr-2">📤</span> Publishing Your Game
+            </h2>
+            <div class="space-y-4">
+                <p class="text-gray-700">
+                    <strong>Step 1:</strong> Save your game frequently (auto-saves every 30 seconds)
+                </p>
+                <p class="text-gray-700">
+                    <strong>Step 2:</strong> Test thoroughly with preview mode before publishing
+                </p>
+                <p class="text-gray-700">
+                    <strong>Step 3:</strong> Click "🚀 Publish" and complete the submission form
+                </p>
+                <p class="text-gray-700">
+                    <strong>Step 4:</strong> Wait for moderator approval (check notifications)
+                </p>
+                <p class="text-gray-700 bg-yellow-50 p-3 rounded">
+                    ⚠️ <strong>Review Criteria:</strong> No offensive content, playable mechanics, clear win/lose conditions, reasonable difficulty
+                </p>
+                <p class="text-gray-700 bg-green-50 p-3 rounded">
+                    ✅ <strong>Approved Games:</strong> Get featured on the platform, earn XP for achievements, and can be remixed by other creators
+                </p>
+            </div>
+        </section>
+
+        <!-- Quick Reference -->
+        <section class="bg-white rounded-lg shadow p-5">
+            <h2 class="text-xl font-bold mb-4 text-lupi-primary flex items-center">
+                <span class="mr-2">⚡</span> Quick Reference Cheat Sheet
+            </h2>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div class="bg-gray-50 p-3 rounded">
+                    <h3 class="font-semibold mb-2 text-blue-600">Shortcuts</h3>
+                    <ul class="text-sm space-y-1 text-gray-700">
+                        <li><span class="font-mono bg-gray-200 px-1">F3</span> - Toggle debug overlay</li>
+                        <li><span class="font-mono bg-gray-200 px-1">Ctrl+Space</span> - AI suggestions</li>
+                        <li><span class="font-mono bg-gray-200 px-1">Ctrl+S</span> - Save project</li>
+                        <li><span class="font-mono bg-gray-200 px-1">Ctrl+Z/Y</span> - Undo/Redo</li>
+                    </ul>
+                </div>
+                <div class="bg-gray-50 p-3 rounded">
+                    <h3 class="font-semibold mb-2 text-blue-600">Hot Tips</h3>
+                    <ul class="text-sm space-y-1 text-gray-700">
+                        <li>Double-click to edit values in blocks</li>
+                        <li>Right-click blocks for context menu</li>
+                        <li>Drag blocks into the terminal to see code</li>
+                        <li>Use tags to organize entities easily</li>
+                    </ul>
+                </div>
+                <div class="bg-gray-50 p-3 rounded">
+                    <h3 class="font-semibold mb-2 text-blue-600">Common Issues</h3>
+                    <ul class="text-sm space-y-1 text-gray-700">
+                        <li>No movement? Check if you added gravity and collision</li>
+                        <li>Sprites not appearing? Verify spawn positions and camera bounds</li>
+                        <li>Game not responding? Check for infinite loops in your logic</li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+        <!-- CTA -->
+        <section class="bg-gradient-to-r from-lupi-primary to-purple-700 rounded-lg text-white p-6 text-center">
+            <h3 class="text-2xl font-bold mb-3">Your Game Awaits!</h3>
+            <p class="mb-4 opacity-90">Start creating in minutes. No coding experience needed.</p>
+            <div class="flex flex-col sm:flex-row justify-center gap-3">
+                <a href="/games/editor/" class="px-6 py-3 bg-white text-lupi-primary font-bold rounded-lg hover:bg-gray-100 transition transform hover:scale-105">
+                    Create Your Game
                 </a>
-            </section>
-        </div>
-    </main>
+                <a href="#" class="px-6 py-3 bg-transparent border-2 border-white text-white font-bold rounded-lg hover:bg-white/10 transition">
+                    Watch Tutorial
+                </a>
+            </div>
+        </section>
+    </div>
+</main>
 
-    <footer class="bg-gray-800 text-gray-200 p-4 mt-8">
-        <div class="container mx-auto text-center text-sm">
-            <p>&copy; 2025 Lupi-fy. Made with ❤️ for game creators.</p>
-        </div>
-    </footer>
+<footer class="bg-lupi-secondary text-gray-300 p-4 mt-8">
+    <div class="container mx-auto text-center text-sm">
+        <p>&copy; 2025 Lupi-fy. A game creation platform for everyone.</p>
+        <p class="mt-1 text-gray-400">Drag, drop, and create amazing games without writing code!</p>
+    </div>
+</footer>
 </body>
 </html>
