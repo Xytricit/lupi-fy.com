@@ -345,6 +345,9 @@ def creator_dashboard_data(request):
 @require_http_methods(["GET"])
 def user_games_api(request):
     """Return the authenticated user's games (published and drafts) with metrics.
+    
+    If game_id query param is provided, returns full details for that game including logic_json.
+    Otherwise returns list of all user games with metrics.
 
     Response format:
     {
@@ -353,6 +356,32 @@ def user_games_api(request):
     """
     try:
         user = request.user
+        game_id = request.GET.get('game_id')
+        
+        # If specific game_id requested, return full details including logic_json
+        if game_id:
+            try:
+                g = Game.objects.get(id=game_id, owner=user)
+                
+                # Get latest version with logic_json
+                latest_version = g.versions.order_by('-version_number').first()
+                logic_json = latest_version.logic_json if latest_version else {}
+                
+                game_data = {
+                    'id': str(g.id),
+                    'title': g.title,
+                    'description': g.description if hasattr(g, 'description') else '',
+                    'thumbnail': g.thumbnail.url if getattr(g, 'thumbnail', None) else None,
+                    'visibility': g.visibility,
+                    'logic_json': logic_json,
+                    'updated_at': g.updated_at.isoformat() if getattr(g, 'updated_at', None) else None,
+                    'created_at': g.created_at.isoformat() if getattr(g, 'created_at', None) else None
+                }
+                return JsonResponse({'game': game_data}, status=200)
+            except Game.DoesNotExist:
+                return JsonResponse({'error': 'Game not found'}, status=404)
+        
+        # Otherwise return list of all user games
         games_qs = Game.objects.filter(owner=user).order_by('-updated_at')
         games = []
         for g in games_qs:

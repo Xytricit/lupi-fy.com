@@ -20,8 +20,10 @@ from django.db.models import Count
 from django.db.models.functions import TruncDate, TruncHour
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
 from django.utils import timezone
 from django.utils.html import escape as html_escape
+from django.views.decorators.http import require_POST
 
 try:
     import bleach
@@ -202,6 +204,58 @@ def register_view(request):
     return render(request, "accounts/register.html", context)
 
 
+@require_POST
+def register_api(request):
+    payload = {}
+    content_type = (request.content_type or "").lower()
+    if "application/json" in content_type:
+        try:
+            payload = json.loads((request.body or b"{}").decode("utf-8"))
+        except (ValueError, UnicodeDecodeError):
+            return JsonResponse(
+                {"success": False, "message": "Invalid request payload."},
+                status=400,
+            )
+    else:
+        payload = request.POST
+    form_data = {
+        "username": (payload.get("username") or "").strip(),
+        "email": (payload.get("email") or "").strip(),
+        "password1": payload.get("password1") or payload.get("password") or "",
+        "password2":
+            payload.get("password2")
+            or payload.get("confirmPassword")
+            or payload.get("confirm_password")
+            or "",
+    }
+    form = CustomUserCreationForm(form_data)
+    if not form.is_valid():
+        errors = {
+            field: [str(error) for error in messages]
+            for field, messages in form.errors.items()
+        }
+        return JsonResponse(
+            {
+                "success": False,
+                "errors": errors,
+                "message": "Please correct the highlighted fields.",
+            },
+            status=400,
+        )
+    user = form.save(commit=False)
+    user.is_active = True
+    user.is_email_verified = True
+    user.save()
+    login(request, user, backend="django.contrib.auth.backends.ModelBackend")
+    return JsonResponse(
+        {
+            "success": True,
+            "message": "Account created successfully!",
+            "redirect_url": reverse("dashboard_home"),
+        }
+    )
+
+
 # -------------------------------
 # LOGIN
 # -------------------------------
@@ -251,6 +305,111 @@ def login_view(request):
 
     # Render the styled backup login template which provides the local username/password form
     return render(request, "accounts/login_backup.html", {"form": form})
+
+
+@require_POST
+def login_api(request):
+    payload = {}
+    content_type = (request.content_type or "").lower()
+    if "application/json" in content_type:
+        try:
+            payload = json.loads((request.body or b"{}").decode("utf-8"))
+        except (ValueError, UnicodeDecodeError):
+            return JsonResponse(
+                {"success": False, "message": "Invalid request payload."}, status=400
+            )
+    else:
+        payload = request.POST
+
+    identifier = (payload.get("identifier") or "").strip()
+    password = payload.get("password") or ""
+    remember_raw = payload.get("remember_me")
+    if isinstance(remember_raw, str):
+        remember_me = remember_raw.lower() in ("1", "true", "yes", "on")
+    else:
+        remember_me = bool(remember_raw)
+
+    if not identifier:
+        return JsonResponse(
+            {
+                "success": False,
+                "error_code": "missing_identifier",
+                "message": "Enter your username or email address.",
+            },
+            status=400,
+        )
+
+    if not password:
+        return JsonResponse(
+            {
+                "success": False,
+                "error_code": "missing_password",
+                "message": "Enter your password.",
+            },
+            status=400,
+        )
+
+    user = None
+    try:
+        user = CustomUser.objects.get(username=identifier)
+    except CustomUser.DoesNotExist:
+        user = CustomUser.objects.filter(email__iexact=identifier).first()
+
+    if not user:
+        return JsonResponse(
+            {
+                "success": False,
+                "error_code": "user_not_found",
+                "message": "No account found with this username or email.",
+            },
+            status=400,
+        )
+
+    if not user.check_password(password):
+        return JsonResponse(
+            {
+                "success": False,
+                "error_code": "incorrect_password",
+                "message": "Incorrect password.",
+            },
+            status=400,
+        )
+
+    if not user.is_active or not user.is_email_verified:
+        return JsonResponse(
+            {
+                "success": False,
+                "error_code": "account_inactive",
+                "message": "Your account is not active. Please verify your email.",
+            },
+            status=400,
+        )
+
+    if getattr(user, "suspended_until", None) and timezone.now() < user.suspended_until:
+        remaining = user.suspended_until - timezone.now()
+        hours = int(remaining.total_seconds() // 3600)
+        return JsonResponse(
+            {
+                "success": False,
+                "error_code": "account_locked",
+                "message": f"Your account is temporarily locked for {hours} more hour(s).",
+            },
+            status=400,
+        )
+
+    login(request, user, backend="django.contrib.auth.backends.ModelBackend")
+    if remember_me:
+        request.session.set_expiry(settings.SESSION_COOKIE_AGE)
+    else:
+        request.session.set_expiry(0)
+
+    return JsonResponse(
+        {
+            "success": True,
+            "message": "Login successful.",
+            "redirect_url": reverse("dashboard_home"),
+        }
+    )
 
 
 # -------------------------------
@@ -475,11 +634,61 @@ def toggle_subscription(request, community_id=None, author_id=None):
 # -------------------------------
 def user_profile_view(request, user_id):
     """Returns user profile data for popup display or privacy message."""
-    target_user = get_object_or_404(User, id=user_id)
-    current_user = request.user
+    try:
+        target_user = get_object_or_404(User, id=user_id)
+        current_user = request.user
 
-    # If viewing own profile, return all info
-    if current_user.is_authenticated and current_user.id == user_id:
+        # If viewing own profile, return all info
+        if current_user.is_authenticated and current_user.id == user_id:
+            return JsonResponse({
+                "username": target_user.username,
+                "avatar": target_user.avatar.url if target_user.avatar else None,
+                "bio": target_user.bio or "",
+                "followers_count": target_user.followers.count(),
+                "is_verified": getattr(target_user, 'is_verified', False),
+                "is_premium": getattr(target_user, 'is_premium', False),
+                "is_own_profile": True,
+                "allow_dms": getattr(target_user, 'allow_dms', True),
+                "allow_public_socials": getattr(target_user, 'allow_public_socials', False),
+                "socials": {
+                    "youtube": getattr(target_user, 'social_youtube', ''),
+                    "instagram": getattr(target_user, 'social_instagram', ''),
+                    "tiktok": getattr(target_user, 'social_tiktok', ''),
+                    "twitch": getattr(target_user, 'social_twitch', ''),
+                    "github": getattr(target_user, 'social_github', ''),
+                },
+            }
+        )
+
+        # If user has allow_public_socials disabled, return structured privacy info
+        # Return a consistent shape so the client can always render Social/Achievements/Chat sections
+        if not target_user.allow_public_socials:
+            return JsonResponse(
+                {
+                    "username": target_user.username,
+                    "avatar": target_user.avatar.url if target_user.avatar else None,
+                    "bio": target_user.bio or "",
+                    "followers_count": target_user.followers.count(),
+                    "is_verified": target_user.is_verified,
+                    "is_premium": target_user.is_premium,
+                    "is_private": True,
+                    "allow_public_socials": False,
+                    "allow_dms": getattr(target_user, "allow_dms", True),
+                    "is_own_profile": current_user.is_authenticated
+                    and current_user.id == user_id,
+                    "socials": {
+                        "youtube": None,
+                        "instagram": None,
+                        "tiktok": None,
+                        "twitch": None,
+                        "github": None,
+                    },
+                    "achievements": [],
+                    "message": "Account is private",
+                }
+            )
+
+        # Public profile - return public info
         return JsonResponse(
             {
                 "username": target_user.username,
@@ -488,7 +697,7 @@ def user_profile_view(request, user_id):
                 "followers_count": target_user.followers.count(),
                 "is_verified": target_user.is_verified,
                 "is_premium": target_user.is_premium,
-                "is_own_profile": True,
+                "is_private": False,
                 "allow_dms": getattr(target_user, "allow_dms", True),
                 "socials": {
                     "youtube": target_user.social_youtube,
@@ -499,55 +708,8 @@ def user_profile_view(request, user_id):
                 },
             }
         )
-
-    # If user has allow_public_socials disabled, return structured privacy info
-    # Return a consistent shape so the client can always render Social/Achievements/Chat sections
-    if not target_user.allow_public_socials:
-        return JsonResponse(
-            {
-                "username": target_user.username,
-                "avatar": target_user.avatar.url if target_user.avatar else None,
-                "bio": target_user.bio or "",
-                "followers_count": target_user.followers.count(),
-                "is_verified": target_user.is_verified,
-                "is_premium": target_user.is_premium,
-                "is_private": True,
-                "allow_public_socials": False,
-                "allow_dms": getattr(target_user, "allow_dms", True),
-                "is_own_profile": current_user.is_authenticated
-                and current_user.id == user_id,
-                "socials": {
-                    "youtube": None,
-                    "instagram": None,
-                    "tiktok": None,
-                    "twitch": None,
-                    "github": None,
-                },
-                "achievements": [],
-                "message": "Account is private",
-            }
-        )
-
-    # Public profile - return public info
-    return JsonResponse(
-        {
-            "username": target_user.username,
-            "avatar": target_user.avatar.url if target_user.avatar else None,
-            "bio": target_user.bio or "",
-            "followers_count": target_user.followers.count(),
-            "is_verified": target_user.is_verified,
-            "is_premium": target_user.is_premium,
-            "is_private": False,
-            "allow_dms": getattr(target_user, "allow_dms", True),
-            "socials": {
-                "youtube": target_user.social_youtube,
-                "instagram": target_user.social_instagram,
-                "tiktok": target_user.social_tiktok,
-                "twitch": target_user.social_twitch,
-                "github": target_user.social_github,
-            },
-        }
-    )
+    except Exception as e:
+        return JsonResponse({"error": str(e)}, status=400)
 
 
 # -------------------------------
@@ -1796,6 +1958,11 @@ def google_login_view(request):
     return render(request, "accounts/google_login.html", context)
 
 
+def password_reset_info_view(request):
+    """Show a static notice with steps while backend reset is pending."""
+    return render(request, "accounts/password_reset.html")
+
+
 # --------------------------------
 # CHAT VIEWS
 # --------------------------------
@@ -2499,43 +2666,6 @@ def game_lobby_post_message_view(request):
         return JsonResponse({"error": "Invalid JSON"}, status=400)
     except Exception as e:
         return JsonResponse({"error": str(e)}, status=500)
-
-
-# --------------------------------
-# GAMES HUB
-# --------------------------------
-
-
-@login_required
-def games_hub_view(request):
-    """Display available approved Lupiforge games only"""
-    try:
-        from games.models import Game
-        
-        # Query only approved games created via Lupiforge
-        approved_games = Game.objects.filter(
-            status='approved'
-        ).select_related('creator').order_by('-created_at')
-        
-        games_list = []
-        for game in approved_games:
-            games_list.append({
-                "id": game.id,
-                "name": game.title,
-                "emoji": "🎮",
-                "description": game.description[:150] if game.description else "No description available",
-                "url": f"/games/play/{game.id}/",
-                "creator": game.creator.username if game.creator else "Unknown",
-                "thumbnail": game.thumbnail.url if hasattr(game, 'thumbnail') and game.thumbnail else None,
-                "plays": getattr(game, 'play_count', 0),
-            })
-        
-        return render(request, "core/games_hub.html", {"games": games_list})
-    except Exception as e:
-        # Fallback to empty list if games app not available
-        return render(request, "core/games_hub.html", {"games": [], "error": "Games system not available"})
-
-    return render(request, "core/games_hub.html", {"games": games_list})
 
 
 # --------------------------------

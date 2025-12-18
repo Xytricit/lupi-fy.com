@@ -1,4 +1,5 @@
 import base64
+import hashlib
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
@@ -13,11 +14,20 @@ from .models import (Community, CommunityPost, CommunityPostComment,
                      ModerationReport)
 
 
+def _youtube_style_id(value: str) -> str:
+    digest = hashlib.blake2b(value.encode("utf-8"), digest_size=6).digest()
+    return base64.urlsafe_b64encode(digest).decode("ascii").rstrip("=")
+
+
 # -------------------------------
 # List all communities
 # -------------------------------
 def communities_list(request):
-    communities = Community.objects.all().order_by("category", "-created_at")
+    queryset = Community.objects.all().order_by("category", "-created_at")
+    communities = []
+    for community in queryset:
+        community.yt_id = _youtube_style_id(f"community-{community.pk}")
+        communities.append(community)
     categories = Community.CATEGORY_CHOICES
     return render(
         request,

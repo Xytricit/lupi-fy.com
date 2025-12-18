@@ -7,10 +7,15 @@ from . import views
 urlpatterns = [
     # Google OAuth login page (replaces old register/login)
     path("login/", views.google_login_view, name="login"),
+    path("password-reset/", views.password_reset_info_view, name="password_reset"),
+    path("api/login/", views.login_api, name="login_api"),
     # Traditional local login (fallback when OAuth missing)
     path("login/local/", views.login_view, name="local_login"),
     # Registration page (handles both Google OAuth and local signup)
     path("register/", views.register_view, name="register"),
+    path("api/register/", views.register_api, name="register_api"),
+    path("api/check-username/", views.check_username_available, name="check_username_api"),
+    path("api/check-email/", views.check_email_available, name="check_email_api"),
     path("logout/", views.logout_view, name="logout"),
     path("dashboard/", views.dashboard_view, name="dashboard"),
     path("profile/", views.profile_view, name="profile"),
@@ -63,8 +68,6 @@ urlpatterns = [
         views.mark_notification_read_api,
         name="mark_notification_read",
     ),
-    # Games hub
-    path("games/", views.games_hub_view, name="games_hub"),
     # Game lobby (DEPRECATED - admin/testing only)
     # path("game/lobby/", views.game_lobby_view, name="game_lobby"),
     path(

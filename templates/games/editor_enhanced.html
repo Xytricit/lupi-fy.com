@@ -5,6 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>LupiForge Block Editor</title>
+    <link rel="icon" href="data:,">
     <!-- Blockly will be loaded dynamically with fallback support -->
     
     <script>
@@ -689,14 +690,30 @@
             initializeSubsystems();
 
             // Load project AFTER workspace is ready
-            loadProject();
-            if (workspace.getAllBlocks(false).length === 0) {
-                addStarterBlock();
-            }
-
-            // Dispatch workspaceReady event to initialize dependent systems
-            document.dispatchEvent(new Event('workspaceReady'));
-            console.log('✅ Editor initialized successfully');
+            // First try to load from server if game_id is provided
+            loadGameFromServer().then(loaded => {
+                if (!loaded) {
+                    // If no server game, load from localStorage
+                    loadProject();
+                }
+                
+                if (workspace.getAllBlocks(false).length === 0) {
+                    addStarterBlock();
+                }
+                
+                // Dispatch workspaceReady event to initialize dependent systems
+                document.dispatchEvent(new Event('workspaceReady'));
+                console.log('✅ Editor initialized successfully');
+            }).catch(error => {
+                console.error('Error during game load:', error);
+                // Fallback to local load
+                loadProject();
+                if (workspace.getAllBlocks(false).length === 0) {
+                    addStarterBlock();
+                }
+                document.dispatchEvent(new Event('workspaceReady'));
+                console.log('✅ Editor initialized successfully (with fallback)');
+            });
             
         } catch (error) {
             console.error('❌ Editor initialization failed:', error);
@@ -884,16 +901,6 @@
                 init: () => {
                     if (typeof ScoreManager !== 'undefined' && ScoreManager.init) {
                         ScoreManager.init();
-                        return true;
-                    }
-                    return false;
-                }
-            },
-            {
-                name: 'NotificationManager',
-                init: () => {
-                    if (typeof NotificationManager !== 'undefined' && NotificationManager.init) {
-                        NotificationManager.init();
                         return true;
                     }
                     return false;
@@ -1215,6 +1222,55 @@
         } catch (error) {
             console.error('Save failed:', error);
             showToast('❌ Save failed: ' + error.message, true);
+        }
+    }
+
+    async function loadGameFromServer() {
+        if (!window.LUPIFORGE_GAME_ID) {
+            console.log('No game_id provided, skipping server load');
+            return false;
+        }
+        
+        try {
+            console.log('Loading game from server:', window.LUPIFORGE_GAME_ID);
+            const response = await fetch(`/games/api/user/games/?game_id=${window.LUPIFORGE_GAME_ID}`, {
+                credentials: 'same-origin',
+                headers: { 'Accept': 'application/json' }
+            });
+            
+            if (!response.ok) {
+                throw new Error(`Failed to load game: ${response.status}`);
+            }
+            
+            const data = await response.json();
+            const game = data.games?.find(g => g.id === window.LUPIFORGE_GAME_ID) || data.game;
+            
+            if (!game) {
+                console.warn('Game not found in response');
+                return false;
+            }
+            
+            // Load game title
+            const projectNameEl = document.getElementById('projectName');
+            if (projectNameEl && game.title) {
+                projectNameEl.value = game.title;
+            }
+            
+            // Load workspace XML if available
+            if (game.logic_json?.xml && workspace) {
+                const xml = Blockly.utils.xml.textToDom(game.logic_json.xml);
+                Blockly.Xml.domToWorkspace(xml, workspace);
+                console.log('✅ Game loaded from server successfully');
+                showToast('📂 Game loaded');
+                return true;
+            }
+            
+            console.log('Game loaded but no workspace data found');
+            return true;
+        } catch (error) {
+            console.error('Error loading game from server:', error);
+            showToast('⚠️ Failed to load game', 'error');
+            return false;
         }
     }
 
@@ -2279,10 +2335,11 @@
         }
         .asset-content {
             flex: 1;
-            overflow-y: auto;
+            overflow-y: auto !important;
             overflow-x: hidden;
             padding: 15px;
             min-height: 0;
+            max-height: 100%;
         }
         .asset-content::-webkit-scrollbar {
             width: 8px;
@@ -2398,7 +2455,8 @@
         /* Terminal/Debug Console expands when asset panel collapsed */
         .asset-panel.collapsed ~ #terminalPanel,
         .asset-panel.collapsed ~ .debug-overlay,
-        .asset-panel.collapsed ~ #lupiScriptPanel {
+        .asset-panel.collapsed ~ #lupiScriptPanel,
+        .asset-panel.collapsed ~ .debug-console {
             right: 0 !important;
             left: 0;
             width: 100%;
@@ -2556,113 +2614,7 @@
             color: #27ae60;
         }
         /* Notification Styles */
-        .notification-bell {
-            position: relative;
-            font-size: 24px;
-            cursor: pointer;
-            padding: 5px 10px;
-            transition: transform 0.3s ease;
-        }
-        .notification-bell:hover {
-            transform: scale(1.1);
-        }
-        .notification-badge {
-            position: absolute;
-            top: 0;
-            right: 5px;
-            background: #e74c3c;
-            color: white;
-            border-radius: 50%;
-            width: 18px;
-            height: 18px;
-            font-size: 11px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: bold;
-        }
-        .notification-badge.hidden {
-            display: none;
-        }
-        .notification-dropdown {
-            position: fixed;
-            top: 60px;
-            right: 20px;
-            width: 350px;
-            max-height: 500px;
-            background: #16213e;
-            border-radius: 10px;
-            box-shadow: 0 5px 30px rgba(0,0,0,0.5);
-            z-index: 2000;
-            display: none;
-        }
-        .notification-dropdown.show {
-            display: block;
-            animation: slideDown 0.3s ease;
-        }
-        @keyframes slideDown {
-            from {
-                opacity: 0;
-                transform: translateY(-20px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-        .notification-header {
-            padding: 15px;
-            border-bottom: 2px solid #533483;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        .notification-header h3 {
-            color: white;
-            font-size: 16px;
-            margin: 0;
-        }
-        .mark-read-btn {
-            background: none;
-            border: none;
-            color: #3498db;
-            cursor: pointer;
-            font-size: 12px;
-        }
-        .mark-read-btn:hover {
-            text-decoration: underline;
-        }
-        .notification-list {
-            max-height: 400px;
-            overflow-y: auto;
-        }
-        .notification-item {
-            padding: 15px;
-            border-bottom: 1px solid #0f3460;
-            cursor: pointer;
-            transition: background 0.3s ease;
-        }
-        .notification-item:hover {
-            background: #0f3460;
-        }
-        .notification-item.unread {
-            background: rgba(83, 52, 131, 0.2);
-        }
-        .notification-title {
-            color: white;
-            font-weight: bold;
-            margin-bottom: 5px;
-        }
-        .notification-message {
-            color: #95a5a6;
-            font-size: 13px;
-            line-height: 1.4;
-        }
-        .notification-time {
-            color: #7f8c8d;
-            font-size: 11px;
-            margin-top: 5px;
-        }
+
 
         /* Header Icon Buttons */
         .header-icon-btn {
@@ -3477,6 +3429,9 @@
         {% if current_user %}
         {{ current_user|json_script:"currentUser" }}
         {% endif %}
+        {% if game_id %}
+        {{ game_id|json_script:"gameIdData" }}
+        {% endif %}
 </head>
 <body>
 <script>
@@ -3486,10 +3441,17 @@
         const el = document.getElementById('currentUser');
         if(el) window.LUPIFORGE_CURRENT_USER = JSON.parse(el.textContent || '{}');
     }catch(e){ window.LUPIFORGE_CURRENT_USER = {}; }
+    
+    // Expose game_id if editing existing game
+    window.LUPIFORGE_GAME_ID = null;
+    try{
+        const gameIdEl = document.getElementById('gameIdData');
+        if(gameIdEl) window.LUPIFORGE_GAME_ID = JSON.parse(gameIdEl.textContent || 'null');
+    }catch(e){ window.LUPIFORGE_GAME_ID = null; }
 </script>
     <div id="header">
         <div style="display: flex; align-items: center;">
-            <h1>🎮 LupiForge Block Editor</h1>
+            <h1><svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-gamepad2-icon lucide-gamepad-2" style="display: inline-block; vertical-align: middle; margin-right: 8px; color: var(--primary);"><line x1="6" x2="10" y1="11" y2="11"/><line x1="8" x2="8" y1="9" y2="13"/><line x1="15" x2="15.01" y1="12" y2="12"/><line x1="18" x2="18.01" y1="10" y2="10"/><path d="M17.32 5H6.68a4 4 0 0 0-3.978 3.59c-.006.052-.01.101-.017.152C2.604 9.416 2 14.456 2 16a3 3 0 0 0 3 3c1 0 1.5-.5 2-1l1.414-1.414A2 2 0 0 1 9.828 16h4.344a2 2 0 0 1 1.414.586L17 18c.5.5 1 1 2 1a3 3 0 0 0 3-3c0-1.545-.604-6.584-.685-7.258-.007-.05-.011-.1-.017-.151A4 4 0 0 0 17.32 5z"/></svg>LupiForge Block Editor</h1>
             <input type="text" id="projectName" placeholder="My Awesome Game" maxlength="50">
         </div>
         <div class="button-group">
@@ -3506,11 +3468,6 @@
         </div>
     </div>
     <div id="blocklyDiv"></div>
-    
-    <!-- Restore Asset Panel Button (appears when collapsed) -->
-    <button class="restore-assets-btn" id="restoreAssetsBtn" onclick="window.restoreAssetPanel()" title="Restore Asset Library">
-        📦 ◀
-    </button>
     
     <!-- LupiScript v1 Panel -->
     <div id="lupiScriptPanel" style="display:none; position:fixed; bottom:0; left:0; right:300px; max-height:50vh; overflow:auto; padding:15px; border-top:2px solid #533483; background:#1a1a2e; z-index:1000; box-shadow:0 -4px 20px rgba(0,0,0,0.5); transition:right 0.3s ease;">
@@ -3747,11 +3704,16 @@
             </div>
         </div>
     </div>
+    
+    <!-- Restore Asset Panel Button (appears when asset panel is collapsed) -->
+    <button class="restore-assets-btn" id="restoreAssetsBtn" onclick="window.restoreAssetPanel()" title="Restore Asset Library">
+        📦 ◀
+    </button>
 
     <!-- Game Preview Panel -->
     <div id="previewPanel" class="preview-panel collapsed">
         <div class="preview-header">
-            <h3>🎮 Game Preview</h3>
+            <h3><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-gamepad2-icon lucide-gamepad-2" style="display: inline-block; vertical-align: middle; margin-right: 6px; color: var(--primary);"><line x1="6" x2="10" y1="11" y2="11"/><line x1="8" x2="8" y1="9" y2="13"/><line x1="15" x2="15.01" y1="12" y2="12"/><line x1="18" x2="18.01" y1="10" y2="10"/><path d="M17.32 5H6.68a4 4 0 0 0-3.978 3.59c-.006.052-.01.101-.017.152C2.604 9.416 2 14.456 2 16a3 3 0 0 0 3 3c1 0 1.5-.5 2-1l1.414-1.414A2 2 0 0 1 9.828 16h4.344a2 2 0 0 1 1.414.586L17 18c.5.5 1 1 2 1a3 3 0 0 0 3-3c0-1.545-.604-6.584-.685-7.258-.007-.05-.011-.1-.017-.151A4 4 0 0 0 17.32 5z"/></svg>Game Preview</h3>
             <div class="preview-controls">
                 <button id="playGame" class="preview-btn">▶️ Play</button>
                 <button id="stopGame" class="preview-btn" disabled>⏹️ Stop</button>
@@ -3815,16 +3777,7 @@
         </div>
     </div>
 
-    <!-- Notification Dropdown -->
-    <div id="notificationDropdown" class="notification-dropdown">
-        <div class="notification-header">
-            <h3>🔔 Notifications</h3>
-            <button id="markAllRead" class="mark-read-btn">Mark all read</button>
-        </div>
-        <div id="notificationList" class="notification-list">
-            <!-- Notifications populated here -->
-        </div>
-    </div>
+
 
     <!-- Leaderboard Modal -->
     <div id="leaderboardModal" class="modal">
@@ -3911,7 +3864,7 @@
                 <canvas id="playsChart" width="400" height="200"></canvas>
             </div>
             <div class="dashboard-section">
-                <h3>🎮 Your Games</h3>
+                <h3><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-gamepad2-icon lucide-gamepad-2" style="display: inline-block; vertical-align: middle; margin-right: 6px; color: var(--primary);"><line x1="6" x2="10" y1="11" y2="11"/><line x1="8" x2="8" y1="9" y2="13"/><line x1="15" x2="15.01" y1="12" y2="12"/><line x1="18" x2="18.01" y1="10" y2="10"/><path d="M17.32 5H6.68a4 4 0 0 0-3.978 3.59c-.006.052-.01.101-.017.152C2.604 9.416 2 14.456 2 16a3 3 0 0 0 3 3c1 0 1.5-.5 2-1l1.414-1.414A2 2 0 0 1 9.828 16h4.344a2 2 0 0 1 1.414.586L17 18c.5.5 1 1 2 1a3 3 0 0 0 3-3c0-1.545-.604-6.584-.685-7.258-.007-.05-.011-.1-.017-.151A4 4 0 0 0 17.32 5z"/></svg>Your Games</h3>
                 <div id="gamesList" class="games-list"></div>
             </div>
             <div class="dashboard-section">
@@ -7677,7 +7630,14 @@ dependencies {
             const match0 = block.getFieldValue('MATCH0');
             const case0 = Blockly.JavaScript.statementToCode(block, 'CASE0');
             const defaultCase = Blockly.JavaScript.statementToCode(block, 'DEFAULT');
-            return `switch(${value}) {\n  case ${match0}:\n${case0}\n    break;\n  default:\n${defaultCase}\n}\n`;
+            return `switch(${value}) {
+  case ${match0}:
+${case0}
+    break;
+  default:
+${defaultCase}
+}
+`;
         };
 
         Blockly.JavaScript.forBlock['while_loop'] = function(block) {
@@ -8158,7 +8118,11 @@ dependencies {
             const direction = block.getFieldValue('DIRECTION');
             const statements = Blockly.JavaScript.statementToCode(block, 'DO');
             const dirCheck = direction === 'any' ? 'true' : `direction === '${direction}'`;
-            return `onSwipe((direction, velocity) => {\n  if (${dirCheck}) {\n${statements}  }\n});\n`;
+            return `onSwipe((direction, velocity) => {
+  if (${dirCheck}) {
+${statements}  }
+});
+`;
         };
 
         Blockly.JavaScript.forBlock['on_pinch'] = function(block) {
@@ -8258,6 +8222,17 @@ dependencies {
             // Also attempt to persist to server (best-effort). Uses CSRF cookie.
             try{
                 const csrftoken = (document.cookie.match(/csrftoken=([^;]+)/)||[])[1] || '';
+                const saveData = {
+                    title: projectName,
+                    description: 'Saved from in-browser editor',
+                    logic_json: { xml: xmlText, code: code }
+                };
+                
+                // Include game_id if editing existing game
+                if (window.LUPIFORGE_GAME_ID) {
+                    saveData.game_id = window.LUPIFORGE_GAME_ID;
+                }
+                
                 fetch('{% url "save_game" %}', {
                     method: 'POST',
                     headers: {
@@ -8265,14 +8240,17 @@ dependencies {
                         'X-CSRFToken': csrftoken,
                         'X-Requested-With': 'XMLHttpRequest'
                     },
-                    body: JSON.stringify({
-                        title: projectName,
-                        description: 'Saved from in-browser editor',
-                        logic_json: { xml: xmlText, code: code }
-                    })
+                    body: JSON.stringify(saveData)
                 }).then(async res => {
                     if(!res.ok) throw new Error('Save failed');
                     const data = await res.json();
+                    
+                    // Store game_id for future saves
+                    if (data.game_id && !window.LUPIFORGE_GAME_ID) {
+                        window.LUPIFORGE_GAME_ID = data.game_id;
+                        console.log('Game ID assigned:', data.game_id);
+                    }
+                    
                     showToast('💾 Saved to your account');
                     console.log('Server save response:', data);
                 }).catch(err => {
@@ -8370,17 +8348,8 @@ dependencies {
             // Check achievement
             AchievementManager.check('first_publish');
 
-            // Add notification
-            NotificationManager.add(
-                '🚀 Game Submitted!',
-                'Your game is now pending moderator review.',
-                'pending'
-            );
-            
-            // Simulate moderator response after 5 seconds (demo only)
-            setTimeout(() => {
-                NotificationManager.simulateModeratorFeedback('approved');
-            }, 5000);
+            // Show submission toast
+            showToast('🚀 Game Submitted! Your game is now pending moderator review.');
         }
 
 
@@ -8531,8 +8500,7 @@ dependencies {
                 game.status = 'approved';
                 console.log('Game approved:', gameId, feedback);
                 console.log('API Endpoint: POST /games/api/approve/', {game_id: gameId, feedback});
-                showToast(`✅ ${game.title} approved!`);
-                NotificationManager.add('🎉 Game Approved!', `Your game "${game.title}" has been approved and is now live!`, 'approved');
+                showToast(`✅ ${game.title} approved! 🎉 Your game has been approved and is now live!`);
                 this.loadQueue();
             },
 
@@ -8541,8 +8509,7 @@ dependencies {
                 game.status = 'rejected';
                 console.log('Game rejected:', gameId, feedback);
                 console.log('API Endpoint: POST /games/api/reject/', {game_id: gameId, feedback});
-                showToast(`❌ ${game.title} rejected`);
-                NotificationManager.add('❌ Game Needs Revision', `Your game "${game.title}" needs changes: ${feedback}`, 'rejected');
+                showToast(`❌ ${game.title} rejected. Your game needs changes: ${feedback}`);
                 this.loadQueue();
             }
         };
@@ -14576,138 +14543,7 @@ document.addEventListener('click', (e) => {
             }
         };
 
-        // Notification Manager
-        const NotificationManager = {
-            notifications: [],
-            unreadCount: 0,
 
-            init() {
-                this.loadNotifications();
-                this.render();
-                this.attachEvents();
-            },
-
-            attachEvents() {
-                document.getElementById('notificationBell').addEventListener('click', () => {
-                    document.getElementById('notificationDropdown').classList.toggle('show');
-                });
-
-                document.getElementById('markAllRead').addEventListener('click', () => {
-                    this.markAllRead();
-                });
-
-                // Close dropdown when clicking outside
-                document.addEventListener('click', (e) => {
-                    const dropdown = document.getElementById('notificationDropdown');
-                    const bell = document.getElementById('notificationBell');
-                    if (!dropdown.contains(e.target) && !bell.contains(e.target)) {
-                        dropdown.classList.remove('show');
-                    }
-                });
-            },
-
-            loadNotifications() {
-                const saved = localStorage.getItem('lupiforge_notifications');
-                if (saved) {
-                    this.notifications = JSON.parse(saved);
-                } else {
-                    // Add welcome notification
-                    this.add('Welcome to LupiForge! 🎮', 'Start creating your first game with blocks!', 'info');
-                }
-                this.updateCount();
-            },
-
-            add(title, message, type = 'info') {
-                const notification = {
-                    id: Date.now() + Math.random(),
-                    title,
-                    message,
-                    type,
-                    read: false,
-                    timestamp: new Date().toISOString()
-                };
-
-                this.notifications.unshift(notification);
-                this.save();
-                this.updateCount();
-                this.render();
-
-                // Show toast for new notification
-                showToast(`🔔 ${title}`);
-            },
-
-            markAsRead(id) {
-                const notification = this.notifications.find(n => n.id === id);
-                if (notification) {
-                    notification.read = true;
-                    this.save();
-                    this.updateCount();
-                    this.render();
-                }
-            },
-
-            markAllRead() {
-                this.notifications.forEach(n => n.read = true);
-                this.save();
-                this.updateCount();
-                this.render();
-            },
-
-            updateCount() {
-                this.unreadCount = this.notifications.filter(n => !n.read).length;
-                const badge = document.getElementById('notificationCount');
-                badge.textContent = this.unreadCount;
-                badge.classList.toggle('hidden', this.unreadCount === 0);
-            },
-
-            save() {
-                localStorage.setItem('lupiforge_notifications', JSON.stringify(this.notifications));
-            },
-
-            render() {
-                const list = document.getElementById('notificationList');
-                
-                if (this.notifications.length === 0) {
-                    list.innerHTML = '<div style="padding: 30px; text-align: center; color: #95a5a6;">No notifications yet</div>';
-                    return;
-                }
-
-                list.innerHTML = this.notifications.map(n => {
-                    const time = new Date(n.timestamp);
-                    const timeAgo = this.getTimeAgo(time);
-                    
-                    return `
-                        <div class="notification-item ${n.read ? '' : 'unread'}" onclick="NotificationManager.markAsRead(${n.id})">
-                            <div class="notification-title">${n.title}</div>
-                            <div class="notification-message">${n.message}</div>
-                            <div class="notification-time">${timeAgo}</div>
-                        </div>
-                    `;
-                }).join('');
-            },
-
-            getTimeAgo(date) {
-                const seconds = Math.floor((new Date() - date) / 1000);
-                if (seconds < 60) return 'Just now';
-                const minutes = Math.floor(seconds / 60);
-                if (minutes < 60) return `${minutes}m ago`;
-                const hours = Math.floor(minutes / 60);
-                if (hours < 24) return `${hours}h ago`;
-                const days = Math.floor(hours / 24);
-                return `${days}d ago`;
-            },
-
-            simulateModeratorFeedback(status) {
-                const messages = {
-                    approved: ['🎉 Your game has been approved!', 'It\'s now live and players can enjoy it!'],
-                    rejected: ['❌ Your game needs revisions', 'Please check the feedback and resubmit.'],
-                    pending: ['⏳ Your game is under review', 'Moderators will review it within 24 hours.']
-                };
-                
-                const [title, message] = messages[status];
-                this.add(title, message, status);
-            }
-        };
 
         const AnimationPreviewRenderer = {
             imageCache: new Map(),

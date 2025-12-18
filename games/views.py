@@ -11,7 +11,18 @@ def editor_debug_view(request):
     This is a temporary helper to verify frontend assets (Blockly/Phaser)
     during local development when authentication would otherwise redirect.
     """
-    return render(request, "games/editor_enhanced.html", {})
+    game_id = request.GET.get('game_id')
+    context = {}
+    if game_id:
+        context['game_id'] = game_id
+    if request.user.is_authenticated:
+        user = request.user
+        context['current_user'] = {
+            'id': user.id,
+            'username': user.username,
+            'avatar_url': getattr(user, 'avatar.url', None) if getattr(user, 'avatar', None) else None,
+        }
+    return render(request, "games/editor_enhanced.html", context)
 
 
 @login_required
@@ -128,23 +139,33 @@ def save_game_api(request):
     logger = logging.getLogger(__name__)
     try:
         data = json.loads(request.body)
+        game_id = data.get('game_id')
         title = data.get('title', 'Untitled Game')
         description = data.get('description', '')
         logic_json = data.get('logic_json', {})
         bundle_url = data.get('bundle_url', 'local://bundle')
         visibility = data.get('visibility', 'draft')
         
-        # Create or update game
-        game, created = Game.objects.get_or_create(
-            owner=request.user,
-            title=title,
-            defaults={'description': description, 'visibility': visibility}
-        )
-        
-        if not created:
-            game.description = description
-            game.visibility = visibility
-            game.save()
+        # Update existing game or create new one
+        if game_id:
+            try:
+                game = Game.objects.get(id=game_id, owner=request.user)
+                game.title = title
+                game.description = description
+                game.visibility = visibility
+                game.save()
+                created = False
+            except Game.DoesNotExist:
+                return JsonResponse({'error': 'Game not found or you do not have permission'}, status=404)
+        else:
+            # Create new game
+            game = Game.objects.create(
+                owner=request.user,
+                title=title,
+                description=description,
+                visibility=visibility
+            )
+            created = True
         
         # Create version
         latest_version = game.versions.order_by('-version_number').first()
@@ -497,9 +518,37 @@ def moderation_view(request):
     return render(request, "games/moderation.html", {})
 
 
-def games_catalog_view(request):
-    """Serve the games catalog page showing all released & approved games."""
-    return render(request, "games/games_catalog.html", {})
+@login_required
+def games_hub_view(request):
+    """Display approved Lupiforge games at /games/."""
+    from .models import Game
+
+    games_list = []
+    error = None
+    try:
+        approved_games = (
+            Game.objects.filter(status='approved')
+            .select_related('creator')
+            .order_by('-created_at')
+        )
+        for game in approved_games:
+            games_list.append({
+                'id': game.id,
+                'name': game.title,
+                'emoji': '🎮',
+                'description': game.description[:150] if game.description else 'No description available',
+                'url': f"/games/play/{game.id}/",
+                'creator': game.creator.username if game.creator else 'Unknown',
+                'thumbnail': game.thumbnail.url if hasattr(game, 'thumbnail') and game.thumbnail else None,
+                'plays': getattr(game, 'play_count', 0),
+            })
+    except Exception:
+        error = 'Games system not available'
+
+    context = {'games': games_list}
+    if error:
+        context['error'] = error
+    return render(request, "core/games_hub.html", context)
 
 
 def block_burst_view(request):

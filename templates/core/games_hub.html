@@ -3,121 +3,8 @@
 {% block title %}Games - Lupify{% endblock %}
 
 {% block content %}
+
 <style>
-/* Games page styling */
-.games-hero {
-    padding: 48px 32px;
-    margin-bottom: 40px;
-    background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
-    border-radius: 20px;
-    color: #fff;
-    text-align: center;
-    box-shadow: 0 20px 50px rgba(31, 156, 238, 0.25);
-    position: relative;
-    overflow: hidden;
-}
-
-.games-hero::before {
-    content: '';
-    position: absolute;
-    top: -50%;
-    right: -10%;
-    width: 400px;
-    height: 400px;
-    background: rgba(255, 255, 255, 0.08);
-    border-radius: 50%;
-    z-index: 0;
-}
-
-.games-hero h1 {
-    margin: 0;
-    font-size: 2.8rem;
-    font-weight: 800;
-    letter-spacing: -0.8px;
-    position: relative;
-    z-index: 1;
-}
-
-.games-hero p {
-    margin: 16px 0 0;
-    opacity: 0.96;
-    font-size: 1.1rem;
-    font-weight: 500;
-    max-width: 600px;
-    margin-left: auto;
-    margin-right: auto;
-    line-height: 1.6;
-    position: relative;
-    z-index: 1;
-}
-
-.games-container {
-    max-width: 1300px;
-    margin: 0 auto;
-    padding: 0 16px;
-}
-
-#gamesForYouSection {
-    margin-bottom: 40px;
-    animation: fadeIn 0.5s ease-in-out;
-}
-
-@keyframes fadeIn {
-    from { opacity: 0; transform: translateY(10px); }
-    to { opacity: 1; transform: translateY(0); }
-}
-
-#gamesForYouSection > div:first-child {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 20px;
-    padding: 0 4px;
-}
-
-#gamesForYouSection h2 {
-    margin: 0;
-    font-size: 1.6rem;
-    font-weight: 700;
-    color: var(--text-dark);
-    letter-spacing: -0.3px;
-}
-
-#gamesForYouSection a {
-    color: var(--primary);
-    font-weight: 600;
-    text-decoration: none;
-    transition: all 0.2s;
-    font-size: 0.95rem;
-}
-
-#gamesForYouSection a:hover {
-    color: var(--primary-dark);
-    transform: translateX(4px);
-}
-
-.games-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-    gap: 28px;
-    margin-bottom: 48px;
-}
-
-.game-card-link {
-    text-decoration: none;
-    color: inherit;
-    display: block;
-}
-
-.game-card {
-    border-radius: 16px;
-    overflow: hidden;
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
-    transition: transform 0.32s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.32s ease, background 0.3s ease;
-    background: var(--card-bg);
-    border: 1px solid rgba(0, 0, 0, 0.04);
-}
-
 .game-card:hover {
     transform: translateY(-12px) scale(1.01);
     box-shadow: 0 20px 48px rgba(0, 0, 0, 0.15);
@@ -262,6 +149,74 @@
     transform: translateY(-1px);
 }
 
+.games-container {
+    display: flex;
+    flex-direction: column;
+    gap: 32px;
+}
+
+.games-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 28px;
+    margin-bottom: 32px;
+}
+
+.games-empty-state {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 80px 20px;
+}
+
+.games-empty-card {
+    max-width: 520px;
+    width: 100%;
+    text-align: center;
+    background: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 28px;
+    padding: 48px 36px;
+    box-shadow: 0 30px 80px rgba(15, 23, 42, 0.15);
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.games-empty-card h2 {
+    margin: 0;
+    font-size: 1.8rem;
+    color: var(--text-dark);
+}
+
+.games-empty-card p {
+    margin: 0;
+    color: var(--secondary-text);
+    line-height: 1.6;
+    font-size: 1rem;
+}
+
+.games-empty-cta {
+    margin: 12px auto 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 12px 28px;
+    border-radius: 999px;
+    background: var(--primary);
+    color: #fff;
+    font-weight: 700;
+    letter-spacing: 0.2px;
+    text-decoration: none;
+    box-shadow: 0 15px 45px rgba(31, 156, 238, 0.35);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.games-empty-cta:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 20px 55px rgba(31, 156, 238, 0.45);
+}
+
 #gamesForYouContainer {
     display: flex;
     gap: 16px;
@@ -372,6 +327,18 @@
         margin-bottom: 32px;
     }
 
+    .games-empty-state {
+        padding: 60px 16px;
+    }
+
+    .games-empty-card {
+        padding: 32px 24px;
+    }
+
+    .games-empty-card h2 {
+        font-size: 1.5rem;
+    }
+
     .game-card-header {
         padding: 36px 20px;
     }
@@ -415,6 +382,10 @@
         font-size: 0.9rem;
     }
 
+    .games-empty-card {
+        padding: 24px 18px;
+    }
+
     .badge {
         padding: 6px 12px;
         font-size: 0.8rem;
@@ -423,7 +394,7 @@
 </style>
 
 <div class="games-hero">
-    <h1>🎮 Games</h1>
+    <h1><svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-gamepad2-icon lucide-gamepad-2" style="display: inline-block; vertical-align: middle; margin-right: 8px; color: var(--primary);"><line x1="6" x2="10" y1="11" y2="11"/><line x1="8" x2="8" y1="9" y2="13"/><line x1="15" x2="15.01" y1="12" y2="12"/><line x1="18" x2="18.01" y1="10" y2="10"/><path d="M17.32 5H6.68a4 4 0 0 0-3.978 3.59c-.006.052-.01.101-.017.152C2.604 9.416 2 14.456 2 16a3 3 0 0 0 3 3c1 0 1.5-.5 2-1l1.414-1.414A2 2 0 0 1 9.828 16h4.344a2 2 0 0 1 1.414.586L17 18c.5.5 1 1 2 1a3 3 0 0 0 3-3c0-1.545-.604-6.584-.685-7.258-.007-.05-.011-.1-.017-.151A4 4 0 0 0 17.32 5z"/></svg>Games</h1>
     <p>Play quick social games, compete with friends, and earn points — built into Lupify.</p>
 </div>
 
@@ -438,6 +409,7 @@
     </section>
 
     <!-- All Games Grid -->
+    {% if games %}
     <div class="games-grid">
         {% for game in games %}
         <a href="{% url game.url %}" class="game-card-link">
@@ -473,6 +445,15 @@
         </a>
         {% endfor %}
     </div>
+    {% else %}
+    <section class="games-empty-state">
+        <div class="games-empty-card">
+            <h2>No games yet</h2>
+            <p>You haven’t created any games yet. Launch the dashboard to build your first experience.</p>
+            <a class="games-empty-cta" href="/games/dashboard/home/">Create One</a>
+        </div>
+    </section>
+    {% endif %}
 </div>
 
 <script>
@@ -511,7 +492,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 el.title = `${g.name || 'Game'} - Recommended for you`;
                 el.innerHTML = `
                     <div class="for-you-game-icon">
-                        ${g.emoji || '🎮'}
+                        ${g.emoji || '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-gamepad2-icon lucide-gamepad-2" style="color: var(--primary);"><line x1="6" x2="10" y1="11" y2="11"/><line x1="8" x2="8" y1="9" y2="13"/><line x1="15" x2="15.01" y1="12" y2="12"/><line x1="18" x2="18.01" y1="10" y2="10"/><path d="M17.32 5H6.68a4 4 0 0 0-3.978 3.59c-.006.052-.01.101-.017.152C2.604 9.416 2 14.456 2 16a3 3 0 0 0 3 3c1 0 1.5-.5 2-1l1.414-1.414A2 2 0 0 1 9.828 16h4.344a2 2 0 0 1 1.414.586L17 18c.5.5 1 1 2 1a3 3 0 0 0 3-3c0-1.545-.604-6.584-.685-7.258-.007-.05-.011-.1-.017-.151A4 4 0 0 0 17.32 5z"/></svg>'}
                     </div>
                     <div class="for-you-game-label">${g.name || 'Game ' + (index + 1)}</div>
                     <div class="for-you-game-tag">⭐ Recommended</div>

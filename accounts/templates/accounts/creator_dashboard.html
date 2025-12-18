@@ -1,36 +1,496 @@
-{% load static %}
 <!doctype html>
 <html lang="en">
 <head>
+  {% load static %}
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>Creator Dashboard — Lupify</title>
   <link rel="stylesheet" href="{% static 'style.css' %}">
   <style>
-    :root{--accent:#1f9cee;--muted:#6b7280;--card:#ffffff;--bg:#f6f8fb}
-    body{margin:0;font-family:Inter,system-ui,Segoe UI,Roboto,Arial;background:var(--bg);color:#0f172a}
-    .topbar{height:72px;background:linear-gradient(90deg,#0ea5e9 0%,#60a5fa 100%);display:flex;align-items:center;justify-content:space-between;padding:0 22px;color:white}
-    .topbar h1{font-size:1.25rem;margin:0}
-    .topbar .actions{display:flex;gap:10px}
-    .container{max-width:1200px;margin:22px auto;padding:0 18px}
-    .grid{display:grid;grid-template-columns:1fr 360px;gap:18px;align-items:start}
-    .card{background:var(--card);border-radius:12px;padding:14px;box-shadow:0 6px 18px rgba(15,23,42,0.06);border:1px solid rgba(15,23,42,0.04)}
-    .metrics{display:flex;gap:12px}
-    .metric{flex:1;padding:12px;border-radius:8px;background:linear-gradient(180deg,rgba(255,255,255,0.6),rgba(249,250,251,0.8));text-align:center}
-    .metric .v{font-size:1.4rem;font-weight:700}
-    .metric .l{color:var(--muted);font-size:0.85rem}
-    .trend{height:220px;margin-top:12px}
-    table{width:100%;border-collapse:collapse}
-    th,td{padding:10px 8px;text-align:left;border-bottom:1px solid #f1f5f9}
-    .btn{background:transparent;border:1px solid rgba(15,23,42,0.06);padding:8px 10px;border-radius:8px;cursor:pointer}
-    .btn.primary{background:var(--accent);color:white;border:0}
-    .small{padding:6px 8px;font-size:0.85rem}
-    .sidebar .section{margin-bottom:12px}
-    .kpi{display:flex;gap:10px;flex-wrap:wrap}
-    .badge{background:#eef2ff;padding:6px 8px;border-radius:8px;color:#1e3a8a;font-weight:600}
-    .modal{position:fixed;inset:0;background:rgba(2,6,23,0.6);display:flex;align-items:center;justify-content:center;z-index:60}
-    .modal .panel{width:96%;max-width:1100px;background:white;border-radius:12px;padding:18px}
-    @media(max-width:980px){.grid{grid-template-columns:1fr}.topbar{padding:0 12px}}
+    :root {
+      --accent: #1f9cee;
+      --accent-strong: #0ea5e9;
+      --accent-soft: #60a5fa;
+      --bg-canvas: radial-gradient(circle at 10% 20%, rgba(79, 70, 229, 0.35), transparent 40%),
+                  radial-gradient(circle at 80% 0%, rgba(14, 165, 233, 0.25), transparent 45%),
+                  #030712;
+      --bg-base: #030712;
+      --bg-panel: rgba(15, 23, 42, 0.9);
+      --bg-panel-soft: rgba(2, 6, 23, 0.74);
+      --stat-bg: rgba(15, 23, 42, 0.82);
+      --ghost-bg: rgba(255, 255, 255, 0.08);
+      --ghost-border: rgba(255, 255, 255, 0.35);
+      --ghost-hover: rgba(255, 255, 255, 0.15);
+      --card-border: rgba(255, 255, 255, 0.08);
+      --text-primary: #f8fafc;
+      --text-secondary: rgba(248, 250, 252, 0.85);
+      --text-muted: #94a3b8;
+      --topbar-gradient: linear-gradient(135deg, rgba(59, 130, 246, 0.95), rgba(15, 118, 255, 0.9));
+      --hero-glow-one: rgba(79, 70, 229, 0.45);
+      --hero-glow-two: rgba(14, 165, 233, 0.35);
+      --chat-window-bg: rgba(255, 255, 255, 0.02);
+      --chat-border: rgba(255, 255, 255, 0.1);
+      --chat-input-bg: rgba(15, 23, 42, 0.8);
+      --row-hover: rgba(255, 255, 255, 0.04);
+      --modal-overlay: rgba(2, 6, 23, 0.75);
+      --modal-bg: rgba(15, 23, 42, 0.98);
+      --shadow-soft: 0 20px 45px rgba(2, 6, 23, 0.65);
+      --shadow-card: 0 10px 20px rgba(2, 6, 23, 0.3);
+      --radius-lg: 20px;
+      --radius-md: 14px;
+      --radius-sm: 8px;
+      --transition: 0.25s ease;
+    }
+    :root[data-theme="light"] {
+      --bg-canvas: #f7f8fc;
+      --bg-base: #ffffff;
+      --bg-panel: #ffffff;
+      --bg-panel-soft: rgba(255, 255, 255, 0.95);
+      --stat-bg: rgba(248, 250, 252, 0.95);
+      --ghost-bg: rgba(15, 23, 42, 0.08);
+      --ghost-border: rgba(15, 23, 42, 0.2);
+      --ghost-hover: rgba(15, 23, 42, 0.12);
+      --card-border: rgba(15, 23, 42, 0.12);
+      --text-primary: #0f172a;
+      --text-secondary: #475569;
+      --text-muted: #6b7280;
+      --topbar-gradient: linear-gradient(135deg, #f97316, #fb923c);
+      --hero-glow-one: rgba(251, 146, 60, 0.35);
+      --hero-glow-two: rgba(59, 130, 246, 0.3);
+      --chat-window-bg: rgba(15, 23, 42, 0.04);
+      --chat-border: rgba(15, 23, 42, 0.1);
+      --chat-input-bg: rgba(255, 255, 255, 0.9);
+      --row-hover: rgba(15, 23, 42, 0.05);
+      --modal-overlay: rgba(248, 250, 252, 0.9);
+      --modal-bg: #ffffff;
+      --shadow-soft: 0 20px 45px rgba(15, 23, 42, 0.15);
+      --shadow-card: 0 10px 20px rgba(15, 23, 42, 0.2);
+    }
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+    }
+    body {
+      margin: 0;
+      font-family: 'Inter', system-ui, 'Segoe UI', sans-serif;
+      min-height: 100vh;
+      background: var(--bg-canvas);
+      color: var(--text-primary);
+      -webkit-font-smoothing: antialiased;
+    }
+    .page-shell {
+      min-height: 100vh;
+      background: var(--bg-base);
+    }
+    .topbar {
+      width: 100%;
+      padding: 22px 32px;
+      background: var(--topbar-gradient);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid var(--card-border);
+      box-shadow: var(--shadow-soft);
+    }
+    .topbar__text h1 {
+      font-size: 1.8rem;
+      margin: 0 0 4px 0;
+      letter-spacing: -0.01em;
+    }
+    .topbar__text p {
+      margin: 0;
+      color: var(--text-secondary);
+      font-size: 0.95rem;
+    }
+    .topbar-actions {
+      display: flex;
+      gap: 12px;
+    }
+    .btn {
+      border: none;
+      border-radius: var(--radius-md);
+      padding: 0.65rem 1.4rem;
+      font-size: 0.95rem;
+      font-weight: 600;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.35rem;
+      cursor: pointer;
+      transition: var(--transition);
+      text-decoration: none;
+    }
+    .btn.primary {
+      background: linear-gradient(135deg, var(--accent), var(--accent-strong));
+      color: white;
+      box-shadow: var(--shadow-card);
+    }
+    .btn.primary:hover {
+      filter: brightness(1.05);
+    }
+    .btn.ghost {
+      background: var(--ghost-bg);
+      color: var(--text-primary);
+      border: 1px solid var(--ghost-border);
+    }
+    .btn.small {
+      padding: 0.35rem 0.9rem;
+      font-size: 0.85rem;
+    }
+    .btn.ghost:hover {
+      background: var(--ghost-hover);
+    }
+    .container {
+      width: min(1200px, 100% - 40px);
+      margin: 0 auto;
+      padding: 28px 0 60px;
+    }
+    .dashboard-main {
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+    }
+    .hero-panel {
+      position: relative;
+      background: linear-gradient(135deg, rgba(255, 255, 255, 0.04), var(--bg-panel));
+      border: 1px solid var(--card-border);
+      border-radius: var(--radius-lg);
+      padding: 32px;
+      overflow: hidden;
+    }
+    .hero-panel__glow {
+      position: absolute;
+      border-radius: 50%;
+      filter: blur(120px);
+      opacity: 0.6;
+    }
+    .hero-panel__glow--one {
+      width: 320px;
+      height: 320px;
+      top: -80px;
+      right: -20px;
+      background: var(--hero-glow-one);
+    }
+    .hero-panel__glow--two {
+      width: 240px;
+      height: 240px;
+      bottom: -80px;
+      left: -40px;
+      background: var(--hero-glow-two);
+    }
+    .hero-panel__content {
+      position: relative;
+      max-width: 720px;
+    }
+    .hero-eyebrow {
+      font-size: 0.85rem;
+      text-transform: uppercase;
+      letter-spacing: 0.2em;
+      color: var(--text-secondary);
+    }
+    .hero-panel__content h2 {
+      font-size: clamp(2rem, 4vw, 2.6rem);
+      margin: 8px 0;
+      font-weight: 700;
+    }
+    .hero-subtitle {
+      color: var(--text-secondary);
+      max-width: 540px;
+      font-size: 1rem;
+      line-height: 1.5;
+    }
+    .hero-actions {
+      margin-top: 18px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+    .hero-stats {
+      margin-top: 24px;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 12px;
+    }
+    .hero-stat {
+      background: var(--stat-bg);
+      border: 1px solid var(--card-border);
+      border-radius: var(--radius-md);
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .hero-stat-label {
+      color: var(--text-muted);
+      font-size: 0.85rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+    .hero-stat-value {
+      font-size: 1.8rem;
+      font-weight: 700;
+    }
+    .hero-stat-meta {
+      font-size: 0.85rem;
+      color: var(--text-secondary);
+    }
+    .insight-panel {
+      background: var(--bg-panel);
+      border-radius: var(--radius-lg);
+      padding: 22px;
+      border: 1px solid var(--card-border);
+    }
+    .insight-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 14px;
+    }
+    .insight-card {
+      background: var(--bg-panel-soft);
+      border: 1px solid var(--card-border);
+      border-radius: var(--radius-md);
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      min-height: 130px;
+    }
+    .insight-card__label {
+      color: var(--text-muted);
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+    .insight-card__value {
+      font-size: 1.8rem;
+      font-weight: 700;
+    }
+    .insight-card__meta {
+      color: rgba(248, 250, 252, 0.7);
+      font-size: 0.9rem;
+      line-height: 1.4;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: 1fr 360px;
+      gap: 24px;
+      align-items: start;
+    }
+    .card {
+      background: var(--bg-panel);
+      border-radius: var(--radius-lg);
+      padding: 22px;
+      border: 1px solid var(--card-border);
+      box-shadow: var(--shadow-card);
+      color: var(--text-primary);
+    }
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .card-header .subtle {
+      color: var(--text-muted);
+      font-size: 0.9rem;
+    }
+    .timeframe-controls {
+      display: flex;
+      gap: 8px;
+    }
+    .timeframe-controls .btn {
+      padding: 0.35rem 0.95rem;
+      font-size: 0.85rem;
+    }
+    .metric-grid {
+      margin-top: 16px;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 12px;
+    }
+    .metric-card {
+      background: var(--bg-panel-soft);
+      border: 1px solid var(--card-border);
+      border-radius: var(--radius-md);
+      padding: 12px 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .metric-value {
+      font-size: 1.3rem;
+      font-weight: 700;
+    }
+    .metric-label {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+    .chart-wrapper {
+      margin-top: 16px;
+      background: var(--bg-panel-soft);
+      border-radius: var(--radius-md);
+      border: 1px solid var(--card-border);
+      padding: 16px;
+      min-height: 240px;
+    }
+    .table-card {
+      margin-top: 12px;
+    }
+    .content-table {
+      width: 100%;
+      border-collapse: separate;
+      border-spacing: 0;
+      font-size: 0.95rem;
+      color: var(--text-primary);
+      background: transparent;
+    }
+    .content-table th,
+    .content-table td {
+      padding: 12px 10px;
+      text-align: left;
+    }
+    .content-table thead th {
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      border-bottom: 1px solid var(--card-border);
+    }
+    .content-table tbody tr {
+      border-bottom: 1px solid var(--card-border);
+    }
+    .content-table tbody tr:last-child {
+      border-bottom: none;
+    }
+    .content-table tbody tr:hover {
+      background: var(--row-hover);
+    }
+    .content-table td:last-child {
+      text-align: right;
+      white-space: nowrap;
+    }
+    .analytics-btn {
+      border-radius: var(--radius-sm);
+      padding: 0.35rem 0.8rem;
+    }
+    .sidebar {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+    .sidebar-card h4 {
+      margin-bottom: 6px;
+    }
+    .sidebar-card .card-body {
+      color: var(--text-muted);
+      font-size: 0.9rem;
+      line-height: 1.4;
+    }
+    .sidebar-card .resource-link {
+      color: var(--accent);
+      text-decoration: none;
+      font-weight: 600;
+    }
+    .revenue-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+    }
+    .chat-card {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .chat-window {
+      background: var(--chat-window-bg);
+      border: 1px solid var(--chat-border);
+      border-radius: var(--radius-md);
+      padding: 12px;
+      min-height: 180px;
+      max-height: 220px;
+      overflow-y: auto;
+    }
+    .chat-input-row {
+      display: flex;
+      gap: 8px;
+    }
+    .chat-input {
+      flex: 1;
+      padding: 10px 14px;
+      border-radius: var(--radius-md);
+      border: 1px solid var(--card-border);
+      background: var(--chat-input-bg);
+      color: var(--text-primary);
+      font-size: 0.95rem;
+    }
+    .chat-input:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 2px rgba(30, 64, 175, 0.3);
+    }
+    .chat-send {
+      padding: 0.5rem 1rem;
+    }
+    .modal {
+      position: fixed;
+      inset: 0;
+      background: var(--modal-overlay);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 60;
+      padding: 16px;
+    }
+    .modal .panel {
+      width: 100%;
+      max-width: 960px;
+      background: var(--modal-bg);
+      border-radius: var(--radius-lg);
+      border: 1px solid var(--card-border);
+      padding: 24px;
+      box-shadow: var(--shadow-soft);
+      color: var(--text-primary);
+    }
+    .modal .panel h3 {
+      margin: 0;
+    }
+    .modal canvas {
+      width: 100% !important;
+      height: 220px !important;
+    }
+    @media (max-width: 1024px) {
+      .grid {
+        grid-template-columns: 1fr;
+      }
+      .topbar {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 12px;
+      }
+      .topbar__text h1 {
+        font-size: 1.5rem;
+      }
+    }
+    @media (max-width: 768px) {
+      .hero-panel {
+        padding: 22px;
+      }
+      .hero-stats {
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      }
+      .content-table th,
+      .content-table td {
+        padding: 10px 6px;
+      }
+      .chat-input-row {
+        flex-direction: column;
+      }
+    }
   </style>
   <script>
     // Initialize theme early to ensure site-wide dark mode applies
@@ -44,314 +504,375 @@
   </script>
 </head>
 <body>
-  <header class="topbar">
-    <h1>Creator Dashboard</h1>
-    <div class="actions">
-      <a class="btn small" href="{% url 'account_dashboard' %}">Profile</a>
-      <button class="btn primary" id="newContent">Create</button>
-    </div>
-  </header>
+  <div class="page-shell">
+    <header class="topbar">
+      <div class="topbar__text">
+        <h1>Creator Dashboard</h1>
+        <p>Track posts, community signals, and AI guidance in one view.</p>
+      </div>
+      <div class="topbar-actions">
+        <a class="btn ghost small" href="{% url 'account_dashboard' %}">Profile</a>
+        <button class="btn primary" id="newContent">Create</button>
+      </div>
+    </header>
 
-  <div class="container">
-    <div class="grid">
-      <main>
-        <section class="card">
-          <div style="display:flex;justify-content:space-between;align-items:center">
-            <div>
-              <h2 style="margin:0 0 6px 0">Overview</h2>
-              <div style="color:var(--muted);font-size:0.95rem">Key metrics at a glance</div>
+    <div class="container">
+      <main class="dashboard-main">
+        <section class="hero-panel">
+          <div class="hero-panel__glow hero-panel__glow--one"></div>
+          <div class="hero-panel__glow hero-panel__glow--two"></div>
+          <div class="hero-panel__content">
+            <p class="hero-eyebrow">Creator HQ</p>
+            <h2>Creator Dashboard</h2>
+            <p class="hero-subtitle">Monitor reach, loyalty, and monetization while keeping the AI assistant close to guide your next move.</p>
+            <div class="hero-actions">
+              <a class="btn primary" href="{% url 'create_post' %}">New Post</a>
+              <button class="btn ghost" onclick="location.reload()">Refresh insights</button>
             </div>
-            <div class="kpi">
-              <div style="display:flex;gap:8px;align-items:center">
-                <button id="tfToday" class="btn small">Today</button>
-                <button id="tfWeek" class="btn small">This Week</button>
-                <button id="tf30" class="btn small primary">30d</button>
+          </div>
+          <div class="hero-stats">
+            <article class="hero-stat">
+              <span class="hero-stat-label">Views</span>
+              <span class="hero-stat-value">{{ overview.total_views|default:"0" }}</span>
+              <span class="hero-stat-meta">All-time reach</span>
+            </article>
+            <article class="hero-stat">
+              <span class="hero-stat-label">Likes</span>
+              <span class="hero-stat-value">{{ overview.total_likes|default:"0" }}</span>
+              <span class="hero-stat-meta">Community approval</span>
+            </article>
+            <article class="hero-stat">
+              <span class="hero-stat-label">Followers</span>
+              <span class="hero-stat-value">{{ overview.followers_count|default:"0" }}</span>
+              <span class="hero-stat-meta">Subscribed players</span>
+            </article>
+            <article class="hero-stat">
+              <span class="hero-stat-label">Earnings</span>
+              <span class="hero-stat-value">${{ overview.earnings.amount|default:"0" }}</span>
+              <span class="hero-stat-meta">Behind the scenes</span>
+            </article>
+          </div>
+        </section>
+
+        <section class="insight-panel">
+          <div class="insight-grid">
+            <article class="insight-card">
+              <div class="insight-card__label">Followers</div>
+              <div class="insight-card__value">{{ overview.followers_count|default:"0" }}</div>
+              <div class="insight-card__meta">People who receive every post you publish.</div>
+            </article>
+            <article class="insight-card">
+              <div class="insight-card__label">Likes</div>
+              <div class="insight-card__value">{{ overview.total_likes|default:"0" }}</div>
+              <div class="insight-card__meta">Signals of what your community loves.</div>
+            </article>
+            <article class="insight-card">
+              <div class="insight-card__label">Next payout</div>
+              <div class="insight-card__value">${{ overview.earnings.amount|default:"0" }}</div>
+              <div class="insight-card__meta">Estimated in this earning cycle.</div>
+            </article>
+            <article class="insight-card">
+              <div class="insight-card__label">AI support</div>
+              <div class="insight-card__value">Chat Anytime</div>
+              <div class="insight-card__meta">Ask the assistant for growth prompts, publishing schedules, or monetization ideas.</div>
+            </article>
+          </div>
+        </section>
+
+        <div class="grid">
+          <main>
+            <section class="card overview-card">
+              <div class="card-header">
+                <div>
+                  <h2>Overview</h2>
+                  <p class="subtle">Key metrics at a glance</p>
+                </div>
+                <div class="timeframe-controls">
+                  <button class="btn ghost small" id="tfToday">Today</button>
+                  <button class="btn ghost small" id="tfWeek">This Week</button>
+                  <button class="btn ghost small" id="tf30">30d</button>
+                </div>
+              </div>
+              <div class="metric-grid">
+                <div class="metric-card">
+                  <small class="metric-label">Views</small>
+                  <span class="metric-value">{{ overview.total_views|default:"0" }}</span>
+                </div>
+                <div class="metric-card">
+                  <small class="metric-label">Likes</small>
+                  <span class="metric-value">{{ overview.total_likes|default:"0" }}</span>
+                </div>
+                <div class="metric-card">
+                  <small class="metric-label">Followers</small>
+                  <span class="metric-value">{{ overview.followers_count|default:"0" }}</span>
+                </div>
+                <div class="metric-card">
+                  <small class="metric-label">Earnings</small>
+                  <span class="metric-value">${{ overview.earnings.amount|default:"0" }}</span>
+                </div>
+              </div>
+              <div class="chart-wrapper">
+                <canvas id="overviewTrend"></canvas>
+              </div>
+            </section>
+
+            <section class="card table-card">
+              <div class="card-header">
+                <div>
+                  <h3>Content Management</h3>
+                  <p class="subtle">Recent posts and quick actions</p>
+                </div>
+              </div>
+              <div style="margin-top:16px;overflow-x:auto">
+                <table class="content-table">
+                  <thead>
+                    <tr>
+                      <th>Post</th>
+                      <th>Created</th>
+                      <th>Likes</th>
+                      <th>Views</th>
+                      <th></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {% for p in posts %}
+                    <tr>
+                      <td style="width:45%">{{ p.title }}</td>
+                      <td>{{ p.created|date:"Y-m-d" }}</td>
+                      <td>{{ p.like_count }}</td>
+                      <td>{{ p.views }}</td>
+                      <td style="text-align:right">
+                        <a class="btn small" href="#" data-post-id-edit="{{ p.id }}">Edit</a>
+                        <button class="btn small analytics-btn" data-post-id="{{ p.id }}">Analytics</button>
+                      </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                      <td colspan="5">You haven't created any posts yet.</td>
+                    </tr>
+                    {% endfor %}
+                  </tbody>
+                </table>
+              </div>
+            </section>
+          </main>
+
+          <aside class="sidebar">
+            <div class="card sidebar-card">
+              <h4>Audience Insights</h4>
+              <div class="card-body">Demographics, peak engagement windows, and breakdowns will populate here as you grow.</div>
+            </div>
+            <div class="card sidebar-card">
+              <h4>Revenue & Monetization</h4>
+              <div class="revenue-row">
+                <div>
+                  <div style="font-size:1.4rem;font-weight:700">${{ overview.earnings.amount|default:"0" }}</div>
+                  <div style="font-size:0.9rem;color:var(--text-muted)">Estimated (30d)</div>
+                </div>
+                <div><a class="resource-link" href="#">Payouts</a></div>
+              </div>
+              <div class="card-body">Enable more monetization paths and schedule future drops to keep income steady.</div>
+            </div>
+            <div class="card sidebar-card">
+              <h4>Inbox / Moderation</h4>
+              <div class="card-body">Messages, comments, and moderation tools will appear here once activity starts rolling in.</div>
+            </div>
+            <div class="card sidebar-card">
+              <h4>Growth & AI</h4>
+              <div class="card-body" style="display:flex;flex-direction:column;gap:8px">
+                <p>Ask Lupify's AI assistant for content ideas, posting schedules, or community strategies.</p>
+                <a class="resource-link" href="/chatbot/">Open AI Assistant</a>
               </div>
             </div>
-          </div>
-
-          <div class="metrics" style="margin-top:14px">
-            <div class="metric">
-              <div class="v">{{ overview.total_views }}</div>
-              <div class="l">Views</div>
+            <div class="card chat-card">
+              <h4>AI Companion</h4>
+              <div class="chat-window" id="chatWindow">
+                <div style="color:var(--text-muted);font-size:0.9rem">Ask the assistant anything — from drop ideas to monetization tips.</div>
+              </div>
+              <div class="chat-input-row">
+                <input class="chat-input" id="chatInput" type="text" placeholder="Send a question to the assistant" autocomplete="off">
+                <button class="btn primary chat-send" id="chatSend">Send</button>
+              </div>
             </div>
-            <div class="metric">
-              <div class="v">{{ overview.total_likes }}</div>
-              <div class="l">Likes</div>
-            </div>
-            <div class="metric">
-              <div class="v">{{ overview.followers_count }}</div>
-              <div class="l">Followers</div>
-            </div>
-            <div class="metric">
-              <div class="v">${{ overview.earnings.amount }}</div>
-              <div class="l">Earnings</div>
-            </div>
-          </div>
-
-          <div class="trend card" style="margin-top:14px;">
-            <canvas id="overviewTrend" style="width:100%;height:100%"></canvas>
-          </div>
-        </section>
-
-        <section class="card" style="margin-top:18px">
-          <div style="display:flex;justify-content:space-between;align-items:center">
-            <h3 style="margin:0">Content Management</h3>
-            <div>
-              <!-- Bulk Upload and Schedule removed until implemented -->
-            </div>
-          </div>
-
-          <div style="margin-top:12px;overflow:auto">
-            <table>
-              <thead>
-                <tr><th>Post</th><th>Created</th><th>Likes</th><th>Views</th><th></th></tr>
-              </thead>
-              <tbody>
-                {% for p in posts %}
-                <tr>
-                  <td style="width:45%">{{ p.title }}</td>
-                  <td>{{ p.created|date:"Y-m-d" }}</td>
-                  <td>{{ p.like_count }}</td>
-                  <td>{{ p.views }}</td>
-                  <td style="text-align:right">
-                    <a class="btn small" href="#" data-post-id-edit="{{ p.id }}">Edit</a>
-                    <button class="btn small analytics-btn" data-post-id="{{ p.id }}">Analytics</button>
-                  </td>
-                </tr>
-                {% empty %}
-                <tr><td colspan="5">You haven't created any posts yet.</td></tr>
-                {% endfor %}
-              </tbody>
-            </table>
-          </div>
-        </section>
-
+          </aside>
+        </div>
       </main>
-
-      <aside class="sidebar">
-        <div class="card section">
-          <h4 style="margin:0 0 6px 0">Audience Insights</h4>
-          <div style="color:var(--muted);font-size:0.95rem">Demographics, peak times, and segments (placeholder)</div>
-        </div>
-
-        <div class="card section">
-          <h4 style="margin:0 0 6px 0">Revenue & Monetization</h4>
-          <div style="display:flex;justify-content:space-between;align-items:center">
-            <div>
-              <div style="font-weight:700">${{ overview.earnings.amount }}</div>
-              <div style="color:var(--muted);font-size:0.9rem">Estimated (30d)</div>
-            </div>
-            <div><a class="btn small" href="#">Payouts</a></div>
-          </div>
-        </div>
-
-        <div class="card section">
-          <h4 style="margin:0 0 6px 0">Inbox / Moderation</h4>
-          <div style="color:var(--muted);font-size:0.95rem">Messages, comments, moderation tools (placeholder).</div>
-        </div>
-
-        <div class="card section">
-          <h4 style="margin:0 0 6px 0">Growth & AI</h4>
-          <div style="display:flex;flex-direction:column;gap:8px;">
-            <p style="color:var(--muted);margin:0 0 8px 0">Access Lupify's AI assistant for creator help and growth tips.</p>
-            <a class="btn primary" href="/chatbot/">Open AI Assistant</a>
-          </div>
-        </div>
-      </aside>
     </div>
-  </div>
 
-  <!-- Analytics Modal -->
-  <div id="analyticsModal" class="modal" style="display:none">
-    <div class="panel">
-      <div style="display:flex;justify-content:space-between;align-items:center">
-        <h3 id="analyticsTitle" style="margin:0">Analytics</h3>
-        <button id="analyticsClose" class="btn small">Close</button>
-      </div>
-      <div style="margin-top:12px">
-        <canvas id="viewsChart" style="width:100%;height:240px"></canvas>
-      </div>
-      <div style="margin-top:12px">
-        <canvas id="likesChart" style="width:100%;height:220px"></canvas>
+    <div id="analyticsModal" class="modal" style="display:none">
+      <div class="panel">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <h3 id="analyticsTitle" style="margin:0">Analytics</h3>
+          <button id="analyticsClose" class="btn small">Close</button>
+        </div>
+        <div style="margin-top:12px">
+          <canvas id="viewsChart"></canvas>
+        </div>
+        <div style="margin-top:12px">
+          <canvas id="likesChart"></canvas>
+        </div>
       </div>
     </div>
   </div>
 
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
-{{ trend_labels_30|json_script:"trendLabels30" }}
-{{ trend_views_30|json_script:"trendViews30" }}
-{{ trend_likes_30|json_script:"trendLikes30" }}
+  {{ trend_labels_30|json_script:"trendLabels30" }}
+  {{ trend_views_30|json_script:"trendViews30" }}
+  {{ trend_likes_30|json_script:"trendLikes30" }}
 
-{{ trend_labels_7|json_script:"trendLabels7" }}
-{{ trend_views_7|json_script:"trendViews7" }}
-{{ trend_likes_7|json_script:"trendLikes7" }}
+  {{ trend_labels_7|json_script:"trendLabels7" }}
+  {{ trend_views_7|json_script:"trendViews7" }}
+  {{ trend_likes_7|json_script:"trendLikes7" }}
 
-{{ trend_labels_24|json_script:"trendLabels24" }}
-{{ trend_views_24|json_script:"trendViews24" }}
-{{ trend_likes_24|json_script:"trendLikes24" }}
+  {{ trend_labels_24|json_script:"trendLabels24" }}
+  {{ trend_views_24|json_script:"trendViews24" }}
+  {{ trend_likes_24|json_script:"trendLikes24" }}
 
-<script>
-document.addEventListener('DOMContentLoaded', function(){
-  const trendLabels30 = JSON.parse(document.getElementById('trendLabels30').textContent || '[]');
-  const trendViews30 = JSON.parse(document.getElementById('trendViews30').textContent || '[]');
-  const trendLikes30 = JSON.parse(document.getElementById('trendLikes30').textContent || '[]');
+  <script>
+  document.addEventListener('DOMContentLoaded', function(){
+    const trendLabels30 = JSON.parse(document.getElementById('trendLabels30').textContent || '[]');
+    const trendViews30 = JSON.parse(document.getElementById('trendViews30').textContent || '[]');
+    const trendLikes30 = JSON.parse(document.getElementById('trendLikes30').textContent || '[]');
 
-  const trendLabels7 = JSON.parse(document.getElementById('trendLabels7').textContent || '[]');
-  const trendViews7 = JSON.parse(document.getElementById('trendViews7').textContent || '[]');
-  const trendLikes7 = JSON.parse(document.getElementById('trendLikes7').textContent || '[]');
+    const trendLabels7 = JSON.parse(document.getElementById('trendLabels7').textContent || '[]');
+    const trendViews7 = JSON.parse(document.getElementById('trendViews7').textContent || '[]');
+    const trendLikes7 = JSON.parse(document.getElementById('trendLikes7').textContent || '[]');
 
-  const trendLabels24 = JSON.parse(document.getElementById('trendLabels24').textContent || '[]');
-  const trendViews24 = JSON.parse(document.getElementById('trendViews24').textContent || '[]');
-  const trendLikes24 = JSON.parse(document.getElementById('trendLikes24').textContent || '[]');
+    const trendLabels24 = JSON.parse(document.getElementById('trendLabels24').textContent || '[]');
+    const trendViews24 = JSON.parse(document.getElementById('trendViews24').textContent || '[]');
+    const trendLikes24 = JSON.parse(document.getElementById('trendLikes24').textContent || '[]');
 
-  const ctx = document.getElementById('overviewTrend').getContext('2d');
-  let overviewChart = new Chart(ctx, {
-    type: 'line',
-    data: { labels: trendLabels30.map(d=>d.replace(/-/g,'/')), datasets:[
-      { label:'Views', data:trendViews30, borderColor:'#1f9cee', backgroundColor:'rgba(31,156,238,0.08)', fill:true},
-      { label:'Likes', data:trendLikes30, borderColor:'#ff6b6b', backgroundColor:'rgba(255,107,107,0.08)', fill:true}
-    ]},
-    options:{responsive:true,maintainAspectRatio:false}
-  });
+    const ctx = document.getElementById('overviewTrend').getContext('2d');
+    let overviewChart = new Chart(ctx, {
+      type: 'line',
+      data: { labels: trendLabels30.map(d=>d.replace(/-/g,'/')), datasets:[
+        { label:'Views', data:trendViews30, borderColor:'#1f9cee', backgroundColor:'rgba(31,156,238,0.08)', fill:true},
+        { label:'Likes', data:trendLikes30, borderColor:'#ff6b6b', backgroundColor:'rgba(255,107,107,0.08)', fill:true }
+      ]},
+      options:{responsive:true,maintainAspectRatio:false}
+    });
 
-  // Timeframe toggles
-  const tfToday = document.getElementById('tfToday');
-  const tfWeek = document.getElementById('tfWeek');
-  const tf30 = document.getElementById('tf30');
+    const tfToday = document.getElementById('tfToday');
+    const tfWeek = document.getElementById('tfWeek');
+    const tf30 = document.getElementById('tf30');
 
-  function setActive(btn){
-    [tfToday, tfWeek, tf30].forEach(b=> b.classList.remove('primary'));
-    btn.classList.add('primary');
-  }
+    function setActive(btn){
+      [tfToday, tfWeek, tf30].forEach(b=> b.classList.remove('primary'));
+      btn.classList.add('primary');
+    }
 
-  function updateOverview(chart, labels, views, likes){
-    chart.data.labels = labels.map(d=>d.replace(/-/g,'/'));
-    chart.data.datasets[0].data = views;
-    chart.data.datasets[1].data = likes;
-    chart.update();
-  }
+    function updateOverview(chart, labels, views, likes){
+      chart.data.labels = labels.map(d=>d.replace(/-/g,'/'));
+      chart.data.datasets[0].data = views;
+      chart.data.datasets[1].data = likes;
+      chart.update();
+    }
 
-  tf30.addEventListener('click', ()=>{ setActive(tf30); updateOverview(overviewChart, trendLabels30, trendViews30, trendLikes30); });
-  tfWeek.addEventListener('click', ()=>{ setActive(tfWeek); updateOverview(overviewChart, trendLabels7, trendViews7, trendLikes7); });
-  tfToday.addEventListener('click', ()=>{ setActive(tfToday); updateOverview(overviewChart, trendLabels24, trendViews24, trendLikes24); });
+    tf30.addEventListener('click', ()=>{ setActive(tf30); updateOverview(overviewChart, trendLabels30, trendViews30, trendLikes30); });
+    tfWeek.addEventListener('click', ()=>{ setActive(tfWeek); updateOverview(overviewChart, trendLabels7, trendViews7, trendLikes7); });
+    tfToday.addEventListener('click', ()=>{ setActive(tfToday); updateOverview(overviewChart, trendLabels24, trendViews24, trendLikes24); });
 
-  // Analytics modal handlers
-  const modal = document.getElementById('analyticsModal');
-  const closeBtn = document.getElementById('analyticsClose');
-  const titleEl = document.getElementById('analyticsTitle');
-  let viewsChart = null, likesChart = null;
+    const modal = document.getElementById('analyticsModal');
+    const closeBtn = document.getElementById('analyticsClose');
+    const titleEl = document.getElementById('analyticsTitle');
+    let viewsChart = null, likesChart = null;
 
-  closeBtn.addEventListener('click', ()=> modal.style.display='none');
+    closeBtn.addEventListener('click', ()=> modal.style.display='none');
 
-  document.querySelectorAll('.analytics-btn').forEach(btn=>{
-    btn.addEventListener('click', async ()=>{
-      const postId = btn.getAttribute('data-post-id');
-      titleEl.textContent = 'Loading...'; modal.style.display = 'flex';
+    document.querySelectorAll('.analytics-btn').forEach(btn=>{
+      btn.addEventListener('click', async ()=>{
+        const postId = btn.getAttribute('data-post-id');
+        titleEl.textContent = 'Loading...'; modal.style.display = 'flex';
+        try{
+          const res = await fetch(`/accounts/api/post-analytics/${postId}/`);
+          if(!res.ok) throw new Error('fetch failed');
+          const data = await res.json();
+          titleEl.textContent = data.post.title;
+          const labels = data.labels.map(d=>d.replace(/-/g,'/'));
+
+          const ctx1 = document.getElementById('viewsChart').getContext('2d');
+          if(viewsChart) viewsChart.destroy();
+          const viewsData = (data.views && data.views.length > 0) ? data.views : [0];
+          const likesData = (data.likes && data.likes.length > 0) ? data.likes : [0];
+          const chartLabels = (labels && labels.length > 0) ? labels : ['No data'];
+          viewsChart = new Chart(ctx1,{type:'line',data:{labels:chartLabels,datasets:[{label:'Views',data:viewsData,borderColor:'#1f9cee',backgroundColor:'rgba(31,156,238,0.08)',fill:true,tension:0.3}]},options:{responsive:true,maintainAspectRatio:false,scales:{y:{beginAtZero:true}}}});
+
+          const ctx2 = document.getElementById('likesChart').getContext('2d');
+          if(likesChart) likesChart.destroy();
+          likesChart = new Chart(ctx2,{type:'line',data:{labels:chartLabels,datasets:[{label:'Likes',data:likesData,borderColor:'#ff6b6b',backgroundColor:'rgba(255,107,107,0.08)',fill:true,tension:0.3}]},options:{responsive:true,maintainAspectRatio:false,scales:{y:{beginAtZero:true}}}});
+        }catch(err){
+          titleEl.textContent = 'Error loading analytics';
+          console.error(err);
+        }
+      });
+    });
+
+    window.addEventListener('click', (e)=>{ if(e.target === modal) modal.style.display='none' });
+
+    const chatWindow = document.getElementById('chatWindow');
+    const chatInput = document.getElementById('chatInput');
+    const chatSend = document.getElementById('chatSend');
+
+    function appendMessage(text, who='bot'){
+      const d = document.createElement('div');
+      d.style.marginBottom = '8px';
+      d.style.whiteSpace = 'pre-wrap';
+      if(who==='user'){
+        d.style.textAlign = 'right'; d.textContent = text; d.style.color='#0f172a'; d.style.fontWeight='600';
+      } else {
+        d.style.textAlign = 'left'; d.textContent = text; d.style.color='#374151';
+      }
+      chatWindow.appendChild(d);
+      chatWindow.scrollTop = chatWindow.scrollHeight;
+    }
+
+    chatSend.addEventListener('click', async ()=>{
+      const msg = (chatInput.value || '').trim();
+      if(!msg) return;
+      appendMessage(msg, 'user');
+      chatInput.value = '';
+      appendMessage('Thinking...', 'bot');
       try{
-        const res = await fetch(`/accounts/api/post-analytics/${postId}/`);
-        if(!res.ok) throw new Error('fetch failed');
+        const res = await fetch('{% url "creator_chat_api" %}', {method:'POST', headers:{'Content-Type':'application/json','X-CSRFToken': (document.cookie.match(/csrftoken=([^;]+)/)||[])[1]}, body: JSON.stringify({message: msg})});
         const data = await res.json();
-        titleEl.textContent = data.post.title;
-        const labels = data.labels.map(d=>d.replace(/-/g,'/'));
-
-        const ctx1 = document.getElementById('viewsChart').getContext('2d');
-        if(viewsChart) viewsChart.destroy();
-        
-        // Ensure we have data, use fallback if empty
-        const viewsData = (data.views && data.views.length > 0) ? data.views : [0];
-        const likesData = (data.likes && data.likes.length > 0) ? data.likes : [0];
-        const chartLabels = (labels && labels.length > 0) ? labels : ['No data'];
-        
-        viewsChart = new Chart(ctx1,{type:'line',data:{labels:chartLabels,datasets:[{label:'Views',data:viewsData,borderColor:'#1f9cee',backgroundColor:'rgba(31,156,238,0.08)',fill:true,tension:0.3}]},options:{responsive:true,maintainAspectRatio:false,scales:{y:{beginAtZero:true}}}});
-
-        const ctx2 = document.getElementById('likesChart').getContext('2d');
-        if(likesChart) likesChart.destroy();
-        likesChart = new Chart(ctx2,{type:'line',data:{labels:chartLabels,datasets:[{label:'Likes',data:likesData,borderColor:'#ff6b6b',backgroundColor:'rgba(255,107,107,0.08)',fill:true,tension:0.3}]},options:{responsive:true,maintainAspectRatio:false,scales:{y:{beginAtZero:true}}}})
+        if(chatWindow.lastChild && chatWindow.lastChild.textContent === 'Thinking...') chatWindow.removeChild(chatWindow.lastChild);
+        if(data && data.reply) {
+          appendMessage(data.reply, 'bot');
+          if(data.action){
+            if(data.action === 'open_create_post'){
+              window.location.href = '{% url "create_post" %}';
+            } else if(typeof data.action === 'object' && data.action.type === 'open_edit_post'){
+              window.location.href = `/posts/blog/${data.action.post_id}/`;
+            } else if(data.action === 'refresh_dashboard'){
+              setTimeout(()=>location.reload(), 800);
+            }
+          }
+        } else {
+          appendMessage('No response from assistant.', 'bot');
+        }
       }catch(err){
-        titleEl.textContent = 'Error loading analytics';
+        if(chatWindow.lastChild && chatWindow.lastChild.textContent === 'Thinking...') chatWindow.removeChild(chatWindow.lastChild);
+        appendMessage('Error contacting assistant.', 'bot');
         console.error(err);
       }
     });
-  });
 
-  // close on outside click
-  window.addEventListener('click', (e)=>{ if(e.target === modal) modal.style.display='none' });
-
-  // Creator chat widget
-  const chatWindow = document.getElementById('chatWindow');
-  const chatInput = document.getElementById('chatInput');
-  const chatSend = document.getElementById('chatSend');
-
-  function appendMessage(text, who='bot'){
-    const d = document.createElement('div');
-    d.style.marginBottom = '8px';
-    d.style.whiteSpace = 'pre-wrap';
-    if(who==='user'){
-      d.style.textAlign = 'right'; d.textContent = text; d.style.color='#0f172a'; d.style.fontWeight='600';
-    } else {
-      d.style.textAlign = 'left'; d.textContent = text; d.style.color='#374151';
+    const newContentBtn = document.getElementById('newContent');
+    if(newContentBtn){
+      newContentBtn.addEventListener('click', ()=>{
+        window.location.href = '{% url "create_post" %}';
+      });
     }
-    chatWindow.appendChild(d);
-    chatWindow.scrollTop = chatWindow.scrollHeight;
-  }
 
-  chatSend.addEventListener('click', async ()=>{
-    const msg = (chatInput.value || '').trim();
-    if(!msg) return;
-    appendMessage(msg, 'user');
-    chatInput.value = '';
-    appendMessage('Thinking...', 'bot');
-    try{
-      const res = await fetch('{% url "creator_chat_api" %}', {method:'POST', headers:{'Content-Type':'application/json','X-CSRFToken': (document.cookie.match(/csrftoken=([^;]+)/)||[])[1]}, body: JSON.stringify({message: msg})});
-      const data = await res.json();
-      // Remove the 'Thinking...' last node
-      if(chatWindow.lastChild && chatWindow.lastChild.textContent === 'Thinking...') chatWindow.removeChild(chatWindow.lastChild);
-      if(data && data.reply) {
-        appendMessage(data.reply, 'bot');
-        
-        // Handle commands
-        if(data.action){
-          if(data.action === 'open_create_post'){
-            // Redirect to create post page
-            window.location.href = '{% url "create_post" %}';
-          } else if(typeof data.action === 'object' && data.action.type === 'open_edit_post'){
-            // Redirect to post detail (no edit view exists); show post detail
-            window.location.href = `/posts/blog/${data.action.post_id}/`;
-          } else if(data.action === 'refresh_dashboard'){
-            // Refresh dashboard
-            setTimeout(()=>location.reload(), 800);
-          }
-        }
-      } else {
-        appendMessage('No response from assistant.', 'bot');
-      }
-    }catch(err){
-      if(chatWindow.lastChild && chatWindow.lastChild.textContent === 'Thinking...') chatWindow.removeChild(chatWindow.lastChild);
-      appendMessage('Error contacting assistant.', 'bot');
-      console.error(err);
-    }
-  });
-
-  // Wire dashboard buttons: Create and Edit links
-  const newContentBtn = document.getElementById('newContent');
-  if(newContentBtn){
-    newContentBtn.addEventListener('click', ()=>{
-      window.location.href = '{% url "create_post" %}';
-    });
-  }
-
-  // Edit buttons: redirect to post detail (no inline edit available)
-  document.querySelectorAll('[data-post-id-edit]').forEach(a=>{
-    a.addEventListener('click', (e)=>{
-      e.preventDefault();
-      const id = a.getAttribute('data-post-id-edit');
-      if(id) window.location.href = `/posts/blog/${id}/`;
+    document.querySelectorAll('[data-post-id-edit]').forEach(a=>{
+      a.addEventListener('click', (e)=>{
+        e.preventDefault();
+        const id = a.getAttribute('data-post-id-edit');
+        if(id) window.location.href = `/posts/blog/${id}/`;
+      });
     });
   });
-});
-</script>
-
+  </script>
 </body>
 </html>

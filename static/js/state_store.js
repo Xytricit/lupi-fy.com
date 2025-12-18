@@ -1,10 +1,8 @@
-// Prevent duplicate declarations
-if (typeof StateStore !== 'undefined') {
-  console.log('⚠️ StateStore already defined, skipping redeclaration');
-  return;
-}
-
 (function() {
+  if (typeof StateStore !== 'undefined') {
+    console.log('⚠️ StateStore already defined, skipping redeclaration');
+    return;
+  }
 
   class StateStore {
     constructor() {

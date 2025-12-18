@@ -986,26 +986,57 @@ window.addEventListener('resize', () => {
 // ============================================
 // CREATE BUTTON MODAL HANDLER
 // ============================================
-document.querySelector('.create-btn')?.addEventListener('click', function() {
-    const modal = document.getElementById('createModal');
-    if (modal) {
-        modal.style.display = 'flex';
+function initCreateModal() {
+    const createBtn = document.querySelector('.create-btn');
+    const createModal = document.getElementById('createModal');
+    
+    if (!createBtn || !createModal) {
+        console.warn('Create modal elements not found');
+        return;
     }
-});
 
-document.getElementById('createModal')?.addEventListener('click', function(e) {
-    if (e.target === this) {
-        this.style.display = 'none';
+    // Remove existing listeners to prevent duplicates
+    const newCreateBtn = createBtn.cloneNode(true);
+    createBtn.parentNode.replaceChild(newCreateBtn, createBtn);
+
+    // Open modal
+    newCreateBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        createModal.style.display = 'flex';
+    });
+
+    // Close modal by clicking outside
+    createModal.addEventListener('click', (e) => {
+        if (e.target === createModal) {
+            createModal.style.display = 'none';
+        }
+    });
+
+    // Redirect buttons
+    const blogPostBtn = document.getElementById('blog-post');
+    const communityPostBtn = document.getElementById('community-post');
+    
+    if (blogPostBtn) {
+        blogPostBtn.addEventListener('click', () => {
+            const url = document.querySelector('[data-create-post-url]')?.dataset.createPostUrl || '/posts/create/';
+            window.location.href = url;
+        });
     }
-});
 
-document.getElementById('community-post')?.addEventListener('click', function() {
-    window.location.href = '/communities/create-post/';
-});
+    if (communityPostBtn) {
+        communityPostBtn.addEventListener('click', () => {
+            const url = document.querySelector('[data-create-community-url]')?.dataset.createCommunityUrl || '/communities/create-post/';
+            window.location.href = url;
+        });
+    }
+}
 
-document.getElementById('blog-post')?.addEventListener('click', function() {
-    window.location.href = '/posts/create/';
-});
+// Initialize when DOM is ready
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initCreateModal);
+} else {
+    initCreateModal();
+}
 
 // ============================================
 // NOTIFICATION BELL DROPDOWN

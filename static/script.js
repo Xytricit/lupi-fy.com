@@ -21,6 +21,10 @@ function getCSRF() {
   return cookie ? cookie.split('=')[1] : null;
 }
 
+function csrfToken() {
+  return getCSRF();
+}
+
 function handleResponseJSON(res) {
   if (res.status === 401) {
     // Not authenticated — redirect to login preserving current path
@@ -332,21 +336,25 @@ document.addEventListener('click', (e) => {
 document.addEventListener('click', (ev) => {
   const chip = ev.target.closest('.trending-chip');
   if (!chip) return;
-  const postId = chip.dataset.postId;
-  const chips = document.querySelectorAll('.trending-chip');
-  chips.forEach(c => c.classList.remove('active'));
-  chip.classList.add('active');
+  try {
+    const postId = chip.dataset.postId;
+    const chips = document.querySelectorAll('.trending-chip');
+    chips.forEach(c => c.classList.remove('active'));
+    chip.classList.add('active');
 
-  const posts = document.querySelectorAll('.main-feed .post-card');
-  if (postId === 'all') {
-    posts.forEach(p => p.style.display = 'block');
-    return;
+    const posts = document.querySelectorAll('.main-feed .post-card');
+    if (postId === 'all') {
+      posts.forEach(p => p.style.display = 'block');
+      return;
+    }
+
+    posts.forEach(p => {
+      const pid = p.querySelector('.bookmark-btn') ? p.querySelector('.bookmark-btn').dataset.postId : null;
+      if (pid === postId) p.style.display = 'block'; else p.style.display = 'none';
+    });
+  } catch (err) {
+    console.error('Error handling trending chip click:', err);
   }
-
-  posts.forEach(p => {
-    const pid = p.querySelector('.bookmark-btn') ? p.querySelector('.bookmark-btn').dataset.postId : null;
-    if (pid === postId) p.style.display = 'block'; else p.style.display = 'none';
-  });
 });
 
 // --------------------------
@@ -458,14 +466,10 @@ document.addEventListener('click', async (e) => {
     popup.querySelectorAll('.view-account-btn').forEach(btn => {
       btn.addEventListener('click', (ev) => {
         const id = btn.dataset.userid || userId;
-        // If the profile belongs to the current user, take them to their account dashboard
-        if (data && data.is_own_profile) {
-          window.location.href = '/account/';
-          return;
-        }
-        // Otherwise go to the public/read-only profile page
+        // Always go to public profile page
         window.location.href = `/accounts/user/${id}/public-profile/`;
       });
+    });
     });
 
     // wire up Chat button: navigate to full chat page

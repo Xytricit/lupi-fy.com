@@ -1,9 +1,8 @@
-if (typeof AssetTaggingSystem !== 'undefined') {
-  console.log('⚠️ AssetTaggingSystem already defined, skipping redeclaration');
-  return;
-}
-
 (function() {
+  if (typeof AssetTaggingSystem !== 'undefined') {
+    console.log('⚠️ AssetTaggingSystem already defined, skipping redeclaration');
+    return;
+  }
 
   class AssetTaggingSystem {
     constructor(workspace, assetManager) {

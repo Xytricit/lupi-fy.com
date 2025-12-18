@@ -1,389 +1,1009 @@
-{% load static %}
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <!-- Basic Page Info -->
     <meta charset="UTF-8">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lupify - The Ultimate Platform for Creators</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
 
-    <!-- Title -->
-    <title>Lupify - Blog & Community Platform</title>
+        :root {
+            --primary: #1f9cee;
+            --primary-dark: #1a7fb8;
+            --background: #ffffff;
+            --foreground: #0f172a;
+            --muted: #64748b;
+            --card: #ffffff;
+            --border: #e2e8f0;
+            --accent: #f1f5f9;
+        }
 
-    <!-- Meta Description (for SEO) -->
-    <meta name="description" content="A modern blogging and community platform for creators and readers.">
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: var(--background);
+            color: var(--foreground);
+            line-height: 1.6;
+            overflow-x: hidden;
+        }
 
-    <!-- Keywords -->
-    <meta name="keywords" content="community, blog, posts, categories, forum, articles">
+        a {
+            text-decoration: none;
+        }
 
-    <!-- Author -->
-    <meta name="author" content="Lupify">
+        a:hover {
+            text-decoration: none;
+        }
 
-    <!-- Favicon -->
-    <link rel="icon" href="{% static 'favicon.ico' %}" type="image/x-icon">
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 1.5rem;
+        }
 
-    <!-- Open Graph / Social Media -->
-    <meta property="og:title" content="Lupify - Blog & Community Platform">
-    <meta property="og:description" content="Connect, write, and explore blogs and communities.">
-    <meta property="og:image" content="{% static 'social-share-image.png' %}">
-    <meta property="og:url" content="https://lupify.com">
-    <meta property="og:type" content="website">
+        /* Header */
+        header {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid var(--border);
+            z-index: 1000;
+        }
 
-    <!-- Robots -->
-    <meta name="robots" content="index, follow">
+        nav {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            height: 70px;
+            gap: 0;
+            padding: 0 1.5rem;
+            width: 100%;
+        }
 
-    <!-- Stylesheet -->
-    <link rel="stylesheet" href="{% static 'style.css' %}">
+        .nav-right {
+            display: flex;
+            align-items: center;
+            gap: 2rem;
+            margin-left: auto;
+            padding-right: 0;
+        }
 
-    <!-- Scripts -->
-    <script src="{% static 'script.js' %}" defer></script>
+        .logo {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: var(--foreground);
+            padding-left: 0.5rem;
+            flex-shrink: 0;
+        }
 
-    <!-- Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+        .logo span {
+            color: var(--primary);
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 2rem;
+            list-style: none;
+        }
+
+        .nav-links a {
+            text-decoration: none;
+            color: var(--muted);
+            font-weight: 500;
+            transition: color 0.2s;
+        }
+
+        .nav-links a:hover {
+            color: var(--primary);
+        }
+
+        .nav-buttons {
+            display: flex;
+            gap: 1rem;
+        }
+
+        .btn {
+            padding: 0.5rem 1.5rem;
+            border-radius: 0.5rem;
+            font-weight: 600;
+            transition: all 0.3s;
+            cursor: pointer;
+            border: none;
+            font-size: 0.875rem;
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+            box-shadow: 0 4px 12px rgba(31, 156, 238, 0.3);
+        }
+
+        .btn-primary:hover {
+            background: var(--primary-dark);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(31, 156, 238, 0.4);
+        }
+
+        .btn-secondary {
+            background: transparent;
+            color: var(--foreground);
+        }
+
+        .btn-secondary:hover {
+            background: rgba(31, 156, 238, 0.1);
+        }
+
+        .mobile-menu {
+            display: none;
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: var(--foreground);
+        }
+
+        .mobile-menu-panel {
+            display: none;
+            position: fixed;
+            top: 70px;
+            left: 0;
+            right: 0;
+            background: white;
+            border-bottom: 1px solid var(--border);
+            padding: 1.5rem;
+            padding-left: 1.5rem;
+            padding-right: 1.5rem;
+            flex-direction: column;
+            gap: 1.5rem;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            z-index: 999;
+        }
+
+        .mobile-menu-panel.active {
+            display: flex;
+        }
+
+        .mobile-nav-links {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            list-style: none;
+        }
+
+        .mobile-nav-links a {
+            text-decoration: none;
+            color: var(--muted);
+            font-weight: 500;
+            transition: color 0.2s;
+            display: block;
+            padding: 0.5rem 0;
+        }
+
+        .mobile-nav-links a:hover {
+            color: var(--primary);
+        }
+
+        .mobile-nav-buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+            border-top: 1px solid var(--border);
+            padding-top: 1rem;
+        }
+
+        .mobile-nav-buttons .btn {
+            width: 100%;
+        }
+
+        /* Hero Section */
+        .hero {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            padding-top: 70px;
+            overflow: hidden;
+        }
+
+        .hero-background {
+            position: absolute;
+            inset: 0;
+            z-index: -1;
+        }
+
+        .floating-shape {
+            position: absolute;
+            border-radius: 50%;
+            background: rgba(31, 156, 238, 0.05);
+            filter: blur(60px);
+            animation: float 6s ease-in-out infinite;
+        }
+
+        .shape1 {
+            width: 300px;
+            height: 300px;
+            top: 25%;
+            left: 10%;
+        }
+
+        .shape2 {
+            width: 400px;
+            height: 400px;
+            bottom: 25%;
+            right: 10%;
+            animation-delay: 2s;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-30px); }
+        }
+
+        .hero-content {
+            text-align: center;
+            max-width: 900px;
+        }
+
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1rem;
+            border-radius: 2rem;
+            background: rgba(31, 156, 238, 0.1);
+            border: 1px solid rgba(31, 156, 238, 0.2);
+            font-size: 0.875rem;
+            color: var(--primary);
+            margin-bottom: 2rem;
+        }
+
+        h1 {
+            font-size: clamp(2.5rem, 8vw, 4.5rem);
+            font-weight: bold;
+            line-height: 1.1;
+            margin-bottom: 1.5rem;
+        }
+
+        .highlight {
+            color: var(--primary);
+        }
+
+        .hero p {
+            font-size: 1.25rem;
+            color: var(--muted);
+            margin-bottom: 2.5rem;
+            max-width: 700px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .hero-buttons {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .btn-large {
+            padding: 1rem 2.5rem;
+            font-size: 1.125rem;
+            border-radius: 0.75rem;
+        }
+
+        .stats {
+            display: flex;
+            gap: 3rem;
+            justify-content: center;
+            margin-top: 4rem;
+            padding-top: 2rem;
+            border-top: 1px solid var(--border);
+            flex-wrap: wrap;
+        }
+
+        .stat-item {
+            text-align: center;
+        }
+
+        .stat-number {
+            font-size: 2rem;
+            font-weight: bold;
+            color: var(--foreground);
+        }
+
+        .stat-label {
+            font-size: 0.75rem;
+            color: var(--muted);
+        }
+
+        /* Section */
+        section {
+            padding: 6rem 0;
+        }
+
+        .section-header {
+            text-align: center;
+            margin-bottom: 4rem;
+            max-width: 800px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .section-badge {
+            font-size: 0.875rem;
+            font-weight: 600;
+            color: var(--primary);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            margin-bottom: 1rem;
+        }
+
+        h2 {
+            font-size: clamp(2rem, 5vw, 3rem);
+            font-weight: bold;
+            margin-bottom: 1rem;
+        }
+
+        .section-header p {
+            font-size: 1.125rem;
+            color: var(--muted);
+        }
+
+        /* Grid */
+        .grid {
+            display: grid;
+            gap: 1.5rem;
+        }
+
+        .grid-2 {
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        }
+
+        .grid-3 {
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        }
+
+        /* Card */
+        .card {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 1.5rem;
+            padding: 2rem;
+            transition: all 0.3s;
+        }
+
+        .card:hover {
+            border-color: rgba(31, 156, 238, 0.3);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            transform: translateY(-5px);
+        }
+
+        .card-icon {
+            width: 3.5rem;
+            height: 3.5rem;
+            background: rgba(31, 156, 238, 0.1);
+            border-radius: 1rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 1.5rem;
+            font-size: 1.75rem;
+            transition: all 0.3s;
+            color: var(--primary);
+        }
+
+        .card-icon svg {
+            color: var(--primary);
+            stroke: var(--primary);
+        }
+
+        /* Special styling for fire icon to always be white */
+        .card-icon svg.lucide-flame {
+            color: white;
+            stroke: white;
+        }
+
+        .card:hover .card-icon {
+            background: var(--primary);
+            transform: scale(1.1);
+        }
+
+        .card:hover .card-icon {
+            color: white;
+        }
+
+        .card:hover .card-icon svg {
+            color: white;
+            stroke: white;
+        }
+
+        .card-number {
+            position: absolute;
+            top: 1rem;
+            right: 1.5rem;
+            font-size: 4rem;
+            font-weight: bold;
+            color: rgba(31, 156, 238, 0.1);
+            transition: color 0.3s;
+        }
+
+        .card:hover .card-number {
+            color: rgba(31, 156, 238, 0.2);
+        }
+
+        .card h3 {
+            font-size: 1.5rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .card-subtitle {
+            color: var(--primary);
+            font-size: 0.875rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+        }
+
+        .card-list {
+            list-style: none;
+            margin: 1.5rem 0;
+        }
+
+        .card-list li {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-bottom: 0.75rem;
+            color: var(--muted);
+            font-size: 0.875rem;
+        }
+
+        .card-list li::before {
+            content: "•";
+            color: var(--primary);
+            font-weight: bold;
+        }
+
+        .card-quote {
+            border-left: 2px solid rgba(31, 156, 238, 0.3);
+            padding-left: 1rem;
+            font-style: italic;
+            color: var(--muted);
+            font-size: 0.875rem;
+            margin-top: 1rem;
+        }
+
+        /* Feature Card */
+        .feature-card {
+            background: linear-gradient(135deg, rgba(31, 156, 238, 0.1), rgba(31, 156, 238, 0.05));
+            border: 1px solid transparent;
+            border-radius: 1.5rem;
+            padding: 3rem 2rem;
+            text-align: center;
+        }
+
+        .feature-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 0.5rem;
+            margin: 1.5rem 0;
+        }
+
+        .feature-item {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            font-size: 0.875rem;
+        }
+
+        .checkmark {
+            color: var(--primary);
+            font-weight: bold;
+        }
+
+        /* Footer */
+        footer {
+            background: var(--card);
+            border-top: 1px solid var(--border);
+            padding: 4rem 0 2rem;
+        }
+
+        .footer-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 3rem;
+            margin-bottom: 3rem;
+        }
+
+        .footer-section h3 {
+            font-size: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .footer-links {
+            list-style: none;
+        }
+
+        .footer-links li {
+            margin-bottom: 0.75rem;
+        }
+
+        .footer-links a {
+            color: var(--muted);
+            text-decoration: none;
+            font-size: 0.875rem;
+            transition: color 0.2s;
+        }
+
+        .footer-links a:hover {
+            color: var(--primary);
+        }
+
+        .social-links {
+            display: flex;
+            gap: 0.75rem;
+        }
+
+        .social-link {
+            width: 2.5rem;
+            height: 2.5rem;
+            background: var(--accent);
+            border-radius: 0.75rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--muted);
+            text-decoration: none;
+            transition: all 0.2s;
+        }
+
+        .social-link:hover {
+            background: var(--primary);
+            color: white;
+        }
+
+        .footer-bottom {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-top: 2rem;
+            border-top: 1px solid var(--border);
+            font-size: 0.875rem;
+            color: var(--muted);
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .nav-right {
+                display: none;
+            }
+
+            .mobile-menu {
+                display: block;
+            }
+
+            .hero {
+                padding: 120px 1rem 80px;
+            }
+
+            .stats {
+                gap: 2rem;
+            }
+
+            section {
+                padding: 4rem 0;
+            }
+
+            .grid-2, .grid-3 {
+                grid-template-columns: 1fr;
+            }
+
+            .feature-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Animations */
+        .fade-in {
+            animation: fadeIn 1s ease-in;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Scroll animations */
+        .scroll-animate {
+            opacity: 0;
+            transform: translateY(30px);
+            transition: all 0.6s ease-out;
+        }
+
+        .scroll-animate.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header>
+        <nav>
+            <div class="logo"><span>Lupi</span>fy</div>
+            <div class="nav-right">
+                <ul class="nav-links">
+                    <li><a href="{% url 'blogs' %}">Blogs</a></li>
+                    <li><a href="{% url 'communities' %}">Communities</a></li>
+                    <li><a href="{% url 'games_hub' %}">Games</a></li>
+                    <li><a href="{% url 'marketplace:home' %}">Marketplace</a></li>
+                </ul>
+                <div class="nav-buttons">
+                    <a class="btn btn-secondary" href="{% url 'login' %}">Sign In</a>
+                    <a class="btn btn-primary" href="{% url 'register' %}">Get Started</a>
+                </div>
+            </div>
+            <button class="mobile-menu">☰</button>
+        </nav>
+        <div class="mobile-menu-panel" id="mobileMenuPanel">
+            <ul class="mobile-nav-links">
+                <li><a href="{% url 'blogs' %}">Blogs</a></li>
+                <li><a href="{% url 'communities' %}">Communities</a></li>
+                <li><a href="{% url 'games_hub' %}">Games</a></li>
+                <li><a href="{% url 'marketplace:home' %}">Marketplace</a></li>
+            </ul>
+            <div class="mobile-nav-buttons">
+                <a class="btn btn-secondary" href="{% url 'login' %}">Sign In</a>
+                <a class="btn btn-primary" href="{% url 'register' %}">Get Started</a>
+            </div>
+        </div>
+    </header>
+
+    <!-- Hero Section -->
+    <section class="hero">
+        <div class="hero-background">
+            <div class="floating-shape shape1"></div>
+            <div class="floating-shape shape2"></div>
+        </div>
+        <div class="container">
+            <div class="hero-content fade-in">
+                <div class="badge">
+                    <span><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-sparkles-icon lucide-sparkles"><path d="M11.017 2.814a1 1 0 0 1 1.966 0l1.051 5.558a2 2 0 0 0 1.594 1.594l5.558 1.051a1 1 0 0 1 0 1.966l-5.558 1.051a2 2 0 0 0-1.594 1.594l-1.051 5.558a1 1 0 0 1-1.966 0l-1.051-5.558a2 2 0 0 0-1.594-1.594l-5.558-1.051a1 1 0 0 1 0-1.966l5.558-1.051a2 2 0 0 0 1.594-1.594z"/><path d="M20 2v4"/><path d="M22 4h-4"/><circle cx="4" cy="20" r="2"/></svg></span>
+                    Built for modern creators
+                </div>
+                <h1>
+                    The Ultimate Platform <span class="highlight">for Creators</span>
+                </h1>
+                <p>
+                    Build, design, code, and create powerful projects — all in one place. 
+                    Fewer limitations, more creation. A next-generation tool for modern creators.
+                </p>
+                <div class="hero-buttons">
+                    <a class="btn btn-primary btn-large" href="{% url 'register' %}">Start Creating →</a>
+                    <a class="btn btn-secondary btn-large" href="{% url 'register' %}">Explore Features</a>
+                </div>
+                <div class="stats">
+                    <div class="stat-item">
+                        <div class="stat-number">50K+</div>
+                        <div class="stat-label">Active Creators</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-number">1M+</div>
+                        <div class="stat-label">Projects Built</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-number">99.9%</div>
+                        <div class="stat-label">Uptime</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- 6 Pillars Section -->
+    <section style="background: #f8fafc;">
+        <div class="container">
+            <div class="section-header scroll-animate">
+                <div class="section-badge">The Foundation</div>
+                <h2>The Foundation of <span class="highlight">Creating</span></h2>
+                <p>The philosophy that drives everything we build. Master these, and you master creation itself.</p>
+            </div>
+            <div class="grid grid-3">
+                <div class="card scroll-animate" style="position: relative;">
+                    <span class="card-number">01</span>
+                    <div class="card-icon"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-eye"><path d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0"/><circle cx="12" cy="12" r="3"/></svg></div>
+                    <h3>Vision</h3>
+                    <div class="card-subtitle">Everything starts here.</div>
+                    <p style="color: var(--muted); margin-bottom: 1rem;">A creator without vision is just reacting. What are you building? Why does it need to exist?</p>
+                    <div class="card-quote">Vision sets direction. Without it, tools don't matter.</div>
+                </div>
+                <div class="card scroll-animate" style="position: relative;">
+                    <span class="card-number">02</span>
+                    <div class="card-icon"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-palette"><path d="M12 22a1 1 0 0 1 0-20 10 9 0 0 1 10 9 5 5 0 0 1-5 5h-2.25a1.75 1.75 0 0 0-1.4 2.8l.3.4a1.75 1.75 0 0 1-1.4 2.8z"/><circle cx="13.5" cy="6.5" r=".5" fill="currentColor"/><circle cx="17.5" cy="10.5" r=".5" fill="currentColor"/><circle cx="6.5" cy="12.5" r=".5" fill="currentColor"/><circle cx="8.5" cy="7.5" r=".5" fill="currentColor"/></svg></div>
+                    <h3>Design</h3>
+                    <div class="card-subtitle">How vision becomes understandable.</div>
+                    <p style="color: var(--muted); margin-bottom: 1rem;">Structure. Aesthetics. Flow and usability. Good design makes creation feel inevitable.</p>
+                    <div class="card-quote">Bad design creates friction and confusion.</div>
+                </div>
+                <div class="card scroll-animate" style="position: relative;">
+                    <span class="card-number">03</span>
+                    <div class="card-icon"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-rocket"><path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z"/><path d="m12 15-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z"/><path d="M9 12H4s.55-3.03 2-4c1.62-1.08 5 0 5 0"/><path d="M12 15v5s3.03-.55 4-2c1.08-1.62 0-5 0-5"/></svg></div>
+                    <h3>Execution</h3>
+                    <div class="card-subtitle">Ideas are cheap. Execution is the filter.</div>
+                    <p style="color: var(--muted); margin-bottom: 1rem;">Turning plans into reality. Writing the code. Building the systems. Shipping something that works.</p>
+                    <div class="card-quote">Creators are defined by what they finish, not what they imagine.</div>
+                </div>
+                <div class="card scroll-animate" style="position: relative;">
+                    <span class="card-number">04</span>
+                    <div class="card-icon"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-shield"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/></svg></div>
+                    <h3>Control</h3>
+                    <div class="card-subtitle">True creators own their work.</div>
+                    <p style="color: var(--muted); margin-bottom: 1rem;">Full access to code and logic. No artificial limitations. Customization without permission.</p>
+                    <div class="card-quote">Control separates toy tools from real platforms.</div>
+                </div>
+                <div class="card scroll-animate" style="position: relative;">
+                    <span class="card-number">05</span>
+                    <div class="card-icon"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-rotate-cw"><polyline points="23 4 23 10 17 10"></polyline><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path></svg></div>
+                    <h3>Iteration</h3>
+                    <div class="card-subtitle">Creation is never one-and-done.</div>
+                    <p style="color: var(--muted); margin-bottom: 1rem;">Test. Break. Improve. Refine. Iteration is how good projects become great.</p>
+                    <div class="card-quote">This is how creators level up.</div>
+                </div>
+                <div class="card scroll-animate" style="position: relative;">
+                    <span class="card-number">06</span>
+                    <div class="card-icon"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-zap"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg></div>
+                    <h3>Impact</h3>
+                    <div class="card-subtitle">Creation isn't complete until it affects something.</div>
+                    <p style="color: var(--muted); margin-bottom: 1rem;">Users. Players. Viewers. Other creators. Impact is proof that what you made matters.</p>
+                    <div class="card-quote">Without impact, creation is just practice.</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Features Section -->
+    <section id="features">
+        <div class="container">
+            <div class="section-header scroll-animate">
+                <div class="section-badge">What We Offer</div>
+                <h2>Everything Creators <span class="highlight">Need</span></h2>
+                <p>Six pillars that form a complete ecosystem. Create, share, learn, earn, connect, and get discovered.</p>
+            </div>
+            <div class="grid grid-3">
+                <div class="card scroll-animate">
+                    <div class="card-icon"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-gamepad2-icon lucide-gamepad-2"><line x1="6" x2="10" y1="11" y2="11"/><line x1="8" x2="8" y1="9" y2="13"/><line x1="15" x2="15.01" y1="12" y2="12"/><line x1="18" x2="18.01" y1="10" y2="10"/><path d="M17.32 5H6.68a4 4 0 0 0-3.978 3.59c-.006.052-.01.101-.017.152C2.604 9.416 2 14.456 2 16a3 3 0 0 0 3 3c1 0 1.5-.5 2-1l1.414-1.414A2 2 0 0 1 9.828 16h4.344a2 2 0 0 1 1.414.586L17 18c.5.5 1 1 2 1a3 3 0 0 0 3-3c0-1.545-.604-6.584-.685-7.258-.007-.05-.011-.1-.017-.151A4 4 0 0 0 17.32 5z"/></svg></div>
+                    <h3>Games</h3>
+                    <div class="card-subtitle">Playable creations.</div>
+                    <ul class="card-list">
+                        <li>Publish games</li>
+                        <li>Test builds</li>
+                        <li>Share demos and prototypes</li>
+                        <li>Let others play and give feedback</li>
+                    </ul>
+                    <div class="card-quote">This is where creation becomes interactive.</div>
+                </div>
+                <div class="card scroll-animate">
+                    <div class="card-icon"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-file-text"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M9 15h6"/><path d="M9 11h6"/></svg></div>
+                    <h3>Blog</h3>
+                    <div class="card-subtitle">Long-form thinking and documentation.</div>
+                    <ul class="card-list">
+                        <li>Devlogs</li>
+                        <li>Tutorials</li>
+                        <li>Design breakdowns</li>
+                        <li>Progress updates</li>
+                    </ul>
+                    <div class="card-quote">Blogs turn creators into thinkers, not just makers.</div>
+                </div>
+                <div class="card scroll-animate">
+                    <div class="card-icon"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-shopping-bag-icon lucide-shopping-bag"><path d="M16 10a4 4 0 0 1-8 0"/><path d="M3.103 6.034h17.794"/><path d="M3.4 5.467a2 2 0 0 0-.4 1.2V20a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6.667a2 2 0 0 0-.4-1.2l-2-2.667A2 2 0 0 0 17 2H7a2 2 0 0 0-1.6.8z"/></svg></div>
+                    <h3>Marketplace</h3>
+                    <div class="card-subtitle">Exchange value.</div>
+                    <ul class="card-list">
+                        <li>Assets (sprites, sounds, code)</li>
+                        <li>Tools and plugins</li>
+                        <li>Paid & free content</li>
+                        <li>Earn and collaborate</li>
+                    </ul>
+                    <div class="card-quote">Reuse instead of rebuilding everything.</div>
+                </div>
+                <div class="card scroll-animate">
+                    <div class="card-icon"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-users"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></div>
+                    <h3>Communities</h3>
+                    <div class="card-subtitle">Social core of the platform.</div>
+                    <ul class="card-list">
+                        <li>Groups</li>
+                        <li>Forums</li>
+                        <li>Project teams</li>
+                        <li>Feedback threads</li>
+                    </ul>
+                    <div class="card-quote">Communities stop creators from building alone.</div>
+                </div>
+                <div class="card scroll-animate">
+                    <div class="card-icon"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-video"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg></div>
+                    <h3>Videos</h3>
+                    <div class="card-subtitle">High-signal visual learning.</div>
+                    <ul class="card-list">
+                        <li>Tutorials</li>
+                        <li>Walkthroughs</li>
+                        <li>Showcases</li>
+                        <li>Behind-the-scenes</li>
+                    </ul>
+                    <div class="card-quote">Videos reduce friction and accelerate mastery.</div>
+                </div>
+                <div class="card scroll-animate" style="background: linear-gradient(135deg, rgba(31, 156, 238, 0.1), rgba(31, 156, 238, 0.05)); border-color: rgba(31, 156, 238, 0.3);">
+                    <div class="card-icon" style="background: var(--primary); color: white;"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-flame-icon lucide-flame"><path d="M12 3q1 4 4 6.5t3 5.5a1 1 0 0 1-14 0 5 5 0 0 1 1-3 1 1 0 0 0 5 0c0-2-1.5-3-1.5-5q0-2 2.5-4"/></svg></div>
+                    <h3>Discover</h3>
+                    <div class="card-subtitle" style="color: var(--primary);">The most important pillar.</div>
+                    <ul class="card-list">
+                        <li>Trending creations</li>
+                        <li>Featured projects</li>
+                        <li>Rising creators</li>
+                        <li>Staff & community picks</li>
+                    </ul>
+                    <div class="card-quote" style="border-color: var(--primary);">Without discovery, creators feel invisible. Without visibility, people quit.</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Benefits Section -->
+    <section>
+        <div class="container">
+            <div class="section-header scroll-animate">
+                <h2>Why Creators Choose Lupify</h2>
+                <p>Built by creators, for creators. Every feature designed to help you succeed.</p>
+            </div>
+            <div class="grid grid-3">
+                <div class="card scroll-animate">
+                    <div class="card-icon"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-zap"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg></div>
+                    <h3>Lightning Fast</h3>
+                    <p style="color: var(--muted);">Optimized for speed. Your content loads in milliseconds.</p>
+                </div>
+                <div class="card scroll-animate">
+                    <div class="card-icon"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-shield"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/></svg></div>
+                    <h3>Secure & Private</h3>
+                    <p style="color: var(--muted);">Enterprise-grade security protects your work.</p>
+                </div>
+                <div class="card scroll-animate">
+                    <div class="card-icon"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-globe-icon lucide-globe"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></svg></div>
+                    <h3>Global Reach</h3>
+                    <p style="color: var(--muted);">Connect with creators from 190+ countries.</p>
+                </div>
+                <div class="card scroll-animate">
+                    <div class="card-icon"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-trending-up"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg></div>
+                    <h3>Built to Scale</h3>
+                    <p style="color: var(--muted);">From hobby to business, we grow with you.</p>
+                </div>
+                <div class="card scroll-animate">
+                    <div class="card-icon"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-sparkles-icon lucide-sparkles"><path d="M11.017 2.814a1 1 0 0 1 1.966 0l1.051 5.558a2 2 0 0 0 1.594 1.594l5.558 1.051a1 1 0 0 1 0 1.966l-5.558 1.051a2 2 0 0 0-1.594 1.594l-1.051 5.558a1 1 0 0 1-1.966 0l-1.051-5.558a2 2 0 0 0-1.594-1.594l-5.558-1.051a1 1 0 0 1 0-1.966l5.558-1.051a2 2 0 0 0 1.594-1.594z"/><path d="M20 2v4"/><path d="M22 4h-4"/><circle cx="4" cy="20" r="2"/></svg></div>
+                    <h3>AI-Powered</h3>
+                    <p style="color: var(--muted);">Smart tools to enhance your creative workflow.</p>
+                </div>
+                <div class="card scroll-animate">
+                    <div class="card-icon"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-lock"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></div>
+                    <h3>You Own It</h3>
+                    <p style="color: var(--muted);">Your content, your data, your rules. Always.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- CTA Section -->
+    <section style="background: linear-gradient(135deg, rgba(31, 156, 238, 0.05), rgba(31, 156, 238, 0.05));">
+        <div class="container">
+            <div style="max-width: 800px; margin: 0 auto; text-align: center;">
+                <div class="badge" style="margin-bottom: 2rem;">
+                    <span><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-sparkles-icon lucide-sparkles"><path d="M11.017 2.814a1 1 0 0 1 1.966 0l1.051 5.558a2 2 0 0 0 1.594 1.594l5.558 1.051a1 1 0 0 1 0 1.966l-5.558 1.051a2 2 0 0 0-1.594 1.594l-1.051 5.558a1 1 0 0 1-1.966 0l-1.051-5.558a2 2 0 0 0-1.594-1.594l-5.558-1.051a1 1 0 0 1 0-1.966l5.558-1.051a2 2 0 0 0 1.594-1.594z"/><path d="M20 2v4"/><path d="M22 4h-4"/><circle cx="4" cy="20" r="2"/></svg></span>
+                    Ready to create?
+                </div>
+                <h2 style="margin-bottom: 1.5rem;">Your All-in-One Creator Platform</h2>
+                <p style="font-size: 1.125rem; color: var(--muted); margin-bottom: 2.5rem;">Write blogs that get discovered. Build communities that thrive. Play and create games. Sell your creations in our marketplace. All in one place.</p>
+                <div class="hero-buttons">
+                    <a class="btn btn-primary btn-large" href="{% url 'register' %}">Start Creating for Free →</a>
+                    <button class="btn btn-secondary btn-large">Watch Demo</button>
+                </div>
+                <p style="margin-top: 2rem; color: var(--muted); font-size: 0.875rem;">Join 50,000+ creators worldwide. <a href="{% url 'blogs' %}" style="color: var(--primary);">See success stories →</a></p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer>
+        <div class="container">
+            <div class="footer-grid">
+                <div class="footer-section">
+                    <div class="logo" style="margin-bottom: 1rem;"><span>Lupi</span>fy</div>
+                    <p style="color: var(--muted); font-size: 0.875rem; max-width: 300px;">A modern platform for creators to build, share, and grow together. Join the community today.</p>
+                </div>
+                <div class="footer-section">
+                    <h3>Quick Links</h3>
+                    <ul class="footer-links">
+                        <li><a href="{% url 'main_home' %}">Home</a></li>
+                        <li><a href="{% url 'search_page' %}">Explore</a></li>
+                        <li><a href="{% url 'communities' %}">Communities</a></li>
+                        <li><a href="{% url 'blogs' %}">Popular Posts</a></li>
+                    </ul>
+                </div>
+                <div class="footer-section">
+                    <h3>Resources</h3>
+                    <ul class="footer-links">
+                        <li><a href="{% url 'lupiforge_guide' %}">Guidelines</a></li>
+                        <li><a href="{% url 'contact' %}">Help Center</a></li>
+                        <li><a href="#">Privacy Policy</a></li>
+                        <li><a href="{% url 'terms_of_service' %}">Terms of Service</a></li>
+                    </ul>
+                </div>
+                <div class="footer-section">
+                    <h3>Connect</h3>
+                    <div class="social-links">
+                        <a href="#" class="social-link"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-mail-icon lucide-mail"><path d="m22 7-8.991 5.727a2 2 0 0 1-2.009 0L2 7"/><rect x="2" y="4" width="20" height="16" rx="2"/></svg></a>
+                        <a href="#" class="social-link"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-linkedin-icon lucide-linkedin"><path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z"/><rect width="4" height="12" x="2" y="9"/><circle cx="4" cy="4" r="2"/></svg></a>
+                        <a href="#" class="social-link"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-github-icon lucide-github"><path d="M15 22v-4a4.8 4.8 0 0 0-1-3.5c3 0 6-2 6-5.5.08-1.25-.27-2.48-1-3.5.28-1.15.28-2.35 0-3.5 0 0-1 0-3 1.5-2.64-.5-5.36-.5-8 0C6 2 5 2 5 2c-.3 1.15-.3 2.35 0 3.5A5.403 5.403 0 0 0 4 9c0 3.5 3 5.5 6 5.5-.39.49-.68 1.05-.85 1.65-.17.6-.22 1.23-.15 1.85v4"/><path d="M9 18c-4.51 2-5-2-7-2"/></svg></a>
+                        <a href="#" class="social-link"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-youtube-icon lucide-youtube"><path d="M2.5 17a24.12 24.12 0 0 1 0-10 2 2 0 0 1 1.4-1.4 49.56 49.56 0 0 1 16.2 0A2 2 0 0 1 21.5 7a24.12 24.12 0 0 1 0 10 2 2 0 0 1-1.4 1.4 49.55 49.55 0 0 1-16.2 0A2 2 0 0 1 2.5 17"/><path d="m10 15 5-3-5-3z"/></svg></a>
+                    </div>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>© 2025 Lupify. All rights reserved.</p>
+                <p>Made with <span style="color: var(--primary);">♥</span> for creators</p>
+            </div>
+        </div>
+    </footer>
 
     <script>
-    // Initialize theme on page load
-    (function(){
-      const serverPref = "{{ request.user.theme_preference|default:'' }}";
-      let pref = serverPref || null;
-      try { const local = localStorage.getItem('theme_pref'); if(!pref && local) pref = local; }catch(e){}
-      if(!pref) pref = 'system';
-      document.documentElement.setAttribute('data-theme', pref);
-    })();
+        // Smooth scrolling for anchor links
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) {
+                    target.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'start'
+                    });
+                }
+            });
+        });
+
+        // Scroll animations
+        const observerOptions = {
+            threshold: 0.1,
+            rootMargin: '0px 0px -50px 0px'
+        };
+
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('visible');
+                }
+            });
+        }, observerOptions);
+
+        document.querySelectorAll('.scroll-animate').forEach(el => {
+            observer.observe(el);
+        });
+
+        // Mobile menu toggle
+        const mobileMenu = document.querySelector('.mobile-menu');
+        const mobileMenuPanel = document.getElementById('mobileMenuPanel');
+        
+        mobileMenu?.addEventListener('click', () => {
+            mobileMenuPanel.classList.toggle('active');
+        });
+
+        document.querySelectorAll('.mobile-nav-links a').forEach(link => {
+            link.addEventListener('click', () => {
+                mobileMenuPanel.classList.remove('active');
+            });
+        });
     </script>
-</head>
-
-<body class="layout">
-
-<header class="site-header">
-    <h1 class="logo">Lupify</h1>
-    <nav class="navbar">
-        <ul class="nav-links">
-            {% block navbar_links %}
-            <li class="nav-item"><a href="{% url 'main_home' %}">Home</a></li>
-            <li class="nav-item"><a href="{% url 'contact' %}">Contact Us</a></li>
-            <li class="nav-item"><a href="{% url 'about' %}">About</a></li>
-            <li class="nav-item"><a href="{% url 'lupiforge_guide' %}">Guide</a></li>
-            {% endblock %}
-        </ul>
-    </nav>
-</header>
-
-    <main class="main-content">
-        {% block hero %}
-        <section class="hero-section fade-in-up">
-            <div class="hero-section-text1">
-                <h1 class="hero-title">Write, Read, Connect</h1>
-            </div>
-            <div class="hero-section-text2">
-                <p class="hero-subtitle">Start your blog and tap into our built-in audience. Read amazing content for free. Join communities and share whatever's on your mind.</p>
-            </div>
-            <div class="hero-section-buttons">
-    <a href="{% url 'register' %}">
-        <button class="btn-primary">Create Your Blog</button>
-    </a>
-    <a href="{% url 'blogs' %}">
-        <button class="btn-secondary">Start Reading</button>
-    </a>
-</div>
-
-        </section>{% endblock %}
-        {% block overview %}
-        <section class="features-overview fade-in-left">
-            <div class="feature-item">
-                <div class="feature-icon">
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-6">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M15 19.128a9.38 9.38 0 0 0 2.625.372 9.337 9.337 0 0 0 4.121-.952 4.125 4.125 0 0 0-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 0 1 8.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0 1 11.964-3.07M12 6.375a3.375 3.375 0 1 1-6.75 0 3.375 3.375 0 0 1 6.75 0Zm8.25 2.25a2.625 2.625 0 1 1-5.25 0 2.625 2.625 0 0 1 5.25 0Z" />
-                    </svg>
-                </div>
-                <div class="feature-toptext">Growing</div>
-                <div class="feature-text">Active Readers</div>
-                <div class="feature-subtext">Ready to discover your blog</div>
-            </div>
-
-            <div class="feature-item">
-                <div class="feature-icon">
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-6">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" />
-                    </svg>
-                </div>
-                <div class="feature-toptext">Growing</div>
-                <div class="feature-text">Blog Post</div>
-                <div class="feature-subtext">Free content to explore</div>
-            </div>
-
-            <div class="feature-item">
-                <div class="feature-icon">
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-6">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 20.25c4.97 0 9-3.694 9-8.25s-4.03-8.25-9-8.25S3 7.444 3 12c0 2.104.859 4.023 2.273 5.48.432.447.74 1.04.586 1.641a4.483 4.483 0 0 1-.923 1.785A5.969 5.969 0 0 0 6 21c1.282 0 2.47-.402 3.445-1.087.81.22 1.668.337 2.555.337Z" />
-                    </svg>
-                </div>
-                <div class="feature-toptext">Thriving</div>
-                <div class="feature-text">Communities</div>
-                <div class="feature-subtext">Share whatever's on your mind</div>
-            </div>
-
-            <div class="feature-item">
-                <div class="feature-icon">
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-6">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 18 9 11.25l4.306 4.306a11.95 11.95 0 0 1 5.814-5.518l2.74-1.22m0 0-5.94-2.281m5.94 2.28-2.28 5.941" />
-                    </svg>
-                </div>
-                <div class="feature-toptext">Increasing</div>
-                <div class="feature-text">Monthly Views</div>
-                <div class="feature-subtext">Your content can reach them all</div>
-            </div>
-        </section>{%endblock%}
-
-        <!-- Featured Posts -->
-        {% block posts %}
-       <article class="featured-posts fade-in-up">
-    <h1 class="section-title">
-        <div class="feature-icon">
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M15.362 5.214A8.252 8.252 0 0 1 12 21 8.25 8.25 0 0 1 6.038 7.047 8.287 8.287 0 0 0 9 9.601a8.983 8.983 0 0 1 3.361-6.867 8.21 8.21 0 0 0 3 2.48Z"/>
-                <path stroke-linecap="round" stroke-linejoin="round" d="M12 18a3.75 3.75 0 0 0 .495-7.468 5.99 5.99 0 0 0-1.925 3.547 5.975 5.975 0 0 1-2.133-1.001A3.75 3.75 0 0 0 12 18Z"/>
-            </svg>
-        </div>
-        Featured This Week
-    </h1>
-    <div class="cards-container">
-        <div class="featured-card"></div>
-        <div class="featured-card"></div>
-        <div class="featured-card"></div>
-    </div>
-</article>{%endblock%}
-
-
-        <!-- Community Explore -->
-         {% block explore %}
-        <section class="community-explore fade-in-right">
-  <div class="section-content">
-    <div class="community-text">
-      <div class="section-title">
-        <h1>Explore Communities</h1>
-      </div>
-      <div class="section-subtitle">
-        <p>Find your tribe and connect with like-minded people</p>
-      </div>
-    </div>
-
-    <div class="community-cards">
-      <!-- Technology -->
-      <div class="community-card">
-        <div class="community-icon">
-          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M9 17.25v1.007a3 3 0 0 1-.879 2.122L7.5 21h9l-.621-.621A3 3 0 0 1 15 18.257V17.25m6-12V15a2.25 2.25 0 0 1-2.25 2.25H5.25A2.25 2.25 0 0 1 3 15V5.25m18 0A2.25 2.25 0 0 0 18.75 3H5.25A2.25 2.25 0 0 0 3 5.25m18 0V12a2.25 2.25 0 0 1-2.25 2.25H5.25A2.25 2.25 0 0 1 3 12V5.25" />
-          </svg>
-        </div>
-        <h2 class="community-name">Technology</h2>
-      </div>
-
-      <!-- Design -->
-      <div class="community-card">
-        <div class="community-icon">
-          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M9.53 16.122a3 3 0 0 0-5.78 1.128 2.25 2.25 0 0 1-2.4 2.245 4.5 4.5 0 0 0 8.4-2.245c0-.399-.078-.78-.22-1.128Zm0 0a15.998 15.998 0 0 0 3.388-1.62m-5.043-.025a15.994 15.994 0 0 1 1.622-3.395m3.42 3.42a15.995 15.995 0 0 0 4.764-4.648l3.876-5.814a1.151 1.151 0 0 0-1.597-1.597L14.146 6.32a15.996 15.996 0 0 0-4.649 4.763m3.42 3.42a6.776 6.776 0 0 0-3.42-3.42" />
-          </svg>
-        </div>
-        <h2 class="community-name">Design</h2>
-      </div>
-
-      <!-- Business -->
-      <div class="community-card">
-        <div class="community-icon">
-          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M20.25 14.15v4.25c0 1.094-.787 2.036-1.872 2.18-2.087.277-4.216.42-6.378.42s-4.291-.143-6.378-.42c-1.085-.144-1.872-1.086-1.872-2.18v-4.25m16.5 0a2.18 2.18 0 0 0 .75-1.661V8.706c0-1.081-.768-2.015-1.837-2.175a48.114 48.114 0 0 0-3.413-.387m4.5 8.006c-.194.165-.42.295-.673.38A23.978 23.978 0 0 1 12 15.75c-2.648 0-5.195-.429-7.577-1.22a2.016 2.016 0 0 1-.673-.38m0 0A2.18 2.18 0 0 1 3 12.489V8.706c0-1.081.768-2.015 1.837-2.175a48.111 48.111 0 0 1 3.413-.387m7.5 0V5.25A2.25 2.25 0 0 0 13.5 3h-3a2.25 2.25 0 0 0-2.25 2.25v.894m7.5 0a48.667 48.667 0 0 0-7.5 0M12 12.75h.008v.008H12v-.008Z" />
-          </svg>
-        </div>
-        <h2 class="community-name">Business</h2>
-      </div>
-
-      <!-- Lifestyle -->
-      <div class="community-card">
-        <div class="community-icon">
-          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12Z" />
-          </svg>
-        </div>
-        <h2 class="community-name">Lifestyle</h2>
-      </div>
-
-      <!-- Gaming -->
-      <div class="community-card">
-        <div class="community-icon">
-          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M16.5 18.75h-9m9 0a3 3 0 0 1 3 3h-15a3 3 0 0 1 3-3m9 0v-3.375c0-.621-.503-1.125-1.125-1.125h-.871M7.5 18.75v-3.375c0-.621.504-1.125 1.125-1.125h.872m5.007 0H9.497m5.007 0a7.454 7.454 0 0 1-.982-3.172M9.497 14.25a7.454 7.454 0 0 0 .981-3.172M5.25 4.236c-.982.143-1.954.317-2.916.52A6.003 6.003 0 0 0 7.73 9.728M5.25 4.236V4.5c0 2.108.966 3.99 2.48 5.228M5.25 4.236V2.721C7.456 2.41 9.71 2.25 12 2.25c2.291 0 4.545.16 6.75.47v1.516M7.73 9.728a6.726 6.726 0 0 0 2.748 1.35m8.272-6.842V4.5c0 2.108-.966 3.99-2.48 5.228m2.48-5.492a46.32 46.32 0 0 1 2.916.52 6.003 6.003 0 0 1-5.395 4.972m0 0a6.726 6.726 0 0 1-2.749 1.35m0 0a6.772 6.772 0 0 1-3.044 0" />
-          </svg>
-        </div>
-        <h2 class="community-name">Gaming</h2>
-      </div>
-
-      <!-- Photography -->
-      <div class="community-card">
-        <div class="community-icon">
-          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M6.827 6.175A2.31 2.31 0 0 1 5.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 0 0 2.25 2.25h15A2.25 2.25 0 0 0 21.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 0 0-1.134-.175 2.31 2.31 0 0 1-1.64-1.055l-.822-1.316a2.192 2.192 0 0 0-1.736-1.039 48.774 48.774 0 0 0-5.232 0 2.192 2.192 0 0 0-1.736 1.039l-.821 1.316Z" />
-            <path stroke-linecap="round" stroke-linejoin="round" d="M16.5 12.75a4.5 4.5 0 1 1-9 0 4.5 4.5 0 0 1 9 0ZM18.75 10.5h.008v.008h-.008V10.5Z" />
-          </svg>
-        </div>
-        <h2 class="community-name">Photography</h2>
-      </div>
-
-      <!-- Writing -->
-      <div class="community-card">
-        <div class="community-icon">
-          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M12 6.042A8.967 8.967 0 0 0 6 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 0 1 6 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 0 1 6-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0 0 18 18a8.967 8.967 0 0 0-6 2.292m0-14.25v14.25" />
-          </svg>
-        </div>
-        <h2 class="community-name">Writing</h2>
-      </div>
-
-      <!-- Music -->
-      <div class="community-card">
-        <div class="community-icon">
-          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" d="m9 9 10.5-3m0 6.553v3.75a2.25 2.25 0 0 1-1.632 2.163l-1.32.377a1.803 1.803 0 1 1-.99-3.467l2.31-.66a2.25 2.25 0 0 0 1.632-2.163Zm0 0V2.25L9 5.25v10.303m0 0v3.75a2.25 2.25 0 0 1-1.632 2.163l-1.32.377a1.803 1.803 0 0 1-.99-3.467l2.31-.66A2.25 2.25 0 0 0 9 15.553Z" />
-          </svg>
-        </div>
-        <h2 class="community-name">Music</h2>
-      </div>
-    </div>
-  </div>
-</section>{%endblock%}
-
-
-        <!-- Experience Section -->
-         {% block section %}
-        <section class="experience-section fade-in-up">
-            <div><h1 class="section-title">Three Ways to Experience Lupify</h1></div>
-            <diV><p>Whether you write, read, or just want to connect—there's something for you</p></diV>
-            <div class ="experiences">
-                <div class="experience-card">
-                <h2>Start Your Blog, Get Discovered</h2>
-                <p>Launch your blog and instantly reach 50,000+ active readers...</p>
-                <a href="{% url 'register' %}" class="btn-link">Start Blogging</a>
-            </div>
-            <div class="experience-card">
-                <h2>Read Endless Content for Free</h2>
-                <p>Love reading blogs? Dive into thousands of stories...</p>
-                <a href="{% url 'blogs' %}" class="btn-link">Start Reading</a>
-            </div>
-            <div class="experience-card">
-                <h2>Share & Connect in Communities</h2>
-                <p>Post about anything on your mind. Share random thoughts...</p>
-                <a href="{% url 'communities' %}" class="btn-link">Explore Communities</a>
-            </div>
-            </div>
-            <div class="cta-join">
-                <a href="{% url 'register' %}">
-    <button class="btn-primary">Join Lupify Today</button>
-</a>
-
-            </div>
-            <div class = "link-member"><p>Already a member? <a href="{% url 'login' %}">Sign in</a></p></div>
-            
-        </section>{%endblock%}
-
-    </main>
-
- <footer class="site-footer">
-  <div class="footer-site">
-
-    <!-- Main text / Brand -->
-    <div class="footer-maintext">
-      <div class="footer-brand">Lupify</div>
-      <p class="footer-description">
-        A modern platform for bloggers and readers to connect, share, and grow together.
-      </p>
-    </div>
-
-    <!-- Footer links -->
-    <div class="footer-links">
-      <div class="footer-nav1">
-        <h2>Quick Links</h2>
-        <nav class="footer-nav">
-          <ul>
-            <li><a href="/">Home</a></li>
-            <li><a href="/explore">Explore</a></li>
-            <li><a href="/communities">Communities</a></li>
-            <li><a href="/popular-posts">Popular posts</a></li>
-          </ul>
-        </nav>
-      </div>
-
-      <div class="footer-nav2">
-        <h2>Resources</h2>
-        <nav class="footer-nav">
-          <ul>
-            <li><a href="/guidelines">Guidelines</a></li>
-            <li><a href="/help-center">Help Center</a></li>
-            <li><a href="/privacy-policy">Privacy Policy</a></li>
-            <li><a href="/terms-of-service">Terms Of Service</a></li>
-          </ul>
-        </nav>
-      </div>
-    </div>
-
-    <!-- Social / Newsletter -->
-    <div class="icon-stuff">
-      <div class="footer-text">
-        <h2>Connect</h2>
-        <div class="social-icons">
-
-          <!-- Email -->
-          <div class="footer-feature-icon">
-            <a href="#">
-              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-6">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 0 1-2.25 2.25h-15a2.25 2.25 0 0 1-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0 0 19.5 4.5h-15a2.25 2.25 0 0 0-2.25 2.25m19.5 0v.243a2.25 2.25 0 0 1-1.07 1.916l-7.5 4.615a2.25 2.25 0 0 1-2.36 0L3.32 8.91a2.25 2.25 0 0 1-1.07-1.916V6.75" />
-              </svg>
-            </a>
-          </div>
-
-          <!-- LinkedIn -->
-          <div class="footer-feature-icon">
-            <a href="#">
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 640">
-                <path d="M512 96L127.9 96C110.3 96 96 110.5 96 128.3L96 511.7C96 529.5 110.3 544 127.9 544L512 544C529.6 544 544 529.5 544 511.7L544 128.3C544 110.5 529.6 96 512 96zM231.4 480L165 480L165 266.2L231.5 266.2L231.5 480L231.4 480zM198.2 160C219.5 160 236.7 177.2 236.7 198.5C236.7 219.8 219.5 237 198.2 237C176.9 237 159.7 219.8 159.7 198.5C159.7 177.2 176.9 160 198.2 160zM480.3 480L413.9 480L413.9 376C413.9 351.2 413.4 319.3 379.4 319.3C344.8 319.3 339.5 346.3 339.5 374.2L339.5 480L273.1 480L273.1 266.2L336.8 266.2L336.8 295.4L337.7 295.4C346.6 278.6 368.3 260.9 400.6 260.9C467.8 260.9 480.3 305.2 480.3 362.8L480.3 480z"/>
-              </svg>
-            </a>
-          </div>
-
-          <!-- Github -->
-          <div class="footer-feature-icon">
-            <a href="#">
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 640">
-                <path d="M316.8 72C178.1 72 72 177.3 72 316C72 426.9 141.8 521.8 241.5 555.2C254.3 557.5 258.8 549.6 258.8 543.1C258.8 536.9 258.5 502.7 258.5 481.7C258.5 481.7 188.5 496.7 173.8 451.9C173.8 451.9 162.4 422.8 146 415.3C146 415.3 123.1 399.6 147.6 399.9C147.6 399.9 172.5 401.9 186.2 425.7C208.1 464.3 244.8 453.2 259.1 446.6C261.4 430.6 267.9 419.5 275.1 412.9C219.2 406.7 162.8 398.6 162.8 302.4C162.8 274.9 170.4 261.1 186.4 243.5C183.8 237 175.3 210.2 189 175.6C209.9 169.1 258 202.6 258 202.6C278 197 299.5 194.1 320.8 194.1C342.1 194.1 363.6 197 383.6 202.6C383.6 202.6 431.7 169 452.6 175.6C466.3 210.3 457.8 237 455.2 243.5C471.2 261.2 481 275 481 302.4C481 398.9 422.1 406.6 366.2 412.9C375.4 420.8 383.2 435.8 383.2 459.3C383.2 493 382.9 534.7 382.9 542.9C382.9 549.4 387.5 557.3 400.2 555C500.2 521.8 568 426.9 568 316C568 177.3 455.5 72 316.8 72z"/>
-              </svg>
-            </a>
-          </div>
-
-          <!-- Discord -->
-          <div class="footer-feature-icon">
-            <a href="#">
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 640">
-                <path d="M524.5 133.8C524.3 133.5 524.1 133.2 523.7 133.1C485.6 115.6 445.3 103.1 404 96C403.6 95.9 403.2 96 402.9 96.1C402.6 96.2 402.3 96.5 402.1 96.9C396.6 106.8 391.6 117.1 387.2 127.5C342.6 120.7 297.3 120.7 252.8 127.5C248.3 117 243.3 106.8 237.7 96.9C237.5 96.6 237.2 96.3 236.9 96.1C236.6 95.9 236.2 95.9 235.8 95.9C194.5 103 154.2 115.5 116.1 133C115.8 133.1 115.5 133.4 115.3 133.7C39.1 247.5 18.2 358.6 28.4 468.2C28.4 468.5 28.5 468.7 28.6 469C28.7 469.3 28.9 469.4 29.1 469.6C73.5 502.5 123.1 527.6 175.9 543.8C176.3 543.9 176.7 543.9 177 543.8C177.3 543.7 177.7 543.4 177.9 543.1C189.2 527.7 199.3 511.3 207.9 494.3C208 494.1 208.1 493.8 208.1 493.5C208.1 493.2 208.1 493 208 492.7C207.9 492.4 207.8 492.2 207.6 492.1C207.4 492 207.2 491.8 206.9 491.7C191.1 485.6 175.7 478.3 161 469.8C160.7 469.6 160.5 469.4 160.3 469.2C160.1 469 160 468.6 160 468.3C160 468 160 467.7 160.2 467.4C160.4 467.1 160.5 466.9 160.8 466.7C163.9 464.4 167 462 169.9 459.6C170.2 459.4 170.5 459.2 170.8 459.2C171.1 459.2 171.5 459.2 171.8 459.3C268 503.2 372.2 503.2 467.3 459.3C467.6 459.2 468 459.1 468.3 459.1C468.6 459.1 469 459.3 469.2 459.5C472.1 461.9 475.2 464.4 478.3 466.7C478.5 466.9 478.7 467.1 478.9 467.4C479.1 467.7 479.1 468 479.1 468.3C479.1 468.6 479 468.9 478.8 469.2C478.6 469.5 478.4 469.7 478.2 469.8C463.5 478.4 448.2 485.7 432.3 491.6C432.1 491.7 431.8 491.8 431.6 492C431.4 492.2 431.3 492.4 431.2 492.7C431.1 493 431.1 493.2 431.1 493.5C431.1 493.8 431.2 494 431.3 494.3C440.1 511.3 450.1 527.6 461.3 543.1C461.5 543.4 461.9 543.7 462.2 543.8C462.5 543.9 463 543.9 463.3 543.8C516.2 527.6 565.9 502.5 610.4 469.6C610.6 469.4 610.8 469.2 610.9 469C611 468.8 611.1 468.5 611.1 468.2C623.4 341.4 590.6 231.3 524.2 133.7zM222.5 401.5C193.5 401.5 169.7 374.9 169.7 342.3C169.7 309.7 193.1 283.1 222.5 283.1C252.2 283.1 275.8 309.9 275.3 342.3C275.3 375 251.9 401.5 222.5 401.5zM417.9 401.5C388.9 401.5 365.1 374.9 365.1 342.3C365.1 309.7 388.5 283.1 417.9 283.1C447.6 283.1 471.2 309.9 470.7 342.3C470.7 375 447.5 401.5 417.9 401.5z"/>
-              </svg>
-            </a>
-          </div>
-
-        </div>
-        <p class="newsletter-text">Stay updated with our newsletter</p>
-      </div>
-    </div>
-    <div class="footer-separator"></div>
-    <!-- Subtext / Copyright -->
-    <div class="footer-sub-text">
-      <p class="copyright">
-        © 2025 Lupify. All rights reserved. Built with ❤️ for the community.
-      </p>
-    </div>
-
-  </div>
-</footer>
-
-
-
 </body>
 </html>

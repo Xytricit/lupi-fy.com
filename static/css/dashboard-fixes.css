@@ -1,6 +1,6 @@
 /* Sidebar width tweak to avoid clipping */
-.sidebar{width:80px !important;min-width:80px !important}
-@media (min-width:769px){.main-wrapper{margin-left:80px !important}}
+.sidebar{width:140px !important;min-width:140px !important}
+@media (min-width:769px){.main-wrapper{margin-left:140px !important}}
 
 /* Dark mode contrast fixes: ensure components use theme vars */
 html[data-theme="dark"] .avatar-menu,

@@ -9,22 +9,24 @@
 <div class="post-card post-card-intro">
 <div class="marketplace-home">
   <!-- Hero section -->
-  <section style="background:linear-gradient(135deg,var(--primary,#1f9cee)0%,var(--accent,#fec76f)100%);color:white;padding:60px 20px;border-radius:16px;margin-bottom:40px;">
-    <div style="max-width:800px;margin:0 auto;text-align:center;">
-      <h1 style="font-size:3rem;font-weight:800;margin:0 0 16px;letter-spacing:-0.5px;">Marketplace</h1>
+  <section style="background:linear-gradient(135deg,var(--primary) 0%, var(--primary-dark, #1864c3) 100%);color:white;padding:60px 20px;border-radius:16px;margin-bottom:40px;position:relative;overflow:hidden;">
+    <div style="position:absolute;top:0;left:0;right:0;bottom:0;background:radial-gradient(circle at 20% 50%, rgba(255,255,255,0.1) 0%, transparent 50%);pointer-events:none;"></div>
+    <div style="position:absolute;top:0;left:0;right:0;bottom:0;background:radial-gradient(circle at 80% 80%, rgba(255,255,255,0.05) 0%, transparent 50%);pointer-events:none;"></div>
+    <div style="max-width:800px;margin:0 auto;text-align:center;position:relative;z-index:1;">
+      <h1 style="font-size:3rem;font-weight:800;margin:0 0 16px;letter-spacing:-0.5px;text-shadow:0 2px 4px rgba(0,0,0,0.1);">Marketplace</h1>
       <p style="font-size:1.2rem;margin:0;line-height:1.6;opacity:0.95;">Discover amazing projects, tools, templates, and more created by talented creators</p>
       
       <!-- Search bar -->
       <form method="GET" style="max-width:600px;margin:24px auto 0;">
-        <div style="position:relative;display:flex;border-radius:12px;overflow:hidden;box-shadow:0 8px 24px rgba(0,0,0,0.15);">
+        <div style="position:relative;display:flex;border-radius:12px;overflow:hidden;box-shadow:0 8px 24px rgba(0,0,0,0.15);background:rgba(255,255,255,0.1);backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,0.2);">
           <input
             type="text"
             name="q"
             value="{{ search }}"
             placeholder="Search projects..."
-            style="flex:1;padding:14px 20px;border:none;background:white;color:var(--text-dark);font-size:1rem;outline:none;"
+            style="flex:1;padding:14px 20px;border:none;background:rgba(255,255,255,0.9);color:var(--text-dark);font-size:1rem;outline:none;backdrop-filter:blur(10px);"
           />
-          <button type="submit" style="background:var(--card-bg);color:var(--primary);padding:14px 24px;border:none;font-weight:700;cursor:pointer;transition:background 0.2s;" onmouseover="this.style.opacity='0.85'" onmouseout="this.style.opacity='1'">
+          <button type="submit" style="background:rgba(255,255,255,0.2);color:white;padding:14px 24px;border:none;font-weight:700;cursor:pointer;transition:all 0.2s;backdrop-filter:blur(10px);border-left:1px solid rgba(255,255,255,0.2);" onmouseover="this.style.background='rgba(255,255,255,0.3)'" onmouseout="this.style.background='rgba(255,255,255,0.2)'">
             Search
           </button>
         </div>
@@ -42,7 +44,7 @@
         <div style="background:var(--card-bg);border-radius:16px;overflow:hidden;border:1px solid var(--border);box-shadow:var(--card-shadow);transition:all 0.3s cubic-bezier(0.4,0,0.2,1);height:100%;display:flex;flex-direction:column;" onmouseover="this.style.transform='translateY(-8px)';this.style.boxShadow='0 20px 40px rgba(31,156,238,0.2)'" onmouseout="this.style.transform='none';this.style.boxShadow='var(--card-shadow)'">
           <div style="position:relative;overflow:hidden;height:200px;">
             <img src="{{ project.thumbnail.url }}" alt="{{ project.title }}" style="width:100%;height:100%;object-fit:cover;transition:transform 0.3s ease;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
-            <div style="position:absolute;top:12px;left:12px;background:var(--primary);color:white;padding:8px 16px;border-radius:12px;font-size:0.85rem;font-weight:700;">
+            <div style="position:absolute;top:12px;left:12px;background:var(--primary-dark, #1864c3);color:white;padding:8px 16px;border-radius:12px;font-size:0.85rem;font-weight:700;box-shadow:0 4px 12px rgba(31,156,238,0.3);">
               {% if project.is_free %}FREE{% else %}${{ project.price }}{% endif %}
             </div>
           </div>
@@ -101,7 +103,7 @@
         <div style="background:var(--card-bg);border-radius:16px;overflow:hidden;border:1px solid var(--border);box-shadow:var(--card-shadow);transition:all 0.3s cubic-bezier(0.4,0,0.2,1);height:100%;display:flex;flex-direction:column;" onmouseover="this.style.transform='translateY(-8px)';this.style.boxShadow='0 20px 40px rgba(31,156,238,0.2)'" onmouseout="this.style.transform='none';this.style.boxShadow='var(--card-shadow)'">
           <div style="position:relative;overflow:hidden;height:180px;">
             <img src="{{ project.thumbnail.url }}" alt="{{ project.title }}" style="width:100%;height:100%;object-fit:cover;transition:transform 0.3s ease;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
-            <div style="position:absolute;top:10px;right:10px;background:var(--primary);color:white;padding:6px 14px;border-radius:20px;font-size:0.8rem;font-weight:700;">
+            <div style="position:absolute;top:10px;right:10px;background:var(--primary-dark, #1864c3);color:white;padding:6px 14px;border-radius:20px;font-size:0.8rem;font-weight:700;box-shadow:0 4px 12px rgba(31,156,238,0.3);">
               {% if project.is_free %}FREE{% else %}${{ project.price }}{% endif %}
             </div>
           </div>
@@ -110,7 +112,7 @@
             <p style="color:var(--secondary-text);font-size:0.85rem;margin:0 0 12px;line-height:1.4;flex:1;">{{ project.short_description|truncatewords:15 }}</p>
             <div style="display:flex;justify-content:space-between;align-items:center;padding-top:12px;border-top:1px solid var(--border);">
               <div style="display:flex;align-items:center;gap:6px;font-size:0.9rem;">
-                <span style="color:var(--accent,#fec76f);font-size:1.1rem;">★</span>
+                <span style="color:var(--primary-dark, #1864c3);font-size:1.1rem;filter:drop-shadow(0 1px 2px rgba(31,156,238,0.3));">★</span>
                 <span style="color:var(--text-dark);font-weight:600;">{{ project.rating_average }}</span>
               </div>
               <span style="color:var(--secondary-text);font-size:0.85rem;">{{ project.sales_count }} sales</span>
@@ -132,21 +134,21 @@
       {% if projects.has_other_pages %}
       <div style="margin-top:32px;display:flex;justify-content:center;gap:8px;flex-wrap:wrap;">
         {% if projects.has_previous %}
-        <a href="?page={{ projects.previous_page_number }}&category={{ category }}&sort={{ sort }}&q={{ search }}" 
-           style="padding:8px 16px;border-radius:8px;background:var(--primary);color:white;text-decoration:none;font-weight:600;transition:background 0.2s;" onmouseover="this.style.opacity='0.8'" onmouseout="this.style.opacity='1'">
-          ← Previous
-        </a>
+         <a href="?page={{ projects.previous_page_number }}&category={{ category }}&sort={{ sort }}&q={{ search }}" 
+            style="padding:8px 16px;border-radius:8px;background:var(--primary-dark, #1864c3);color:white;text-decoration:none;font-weight:600;transition:all 0.2s;box-shadow:0 4px 12px rgba(31,156,238,0.3);" onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 8px 20px rgba(31,156,238,0.4)'" onmouseout="this.style.transform='none';this.style.boxShadow='0 4px 12px rgba(31,156,238,0.3)'">
+           ← Previous
+         </a>
         {% endif %}
         
-        <span style="padding:8px 16px;color:var(--text-dark);">
+        <span style="padding:8px 16px;color:var(--text-dark);font-weight:500;">
           Page {{ projects.number }} of {{ projects.paginator.num_pages }}
         </span>
         
         {% if projects.has_next %}
         <a href="?page={{ projects.next_page_number }}&category={{ category }}&sort={{ sort }}&q={{ search }}" 
-           style="padding:8px 16px;border-radius:8px;background:var(--primary);color:white;text-decoration:none;font-weight:600;transition:background 0.2s;" onmouseover="this.style.opacity='0.8'" onmouseout="this.style.opacity='1'">
-          Next →
-        </a>
+           style="padding:8px 16px;border-radius:8px;background:var(--primary-dark, #1864c3);color:white;text-decoration:none;font-weight:600;transition:all 0.2s;box-shadow:0 4px 12px rgba(31,156,238,0.3);" onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 8px 20px rgba(31,156,238,0.4)'" onmouseout="this.style.transform='none';this.style.boxShadow='0 4px 12px rgba(31,156,238,0.3)'">
+           Next →
+         </a>
         {% endif %}
       </div>
       {% endif %}

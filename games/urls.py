@@ -3,8 +3,8 @@ from . import views
 from . import views_advanced
 
 urlpatterns = [
-    # Games Catalog (new)
-    path('', views.games_catalog_view, name='games_catalog'),
+    # Games Hub
+    path('', views.games_hub_view, name='games_hub'),
     path('block-burst/', views.block_burst_view, name='block_burst'),
     
     path('api/recently-played/', views.recently_played_api, name='recently_played_api'),

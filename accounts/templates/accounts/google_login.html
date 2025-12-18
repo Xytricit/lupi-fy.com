@@ -1,96 +1,424 @@
-{% extends 'auth_base.html' %}
-
-{% load socialaccount %}
-
-{% block title %}Sign In - Lupify{% endblock %}
-
-{% block content %}
-<div class="auth-header">
-    <h1>Lupify</h1>
-    <p>Sign in to your community</p>
-</div>
-
-<div class="auth-body">
-    {% if request.GET.error %}
-    <div class="error-message">Authentication failed. Please try again.</div>
-    {% endif %}
-
-    {% if google_invalid %}
-    <div class="error-message">
-        ⚙️ Google OAuth Setup Required<br>
-        <small style="font-size: 12px; margin-top: 8px; display: block;">
-            Real Google credentials are needed for OAuth to work. See GOOGLE_OAUTH_SETUP_GUIDE.md for instructions. For now, use the local login form below.
-        </small>
-    </div>
-    {% endif %}
-
-    {% if not google_configured and not google_invalid %}
-    <div class="info-box">
-        <strong>Setup Required:</strong> Google OAuth is not configured. You can either configure it in the admin or use the local sign-in form below.
-    </div>
-    {% endif %}
-
-    <div style="margin-bottom:12px; font-size: 14px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #1f9cee;">Continue with Google</div>
-
-    {% if google_configured and not google_invalid %}
-    <a href="{% provider_login_url 'google' %}" class="btn btn-google" style="display: flex; align-items: center; justify-content: center; gap: 12px; background: linear-gradient(135deg, #f9fafb 0%, #f3f4f6 100%); color: #1f2937; border: 2px solid #e5e7eb; padding: 14px 24px; border-radius: 12px; font-weight: 700; text-decoration: none; width: 100%; font-size: 14px; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);" onmouseover="this.style.background='white'; this.style.borderColor='#1f9cee'; this.style.boxShadow='0 8px 20px rgba(31, 156, 238, 0.15)'; this.style.transform='translateY(-2px)'; this.style.color='#1f9cee';" onmouseout="this.style.background='linear-gradient(135deg, #f9fafb 0%, #f3f4f6 100%)'; this.style.borderColor='#e5e7eb'; this.style.boxShadow='none'; this.style.transform='translateY(0)'; this.style.color='#1f2937';">
-        <svg class="google-logo" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" style="width: 20px; height: 20px; flex-shrink: 0;">
-            <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
-            <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
-            <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
-            <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
-        </svg>
-        Continue with Google
-    </a>
-    {% else %}
-    <button class="btn btn-google" disabled style="opacity: 0.5; cursor: not-allowed;">Continue with Google</button>
-    <p style="margin-top: 12px; font-size: 12px; color: #9ca3af; text-align: center;">Google OAuth requires valid credentials. Use the form below to sign in.</p>
-    {% endif %}
-
-    <div style="display: flex; align-items: center; gap: 12px; margin: 24px 0; font-size: 13px; color: #9ca3af; font-weight: 600;">
-        <div style="flex: 1; height: 1px; background: linear-gradient(to right, transparent, #e5e7eb, transparent);"></div>
-        or
-        <div style="flex: 1; height: 1px; background: linear-gradient(to right, transparent, #e5e7eb, transparent);"></div>
-    </div>
-
-    <!-- Local login fallback -->
-    <form method="POST" action="{% url 'local_login' %}" novalidate>
-        {% csrf_token %}
-
-        <div class="form-group">
-            <label for="id_username">Username or Email</label>
-            <input type="text" id="id_username" name="username" placeholder="Enter your username or email" required>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="Secure and user-friendly login experience for Lupify users">
+    <title>Lupify - Sign In</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background-color: #f8fafc;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 1rem;
+            color: #1e293b;
+        }
+        .login-container {
+            width: 100%;
+            max-width: 400px;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.05);
+            overflow: hidden;
+        }
+        .login-header {
+            text-align: center;
+            padding: 1.75rem 1.5rem 1.25rem;
+            border-bottom: 1px solid #f1f5f9;
+        }
+        .logo {
+            font-size: 1.875rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+        }
+        .logo span.primary {
+            color: #1f9cee;
+        }
+        .logo span.secondary {
+            color: #0f172a;
+        }
+        .login-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: #0f172a;
+        }
+        .login-form {
+            padding: 1.75rem;
+        }
+        .form-group {
+            margin-bottom: 1.25rem;
+        }
+        .form-label {
+            display: block;
+            font-weight: 500;
+            font-size: 0.875rem;
+            margin-bottom: 0.5rem;
+            color: #334155;
+        }
+        .form-input {
+            width: 100%;
+            padding: 0.875rem 1rem;
+            border: 1px solid #cbd5e1;
+            border-radius: 6px;
+            font-size: 1rem;
+            transition: border-color 0.2s;
+        }
+        .form-input:focus {
+            outline: none;
+            border-color: #1f9cee;
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+        }
+        .input-wrapper {
+            position: relative;
+        }
+        .toggle-password {
+            position: absolute;
+            right: 0.875rem;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            color: #64748b;
+            cursor: pointer;
+            padding: 0.25rem;
+            border-radius: 4px;
+            transition: color 0.2s;
+        }
+        .toggle-password:hover {
+            color: #334155;
+        }
+        .form-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+        .remember-me {
+            display: flex;
+            align-items: center;
+            font-size: 0.875rem;
+        }
+        .remember-me input {
+            margin-right: 0.5rem;
+            accent-color: #1f9cee;
+        }
+        .forgot-password {
+            color: #1f9cee;
+            text-decoration: none;
+            font-size: 0.875rem;
+            font-weight: 500;
+            transition: opacity 0.2s;
+        }
+        .forgot-password:hover {
+            opacity: 0.85;
+        }
+        .sign-in-button {
+            width: 100%;
+            background-color: #1f9cee;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            padding: 0.95rem;
+            font-size: 1rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+        }
+        .sign-in-button:hover {
+            background-color: #1387d5;
+        }
+        .sign-in-button:active {
+            transform: scale(0.995);
+        }
+        .sign-in-button:disabled {
+            opacity: 0.75;
+            cursor: not-allowed;
+            transform: none;
+        }
+        .spinner {
+            width: 1.125rem;
+            height: 1.125rem;
+            border: 2px solid rgba(255, 255, 255, 0.4);
+            border-top: 2px solid white;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-left: 0.5rem;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .form-error {
+            background-color: #fef2f2;
+            border: 1px solid #fecaca;
+            color: #b91c1c;
+            border-radius: 6px;
+            padding: 0.75rem;
+            margin-bottom: 1.25rem;
+            font-size: 0.875rem;
+            display: none;
+        }
+        .error-message {
+            color: #b91c1c;
+            font-size: 0.75rem;
+            margin-top: 0.25rem;
+            min-height: 1.125rem;
+        }
+        .signup-section {
+            text-align: center;
+            padding: 1rem 1.75rem 1.5rem;
+            border-top: 1px solid #f1f5f9;
+            color: #475569;
+            font-size: 0.9375rem;
+        }
+        .signup-link {
+            color: #1f9cee;
+            text-decoration: none;
+            font-weight: 500;
+            margin-left: 0.25rem;
+            transition: color 0.2s;
+        }
+        .signup-link:hover {
+            color: #137dbc;
+            text-decoration: underline;
+        }
+        @media (max-width: 480px) {
+            .login-container {
+                margin: 0.75rem;
+            }
+            .login-header {
+                padding: 1.5rem 1.25rem 1rem;
+            }
+            .login-form {
+                padding: 1.5rem;
+            }
+            .signup-section {
+                padding: 0.875rem 1.5rem 1.25rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="login-container">
+        <div class="login-header">
+            <div class="logo">
+                <span class="primary">Lupi</span><span class="secondary">fy</span>
+            </div>
+            <h1 class="login-title">Sign in to your account</h1>
         </div>
-
-        <div class="form-group password-toggle">
-            <label for="id_password">Password</label>
-            <input type="password" id="id_password" name="password" placeholder="Enter your password" required>
-            <button type="button" class="toggle-btn" onclick="togglePassword()">👁</button>
+        <div class="login-form">
+            <div class="form-error" id="formError"></div>
+            
+            <form id="loginForm">
+                <div class="form-group">
+                    <label for="identifier" class="form-label">Username or email address</label>
+                    <input id="identifier" type="text" placeholder="Username or email" class="form-input" autocomplete="username">
+                    <p id="identifierError" class="error-message"></p>
+                </div>
+                
+                <div class="form-group">
+                    <label for="password" class="form-label">Password</label>
+                    <div class="input-wrapper">
+                        <input id="password" type="password" placeholder="Enter your password" class="form-input" autocomplete="current-password">
+                        <button type="button" id="togglePassword" class="toggle-password" aria-label="Toggle password visibility">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="eye-icon">
+                                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                                <circle cx="12" cy="12" r="3"></circle>
+                            </svg>
+                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="eye-off-icon" style="display: none;">
+                                <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
+                                <line x1="1" y1="1" x2="23" y2="23"></line>
+                            </svg>
+                        </button>
+                    </div>
+                    <p id="passwordError" class="error-message"></p>
+                </div>
+                
+                <div class="form-row">
+                    <div class="remember-me">
+                        <input type="checkbox" id="rememberMe">
+                        <label for="rememberMe">Remember me</label>
+                    </div>
+                    <a href="{% url 'password_reset' %}" class="forgot-password">Forgot password?</a>
+                </div>
+                
+                <button type="submit" id="signInButton" class="sign-in-button">
+                    <span id="buttonText">Continue</span>
+                    <div id="spinner" class="spinner" style="display: none;"></div>
+                </button>
+            </form>
         </div>
+        
+        <div class="signup-section">
+            New to Lupify? 
+            <a href="{% url 'register' %}" class="signup-link">Create an account</a>
+        </div>
+    </div>
 
-        <button type="submit" class="btn btn-primary">Sign In</button>
-    </form>
-
-    <div style="margin-top:18px; font-size:13px; text-align: center;"><span style="color: #6b7280;">Don't have an account? </span><a href="/accounts/register/" style="color: #1f9cee; font-weight: 700; text-decoration: none; transition: all 0.3s ease;" onmouseover="this.style.color='#fec76f'; this.style.textDecoration='underline';" onmouseout="this.style.color='#1f9cee'; this.style.textDecoration='none';">Sign up</a></div>
-</div>
-
-<div class="auth-footer">
-    By signing in you agree to our <a href="/terms-of-service">Terms of Service</a>.
-</div>
-
-<script>
-function togglePassword() {
-    const input = document.getElementById('id_password');
-    const btn = event.target;
-    if (!input) return;
-    if (input.type === 'password') { 
-        input.type = 'text'; 
-        btn.textContent = '👁‍🗨'; 
-    } else { 
-        input.type = 'password'; 
-        btn.textContent = '👁'; 
-    }
-}
-</script>
-
-{% endblock %}
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const identifierInput = document.getElementById('identifier');
+            const passwordInput = document.getElementById('password');
+            const togglePasswordBtn = document.getElementById('togglePassword');
+            const eyeIcon = togglePasswordBtn.querySelector('.eye-icon');
+            const eyeOffIcon = togglePasswordBtn.querySelector('.eye-off-icon');
+            const signInButton = document.getElementById('signInButton');
+            const buttonText = document.getElementById('buttonText');
+            const spinner = document.getElementById('spinner');
+            const loginForm = document.getElementById('loginForm');
+            const identifierError = document.getElementById('identifierError');
+            const passwordError = document.getElementById('passwordError');
+            const formError = document.getElementById('formError');
+            const rememberMeInput = document.getElementById('rememberMe');
+            const loginEndpoint = "{% url 'login_api' %}";
+            const dashboardUrl = "{% url 'dashboard_home' %}";
+            const csrftoken = (document.cookie.match(/csrftoken=([^;]+)/) || [])[1] || '';
+            let isPasswordVisible = false;
+            function hideFormError() {
+                formError.textContent = '';
+                formError.style.display = 'none';
+                formError.style.backgroundColor = '';
+                formError.style.borderColor = '';
+                formError.style.color = '';
+            }
+            function showFormError(message) {
+                formError.textContent = message;
+                formError.style.display = 'block';
+            }
+            function validateIdentifier() {
+                const identifier = identifierInput.value.trim();
+                if (!identifier) {
+                    identifierError.textContent = 'This field is required';
+                    return false;
+                }
+                return true;
+            }
+            function validatePassword() {
+                const password = passwordInput.value.trim();
+                if (!password) {
+                    passwordError.textContent = 'This field is required';
+                    return false;
+                }
+                if (password.length < 6) {
+                    passwordError.textContent = 'Password must be at least 6 characters';
+                    return false;
+                }
+                return true;
+            }
+            function scrollToFirstError() {
+                if (identifierError.textContent) {
+                    setTimeout(() => {
+                        identifierInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        identifierInput.focus();
+                    }, 100);
+                    return true;
+                }
+                if (passwordError.textContent) {
+                    setTimeout(() => {
+                        passwordInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        passwordInput.focus();
+                    }, 100);
+                    return true;
+                }
+                return false;
+            }
+            function handleBackendErrors(data) {
+                const message = data.message || 'Login failed. Please try again.';
+                switch (data.error_code) {
+                    case 'missing_identifier':
+                        identifierError.textContent = message;
+                        scrollToFirstError();
+                        return;
+                    case 'missing_password':
+                        passwordError.textContent = message;
+                        scrollToFirstError();
+                        return;
+                    case 'user_not_found':
+                        identifierError.textContent = message;
+                        scrollToFirstError();
+                        return;
+                    case 'incorrect_password':
+                        passwordError.textContent = message;
+                        scrollToFirstError();
+                        return;
+                    case 'account_locked':
+                    case 'account_inactive':
+                        showFormError(message);
+                        return;
+                    default:
+                        showFormError(message);
+                }
+            }
+            togglePasswordBtn.addEventListener('click', function() {
+                isPasswordVisible = !isPasswordVisible;
+                passwordInput.type = isPasswordVisible ? 'text' : 'password';
+                eyeIcon.style.display = isPasswordVisible ? 'none' : 'block';
+                eyeOffIcon.style.display = isPasswordVisible ? 'block' : 'none';
+            });
+            identifierInput.addEventListener('input', () => {
+                identifierError.textContent = '';
+                hideFormError();
+            });
+            passwordInput.addEventListener('input', () => {
+                passwordError.textContent = '';
+                hideFormError();
+            });
+            loginForm.addEventListener('submit', async function(e) {
+                e.preventDefault();
+                identifierError.textContent = '';
+                passwordError.textContent = '';
+                hideFormError();
+                const isIdentifierValid = validateIdentifier();
+                const isPasswordValid = validatePassword();
+                if (!isIdentifierValid || !isPasswordValid) {
+                    scrollToFirstError();
+                    return;
+                }
+                signInButton.disabled = true;
+                buttonText.textContent = 'Signing in';
+                spinner.style.display = 'block';
+                try {
+                    const response = await fetch(loginEndpoint, {
+                        method: 'POST',
+                        credentials: 'same-origin',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRFToken': csrftoken,
+                        },
+                        body: JSON.stringify({
+                            identifier: identifierInput.value.trim(),
+                            password: passwordInput.value,
+                            remember_me: rememberMeInput.checked,
+                        }),
+                    });
+                    const data = await response.json().catch(() => ({}));
+                    if (!response.ok || !data.success) {
+                        handleBackendErrors(data);
+                        return;
+                    }
+                    window.location.href = data.redirect_url || dashboardUrl;
+                } catch (error) {
+                    showFormError('Connection error. Please try again.');
+                    console.error('Login error:', error);
+                } finally {
+                    signInButton.disabled = false;
+                    buttonText.textContent = 'Continue';
+                    spinner.style.display = 'none';
+                }
+            });
+        });
+    </script>
+</body>
+</html>
