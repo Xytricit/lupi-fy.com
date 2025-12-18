@@ -3,17 +3,106 @@
 {% block title %}Search - Lupify{% endblock %}
 
 {% block content %}
-<div class="search-page" style="width:calc(100% - 48px);margin:12px 24px;padding:0 16px;max-width:none;">
-    <div class="search-hero" style="display:flex;gap:12px;align-items:center;margin-bottom:12px;">
-        <input id="searchInput" type="text" placeholder="Search Lupify..." value="{{ q|default:'' }}" style="flex:1;padding:10px 12px;border-radius:8px;border:1px solid #e6e6e6;background:var(--card-bg);"/>
-        <button id="goSearch" style="padding:10px 14px;border-radius:8px;background:var(--primary);color:#fff;border:none;cursor:pointer">Search</button>
-    </div>
-    <div id="results" style="margin-top:8px;display:flex;flex-direction:column;gap:10px;"></div>
-    <div id="loading" class="loading" style="display:none;padding:18px;text-align:center;color:var(--secondary-text)">Loading...</div>
-    <div id="end" class="loading" style="display:none;padding:18px;text-align:center;color:var(--secondary-text)">No more results</div>
-</div>
+<style>
+    .search-gradient {
+        background: linear-gradient(135deg, #1f9cee 0%, #1a7bc4 100%);
+    }
+    .search-input:focus {
+        box-shadow: 0 0 0 3px rgba(31, 156, 238, 0.1);
+    }
+    .result-row {
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .result-row:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 12px 24px -10px rgba(31, 156, 238, 0.3);
+    }
+    .search-badge {
+        background: linear-gradient(135deg, rgba(31, 156, 238, 0.1) 0%, rgba(31, 156, 238, 0.05) 100%);
+        color: #1f9cee;
+    }
+    .btn-primary {
+        background: #1f9cee;
+        transition: all 0.3s ease;
+    }
+    .btn-primary:hover {
+        background: #1a7bc4;
+        box-shadow: 0 8px 16px -4px rgba(31, 156, 238, 0.4);
+    }
+</style>
 
-<link rel="stylesheet" href="{% static 'css/search_results-inline.css' %}">
+<div class="min-h-screen bg-gradient-to-br from-gray-50 to-white dark:from-gray-900 dark:to-gray-800 transition-colors duration-200">
+    <div class="container mx-auto px-4 py-12">
+        <!-- Search Header -->
+        <div class="mb-12 text-center">
+            <div class="inline-block mb-4">
+                <div class="w-16 h-16 mx-auto search-gradient rounded-2xl flex items-center justify-center shadow-lg">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                    </svg>
+                </div>
+            </div>
+            <h1 class="text-4xl md:text-5xl font-bold text-gray-900 dark:text-white mb-3">
+                Search <span style="color: #1f9cee;">Lupify</span>
+            </h1>
+            <p class="text-lg text-gray-600 dark:text-gray-300">Find blogs, communities, users, and games</p>
+        </div>
+
+        <!-- Search Form -->
+        <div class="max-w-3xl mx-auto mb-12">
+            <div class="relative">
+                <div class="flex shadow-2xl rounded-2xl overflow-hidden bg-white dark:bg-gray-800 border-2 border-transparent focus-within:border-[#1f9cee] transition-all duration-300">
+                    <div class="flex-1 relative">
+                        <input
+                            id="searchInput"
+                            type="text"
+                            placeholder="What are you looking for?"
+                            value="{{ q|default:'' }}"
+                            class="search-input w-full px-6 py-5 text-lg border-0 focus:ring-0 focus:outline-none bg-transparent text-gray-900 dark:text-white placeholder-gray-400"
+                            autocomplete="off"
+                        />
+                    </div>
+                    <button
+                        id="goSearch"
+                        class="btn-primary px-8 py-5 text-white font-semibold flex items-center gap-2"
+                    >
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                        </svg>
+                        <span class="hidden sm:inline">Search</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Search Results -->
+        <div id="results" class="max-w-4xl mx-auto">
+            <!-- Results will be populated by JavaScript -->
+            {% if q %}
+                <div class="text-center py-12">
+                    <div class="inline-block animate-spin rounded-full h-10 w-10 border-4 border-gray-200 border-t-[#1f9cee]"></div>
+                    <p class="mt-4 text-gray-600 dark:text-gray-300 font-medium">Searching...</p>
+                </div>
+            {% endif %}
+        </div>
+
+        <!-- Loading Indicator -->
+        <div id="loading" class="hidden text-center py-8">
+            <div class="inline-block animate-spin rounded-full h-10 w-10 border-4 border-gray-200 border-t-[#1f9cee]"></div>
+            <p class="mt-4 text-gray-600 dark:text-gray-300 font-medium">Loading more results...</p>
+        </div>
+
+        <!-- End of Results -->
+        <div id="end" class="hidden text-center py-8">
+            <div class="inline-flex items-center gap-2 px-6 py-3 bg-gray-100 dark:bg-gray-800 rounded-full">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" style="color: #1f9cee;" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <p class="text-gray-700 dark:text-gray-300 font-medium">You've reached the end</p>
+            </div>
+        </div>
+    </div>
+</div>
 
 <script>
 (function(){
@@ -25,49 +114,165 @@
 
     let offset = 0; const limit = 20; let loading=false; let endReached=false; let q = q0;
 
-    function showLoading(s){ loadingEl.style.display = s ? 'block' : 'none'; }
-    function showEnd(s){ endEl.style.display = s ? 'block' : 'none'; }
+    function showLoading(s){
+        loadingEl.classList.toggle('hidden', !s);
+    }
+    function showEnd(s){
+        endEl.classList.toggle('hidden', !s);
+    }
 
     function renderRow(r){
         const a = document.createElement('a');
         a.href = r.url;
-        a.className = 'result-row';
+        a.className = 'result-row group block bg-white dark:bg-gray-800 rounded-2xl shadow-md hover:shadow-xl p-5 mb-4 border-2 border-gray-100 dark:border-gray-700 hover:border-[#1f9cee] dark:hover:border-[#1f9cee]';
         a.style.textDecoration='none';
 
-        const thumb = document.createElement('div'); thumb.className='thumb'; thumb.textContent = (r.image? '': (r.type? r.type[0].toUpperCase() : '?'));
-        if(r.image){ const img = document.createElement('img'); img.src = r.image; img.style.width='100%'; img.style.height='100%'; img.style.objectFit='cover'; img.style.borderRadius='6px'; thumb.innerHTML=''; thumb.appendChild(img); }
-        const meta = document.createElement('div'); meta.className='result-meta';
-        const t = document.createElement('div'); t.className='title'; t.textContent = r.title;
-        const s = document.createElement('div'); s.className='subtitle'; s.textContent = r.subtitle || r.type;
-        meta.appendChild(t); meta.appendChild(s);
-        a.appendChild(thumb); a.appendChild(meta);
+        const container = document.createElement('div');
+        container.className = 'flex items-start gap-5';
+
+        const thumb = document.createElement('div');
+        thumb.className = 'thumb flex-shrink-0 w-20 h-20 rounded-xl flex items-center justify-center text-white font-bold text-2xl shadow-md';
+        thumb.style.background = 'linear-gradient(135deg, #1f9cee 0%, #1a7bc4 100%)';
+
+        if(r.image){
+            const img = document.createElement('img');
+            img.src = r.image;
+            img.alt = r.title || 'Search result';
+            img.className = 'w-full h-full object-cover rounded-xl';
+            thumb.innerHTML = '';
+            thumb.appendChild(img);
+        } else {
+            thumb.textContent = (r.type ? r.type[0].toUpperCase() : '?');
+        }
+
+        const meta = document.createElement('div');
+        meta.className = 'result-meta flex-1 min-w-0';
+
+        const t = document.createElement('div');
+        t.className = 'title text-xl font-bold text-gray-900 dark:text-white mb-2 transition-colors';
+        t.style.color = '';
+        t.textContent = r.title;
+
+        const s = document.createElement('div');
+        s.className = 'subtitle text-gray-600 dark:text-gray-400 text-sm mb-3 line-clamp-2';
+        s.textContent = r.subtitle || r.type;
+
+        const typeBadge = document.createElement('span');
+        typeBadge.className = 'search-badge inline-flex items-center px-3 py-1.5 text-xs font-bold rounded-full';
+        typeBadge.textContent = r.type?.replace('_', ' ').toUpperCase() || 'ITEM';
+
+        meta.appendChild(t);
+        meta.appendChild(s);
+        meta.appendChild(typeBadge);
+
+        container.appendChild(thumb);
+        container.appendChild(meta);
+        a.appendChild(container);
+
+        // Add hover effect to title
+        a.addEventListener('mouseenter', () => {
+            t.style.color = '#1f9cee';
+        });
+        a.addEventListener('mouseleave', () => {
+            t.style.color = '';
+        });
+
         resultsEl.appendChild(a);
+        return a;
     }
 
     async function loadMore(){
         if(loading||endReached) return;
         if(!q) return;
         loading=true; showLoading(true);
+
         const url = `{% url 'search_api' %}` + `?` + new URLSearchParams({q:q,offset:offset,limit:limit}).toString();
         try{
             const res = await fetch(url, {credentials:'include'});
             const data = await res.json();
-            if(!data.results || data.results.length===0){ endReached=true; showEnd(true); }
-            else{ data.results.forEach(renderRow); offset += data.results.length; if(offset>=data.total){ endReached=true; showEnd(true);} }
-        }catch(e){ console.error(e); }
+
+            if(!data.results || data.results.length===0){
+                if(offset === 0) {
+                    resultsEl.innerHTML = `
+                        <div class="text-center py-16">
+                            <div class="w-24 h-24 mx-auto mb-6 rounded-full flex items-center justify-center" style="background: linear-gradient(135deg, rgba(31, 156, 238, 0.1) 0%, rgba(31, 156, 238, 0.05) 100%);">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12" style="color: #1f9cee;" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                            </div>
+                            <h3 class="text-2xl font-bold text-gray-900 dark:text-white mb-2">No results found</h3>
+                            <p class="text-gray-600 dark:text-gray-400">Try adjusting your search query or use different keywords</p>
+                        </div>
+                    `;
+                }
+                endReached=true;
+                showEnd(true);
+            } else{
+                if(offset === 0) resultsEl.innerHTML = ''; // Clear initial loading message
+                data.results.forEach(renderRow);
+                offset += data.results.length;
+                if(offset >= data.total){
+                    endReached = true;
+                    showEnd(true);
+                }
+            }
+        }catch(e){
+            console.error(e);
+            resultsEl.innerHTML = `
+                <div class="text-center py-16">
+                    <div class="w-24 h-24 mx-auto mb-6 rounded-full flex items-center justify-center" style="background: linear-gradient(135deg, rgba(239, 68, 68, 0.1) 0%, rgba(239, 68, 68, 0.05) 100%);">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                        </svg>
+                    </div>
+                    <h3 class="text-2xl font-bold text-gray-900 dark:text-white mb-2">Error loading results</h3>
+                    <p class="text-gray-600 dark:text-gray-400">Please try again later</p>
+                </div>
+            `;
+        }
         loading=false; showLoading(false);
     }
 
     // initial
-    if(q){ loadMore(); }
+    if(q){
+        resultsEl.innerHTML = `
+            <div class="text-center py-16">
+                <div class="inline-block animate-spin rounded-full h-12 w-12 border-4 border-gray-200 border-t-[#1f9cee] mx-auto mb-6"></div>
+                <p class="text-gray-600 dark:text-gray-300 font-medium text-lg">Searching for "${q}"...</p>
+            </div>
+        `;
+        loadMore();
+    }
 
     // search submit with debounce to avoid spamming the API when typing
-    function submitSearch(){ q = input.value.trim(); offset=0; endReached=false; resultsEl.innerHTML=''; showEnd(false); if(q) loadMore(); window.history.replaceState({},'',`?q=${encodeURIComponent(q)}`); }
+    function submitSearch(){
+        q = input.value.trim();
+        offset=0;
+        endReached=false;
+        resultsEl.innerHTML = q ? `
+            <div class="text-center py-16">
+                <div class="inline-block animate-spin rounded-full h-12 w-12 border-4 border-gray-200 border-t-[#1f9cee] mx-auto mb-6"></div>
+                <p class="text-gray-600 dark:text-gray-300 font-medium text-lg">Searching for "${q}"...</p>
+            </div>
+        ` : '';
+        showEnd(false);
+        if(q) loadMore();
+        window.history.replaceState({},'',`?q=${encodeURIComponent(q)}`);
+    }
+
     document.getElementById('goSearch').addEventListener('click', submitSearch);
-    input.addEventListener('keydown', (e)=>{ if(e.key==='Enter') submitSearch(); });
+    input.addEventListener('keydown', (e)=>{
+        if(e.key==='Enter') submitSearch();
+    });
 
     // debounce helper
-    function debounce(fn, wait){ let t; return function(...args){ clearTimeout(t); t = setTimeout(()=>fn.apply(this,args), wait); }; }
+    function debounce(fn, wait){
+        let t;
+        return function(...args){
+            clearTimeout(t);
+            t = setTimeout(()=>fn.apply(this,args), wait);
+        };
+    }
 
     // only trigger search after user stops typing for 450ms
     const debounced = debounce(()=>{

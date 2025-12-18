@@ -266,26 +266,6 @@ def login_view(request):
         if form.is_valid():
             user = form.get_user()
 
-            # Check if email is verified
-            if not user.is_email_verified:
-                # Allow local fallback login even if email is not verified so developers can sign in during setup.
-                if request.path.endswith("/local/"):
-                    messages.info(
-                        request,
-                        "Email not verified — allowing local sign-in for development.",
-                    )
-                else:
-                    # Try to redirect to the verification flow if present; otherwise show a helpful message
-                    try:
-                        return redirect("verify_email", user_id=user.id)
-                    except Exception:
-                        messages.error(
-                            request,
-                            "Please verify your email before logging in. (verification route not configured)",
-                        )
-                        return render(
-                            request, "accounts/login_backup.html", {"form": form}
-                        )
 
             # Check if account is suspended
             if user.suspended_until and timezone.now() < user.suspended_until:
@@ -375,12 +355,12 @@ def login_api(request):
             status=400,
         )
 
-    if not user.is_active or not user.is_email_verified:
+    if not user.is_active:
         return JsonResponse(
             {
                 "success": False,
                 "error_code": "account_inactive",
-                "message": "Your account is not active. Please verify your email.",
+                "message": "Your account is not active.",
             },
             status=400,
         )
