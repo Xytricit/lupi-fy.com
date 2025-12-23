@@ -18,6 +18,7 @@ urlpatterns = [
     
     # Upload new project for sale
     path('upload/', views.upload_project, name='upload'),
+    path('add/', views.upload_project, name='add'),
     
     # Creator dashboard with analytics
     path('creator/', views.creator_dashboard, name='creator_dashboard'),

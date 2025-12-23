@@ -4,6 +4,7 @@
 {% block title %}{{ project.title }} - Marketplace{% endblock %}
 
 {% block content %}
+{% csrf_token %}
 <div class="project-detail py-8">
   <div class="container mx-auto px-4">
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -102,17 +103,24 @@
             Download Project
           </a>
           {% else %}
-          <button onclick="purchaseProject('{{ project.id }}')" 
+          <button onclick="purchaseProject('{{ project.id }}', this)" 
                   class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-lg mb-4">
             {% if project.is_free %}Get for Free{% else %}Buy Now - ${{ project.price }}{% endif %}
           </button>
           {% endif %}
 
           <!-- Wishlist button -->
-          <button onclick="toggleWishlist('{{ project.id }}')" 
+          {% if user.is_authenticated %}
+          <button onclick="toggleWishlist('{{ project.id }}', this)" 
                   class="w-full border-2 border-gray-300 hover:border-red-500 text-gray-700 font-semibold py-2 rounded-lg">
             ♡ Add to Wishlist
           </button>
+          {% else %}
+          <a href="{% url 'account_login' %}" 
+             class="block w-full border-2 border-gray-300 hover:border-red-500 text-gray-700 font-semibold py-2 rounded-lg text-center">
+            ♡ Add to Wishlist
+          </a>
+          {% endif %}
 
           <!-- Creator info -->
           <div class="mt-6 pt-6 border-t">
@@ -133,43 +141,77 @@
 </div>
 
 <script>
-function purchaseProject(projectId) {
-  fetch(`/marketplace/api/purchase/${projectId}/`, {
-    method: 'POST',
-    headers: {
-      'X-CSRFToken': getCsrfToken()
-    }
-  })
-  .then(r => r.json())
-  .then(data => {
-    if (data.success) {
-      if (data.payment_url) {
-        window.location.href = data.payment_url;
-      } else {
-        window.location.reload();
-      }
-    } else {
-      alert(data.error || 'Purchase failed');
-    }
-  })
-  .catch(err => {
-    console.error('Purchase error:', err);
-    alert('An error occurred');
-  });
-}
-
-function toggleWishlist(projectId) {
-  fetch(`/marketplace/api/wishlist/add/${projectId}/`, {
-    method: 'POST',
-    headers: {'X-CSRFToken': getCsrfToken()}
-  })
-  .then(r => r.json())
-  .then(data => alert(data.message));
-}
-
 function getCsrfToken() {
-  return document.querySelector('[name=csrfmiddlewaretoken]')?.value || 
-         document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+    return document.querySelector('[name=csrfmiddlewaretoken]')?.value || 
+           document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+}
+
+async function makeApiRequest(url, options = {}) {
+    const defaultOptions = {
+        headers: {
+            'X-CSRFToken': getCsrfToken(),
+            'Content-Type': 'application/json',
+        },
+        credentials: 'same-origin'
+    };
+    
+    const response = await fetch(url, { ...defaultOptions, ...options });
+    return response.json();
+}
+
+async function purchaseProject(projectId, button) {
+    try {
+        button.disabled = true;
+        const originalText = button.innerHTML;
+        button.innerHTML = '<i class="loading-spinner"></i> Processing...';
+        
+        const result = await makeApiRequest(`/marketplace/api/purchase/${projectId}/`, {
+            method: 'POST'
+        });
+        
+        if (result.success) {
+            if (result.redirect) {
+                window.location.href = result.redirect;
+            } else if (result.payment_url) {
+                window.location.href = result.payment_url;
+            }
+        } else {
+            throw new Error(result.error || 'Purchase failed');
+        }
+    } catch (error) {
+        console.error('Purchase error:', error);
+        alert(error.message || 'Purchase failed. Please try again.');
+        button.disabled = false;
+        button.innerHTML = originalText;
+    }
+}
+
+async function toggleWishlist(projectId, button) {
+    try {
+        const isInWishlist = button.classList.contains('in-wishlist');
+        const url = isInWishlist 
+            ? `/marketplace/api/wishlist/remove/${projectId}/`
+            : `/marketplace/api/wishlist/add/${projectId}/`;
+        
+        button.disabled = true;
+        const originalText = button.innerHTML;
+        button.innerHTML = '<i class="loading-spinner"></i>';
+        
+        const result = await makeApiRequest(url, { method: 'POST' });
+        
+        if (result.success) {
+            button.classList.toggle('in-wishlist', !isInWishlist);
+            button.innerHTML = isInWishlist ? '♡ Add to Wishlist' : '♥ In Wishlist';
+        } else {
+            throw new Error(result.error || 'Failed to update wishlist');
+        }
+    } catch (error) {
+        console.error('Wishlist error:', error);
+        alert('Error updating wishlist. Please try again.');
+        button.innerHTML = originalText;
+    } finally {
+        button.disabled = false;
+    }
 }
 </script>
 {% endblock %}

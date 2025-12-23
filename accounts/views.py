@@ -1,5 +1,6 @@
 import base64
 import json
+import math
 import random
 import re
 import string
@@ -12,18 +13,21 @@ from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth import get_user_model, login, logout
 from django.contrib.auth.decorators import login_required
+from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.contenttypes.models import ContentType
 from django.core.files.base import ContentFile
 from django.core.mail import send_mail
 from django.db import models
-from django.db.models import Count
+from django.db.models import Count, Q
 from django.db.models.functions import TruncDate, TruncHour
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
-from django.utils.html import escape as html_escape
-from django.views.decorators.http import require_POST
+from django.utils.html import escape as html_escape, strip_tags
+from django.utils.text import Truncator
+from django.views.decorators.http import require_POST, require_http_methods
+from django.views.generic import TemplateView
 
 try:
     import bleach
@@ -36,11 +40,12 @@ from blog.models import Post
 from communities.models import Community, CommunityPost
 from recommend.models import Interaction
 
+from .badge_services import check_and_award_badges, get_user_badge_context
 from .forms import (CaseSensitiveAuthenticationForm, CustomUserCreationForm,
                     ProfileUpdateForm)
 from .models import (Conversation, CustomUser, DirectMessage, GameLobbyBan,
                      GameLobbyChallenge, GameLobbyMessage, LetterSetGame,
-                     Notification, Subscription, WordListGame)
+                     Notification, Subscription, WordListGame, SupportNotice)
 
 User = get_user_model()
 
@@ -447,58 +452,234 @@ def dashboard_view(request):
 # -------------------------------
 # SUBSCRIPTIONS VIEW
 # -------------------------------
-@login_required
-def subscriptions_view(request):
-    user = request.user
-    # Get all subscriptions linked to this user
-    subs = Subscription.objects.filter(user=user)
+class SubscriptionsView(LoginRequiredMixin, TemplateView):
+    template_name = "accounts/subscriptions.html"
 
-    # Collect IDs
-    community_ids = subs.filter(community__isnull=False).values_list(
-        "community_id", flat=True
-    )
-    author_ids = subs.filter(author__isnull=False).values_list("author_id", flat=True)
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        user = self.request.user
+        community_total = Subscription.objects.filter(
+            user=user, community__isnull=False
+        ).count()
+        author_ids = _get_subscribed_author_ids(user)
+        bookmarks_total = 0
+        community_bookmarks = getattr(user, "bookmarked_community_posts", None)
+        blog_bookmarks = getattr(user, "bookmarked_posts", None)
+        if community_bookmarks is not None:
+            bookmarks_total += community_bookmarks.count()
+        if blog_bookmarks is not None:
+            bookmarks_total += blog_bookmarks.count()
+        context.update(
+            {
+                "community_posts_count": community_total,
+                "blog_articles_count": len(author_ids),
+                "bookmarks_count": bookmarks_total,
+            }
+        )
+        return context
 
-    # Joined communities: communities the user is a member of
-    joined_communities = Community.objects.filter(members=user)
 
-    # Subscribed communities (explicit subscriptions)
-    subscribed_communities = Community.objects.filter(id__in=community_ids)
-
-    # Show posts from communities the user has joined (bring back community posts)
-    community_posts = CommunityPost.objects.filter(
-        community__in=joined_communities
-    ).select_related('community', 'author').order_by('-created_at')[:50]
-
-    # Also include authors the user follows (via User.following)
+def _parse_limit_param(value):
     try:
-        followed_author_ids = list(user.following.values_list("id", flat=True))
-    except Exception:
-        followed_author_ids = []
+        parsed = int(value)
+    except (TypeError, ValueError):
+        parsed = 10
+    return max(1, min(50, parsed))
 
-    # Merge subscription author IDs with followed author IDs and deduplicate
-    all_author_ids = list(set(list(author_ids) + list(followed_author_ids)))
 
-    # Query author objects for both subscribed and followed authors
-    authors = get_user_model().objects.filter(id__in=all_author_ids)
+def _parse_offset_param(value):
+    try:
+        parsed = int(value)
+    except (TypeError, ValueError):
+        parsed = 0
+    return max(0, parsed)
 
-    author_posts = Post.objects.filter(author_id__in=all_author_ids)
 
-    # Provide vars the template expects (subs, subscribed_communities/authors, joined_communities)
-    return render(
-        request,
-        "accounts/subscriptions.html",
-        {
-            "communities": subscribed_communities,
-            "authors": authors,
-            "community_posts": community_posts,
-            "author_posts": author_posts,
-            "subs": subs,
-            "subscribed_communities": subscribed_communities,
-            "joined_communities": joined_communities,
-            "subscribed_authors": authors,
-        },
+def _get_subscribed_community_ids(user):
+    ids = set(
+        Subscription.objects.filter(user=user, community__isnull=False).values_list(
+            "community_id", flat=True
+        )
     )
+    try:
+        ids.update(user.joined_communities.values_list("id", flat=True))
+    except Exception:
+        pass
+    return ids
+
+
+def _get_subscribed_author_ids(user):
+    ids = set(
+        Subscription.objects.filter(user=user, author__isnull=False).values_list(
+            "author_id", flat=True
+        )
+    )
+    try:
+        ids.update(user.following.values_list("id", flat=True))
+    except Exception:
+        pass
+    return ids
+
+
+def _apply_post_sort(queryset, sort):
+    if sort == "oldest":
+        return queryset.order_by("created_at")
+    if sort == "most_liked":
+        return queryset.order_by("-likes_total", "-created_at")
+    if sort == "most_commented":
+        return queryset.order_by("-comments_total", "-created_at")
+    return queryset.order_by("-created_at")
+
+
+def _apply_blog_sort(queryset, sort):
+    if sort == "oldest":
+        return queryset.order_by("created")
+    if sort == "most_liked":
+        return queryset.order_by("-likes_total", "-created")
+    if sort == "most_commented":
+        return queryset.order_by("-comments_total", "-created")
+    return queryset.order_by("-created")
+
+
+def _serialize_community_post(post, user):
+    content = Truncator(strip_tags(post.content or "")).chars(280)
+    community_image = None
+    if post.community and post.community.community_image:
+        community_image = post.community.community_image.url
+    return {
+        "id": post.id,
+        "title": post.title,
+        "content": content,
+        "community_id": post.community_id,
+        "community_name": post.community.name if post.community else "",
+        "community_image": community_image,
+        "author_username": post.author.username,
+        "created_at": post.created_at.isoformat(),
+        "likes_count": getattr(post, "likes_total", post.likes.count()),
+        "dislikes_count": getattr(post, "dislikes_total", post.dislikes.count()),
+        "comments_count": getattr(post, "comments_total", post.comments.count()),
+        "user_liked": post.likes.filter(id=user.id).exists(),
+        "user_disliked": post.dislikes.filter(id=user.id).exists(),
+        "user_bookmarked": post.bookmarks.filter(id=user.id).exists(),
+    }
+
+
+def _serialize_blog_post(post):
+    text = strip_tags(post.content or "")
+    excerpt = Truncator(text).chars(220)
+    words = max(1, len(text.split()))
+    read_time = max(1, math.ceil(words / 200))
+    avatar = post.author.avatar.url if getattr(post.author, "avatar", None) else None
+    return {
+        "id": post.id,
+        "title": post.title,
+        "excerpt": excerpt,
+        "author_username": post.author.username,
+        "author_avatar": avatar,
+        "created_at": post.created.isoformat(),
+        "likes_count": getattr(post, "likes_total", post.likes.count()),
+        "comments_count": getattr(post, "comments_total", post.comments.count()),
+        "views_count": post.views,
+        "read_time": read_time,
+    }
+
+
+@login_required
+@require_http_methods(["GET"])
+def subscription_posts_api(request):
+    user = request.user
+    community_ids = _get_subscribed_community_ids(user)
+    if not community_ids:
+        return JsonResponse({"items": [], "has_more": False})
+    queryset = (
+        CommunityPost.objects.filter(community_id__in=community_ids)
+        .select_related("community", "author")
+        .annotate(
+            likes_total=Count("likes", distinct=True),
+            dislikes_total=Count("dislikes", distinct=True),
+            comments_total=Count("comments", distinct=True),
+        )
+    )
+    search_query = request.GET.get("q", "").strip()
+    if search_query:
+        queryset = queryset.filter(
+            Q(title__icontains=search_query)
+            | Q(content__icontains=search_query)
+            | Q(community__name__icontains=search_query)
+        )
+    sort = request.GET.get("sort", "newest")
+    queryset = _apply_post_sort(queryset, sort)
+    offset = _parse_offset_param(request.GET.get("offset"))
+    limit = _parse_limit_param(request.GET.get("limit"))
+    results = list(queryset[offset : offset + limit + 1])
+    has_more = len(results) > limit
+    items = results[:limit]
+    data = [_serialize_community_post(post, user) for post in items]
+    return JsonResponse({"items": data, "has_more": has_more})
+
+
+@login_required
+@require_http_methods(["GET"])
+def subscription_blogs_api(request):
+    user = request.user
+    author_ids = _get_subscribed_author_ids(user)
+    if not author_ids:
+        return JsonResponse({"items": [], "has_more": False})
+    queryset = (
+        Post.objects.filter(author_id__in=author_ids)
+        .select_related("author")
+        .annotate(
+            likes_total=Count("likes", distinct=True),
+            comments_total=Count("comments", distinct=True),
+        )
+    )
+    search_query = request.GET.get("q", "").strip()
+    if search_query:
+        queryset = queryset.filter(
+            Q(title__icontains=search_query)
+            | Q(content__icontains=search_query)
+            | Q(author__username__icontains=search_query)
+        )
+    sort = request.GET.get("sort", "newest")
+    queryset = _apply_blog_sort(queryset, sort)
+    offset = _parse_offset_param(request.GET.get("offset"))
+    limit = _parse_limit_param(request.GET.get("limit"))
+    results = list(queryset[offset : offset + limit + 1])
+    has_more = len(results) > limit
+    items = results[:limit]
+    data = [_serialize_blog_post(post) for post in items]
+    return JsonResponse({"items": data, "has_more": has_more})
+
+
+@login_required
+@require_http_methods(["GET"])
+def bookmarked_posts_api(request):
+    user = request.user
+    queryset = (
+        CommunityPost.objects.filter(bookmarks=user)
+        .select_related("community", "author")
+        .annotate(
+            likes_total=Count("likes", distinct=True),
+            dislikes_total=Count("dislikes", distinct=True),
+            comments_total=Count("comments", distinct=True),
+        )
+    )
+    search_query = request.GET.get("q", "").strip()
+    if search_query:
+        queryset = queryset.filter(
+            Q(title__icontains=search_query)
+            | Q(content__icontains=search_query)
+            | Q(community__name__icontains=search_query)
+        )
+    sort = request.GET.get("sort", "newest")
+    queryset = _apply_post_sort(queryset, sort)
+    offset = _parse_offset_param(request.GET.get("offset"))
+    limit = _parse_limit_param(request.GET.get("limit"))
+    results = list(queryset[offset : offset + limit + 1])
+    has_more = len(results) > limit
+    items = results[:limit]
+    data = [_serialize_community_post(post, user) for post in items]
+    return JsonResponse({"items": data, "has_more": has_more})
 
 
 # -------------------------------
@@ -507,9 +688,11 @@ def subscriptions_view(request):
 @login_required
 def account_dashboard_view(request):
     user = request.user
+    check_and_award_badges(user)
     section = request.GET.get("section", "profile")  # default to profile
     form = None
     membership_plans = ["Free", "Basic", "Premium"]
+    badge_context = None
 
     # Ensure default membership
     if not hasattr(user, "membership") or not user.membership:
@@ -568,6 +751,9 @@ def account_dashboard_view(request):
             messages.success(request, "Your social settings have been updated!")
             return redirect(f"{request.path}?section=social")
 
+    if section == "achievements":
+        badge_context = get_user_badge_context(user)
+
     return render(
         request,
         "accounts/account_dashboard.html",
@@ -576,8 +762,19 @@ def account_dashboard_view(request):
             "form": form,
             "user": user,
             "plans": membership_plans,
+            "badge_cards": badge_context["cards"] if badge_context else [],
+            "badge_earned_count": badge_context["earned_count"] if badge_context else 0,
+            "badge_total": badge_context["total"] if badge_context else 0,
         },
     )
+
+
+def _toggle_author_subscription(user, author):
+    sub, created = Subscription.objects.get_or_create(user=user, author=author)
+    if not created:
+        sub.delete()
+        return False
+    return True
 
 
 @login_required
@@ -599,14 +796,27 @@ def toggle_subscription(request, community_id=None, author_id=None):
     # AUTHOR SUBSCRIPTION
     if author_id:
         author = get_object_or_404(User, id=author_id)
-        sub, created = Subscription.objects.get_or_create(user=user, author=author)
-
-        if not created:
-            sub.delete()
-
+        _toggle_author_subscription(user, author)
         return redirect("subscriptions")
 
     return redirect("subscriptions")
+
+
+@login_required
+@require_POST
+def toggle_follow_author_api(request, author_id):
+    if request.user.id == author_id:
+        return JsonResponse({"error": "Cannot follow yourself."}, status=400)
+
+    author = get_object_or_404(User, id=author_id)
+    followed = _toggle_author_subscription(request.user, author)
+
+    return JsonResponse(
+        {
+            "followed": followed,
+            "followers_count": author.author_subscribers.count(),
+        }
+    )
 
 
 # -------------------------------
@@ -700,6 +910,8 @@ def public_profile_view(request, user_id):
     target_user = get_object_or_404(User, id=user_id)
     current_user = request.user
     section = request.GET.get("section", "profile")  # default to profile
+    check_and_award_badges(target_user)
+    badge_context = get_user_badge_context(target_user)
 
     # Check if profile is private
     if not target_user.public_profile and (
@@ -717,6 +929,9 @@ def public_profile_view(request, user_id):
                 "section": section,
                 "user": target_user,
                 "form": form,
+                "badge_cards": badge_context["cards"],
+                "badge_earned_count": badge_context["earned_count"],
+                "badge_total": badge_context["total"],
             },
         )
 
@@ -755,6 +970,9 @@ def public_profile_view(request, user_id):
         "section": section,
         "user": target_user,
         "form": form,
+        "badge_cards": badge_context["cards"],
+        "badge_earned_count": badge_context["earned_count"],
+        "badge_total": badge_context["total"],
     }
 
     return render(request, "accounts/account_dashboard.html", context)
@@ -1939,8 +2157,13 @@ def google_login_view(request):
 
 
 def password_reset_info_view(request):
-    """Show a static notice with steps while backend reset is pending."""
-    return render(request, "accounts/password_reset.html")
+    notice = (
+        SupportNotice.objects.filter(slug="password_reset", active=True)
+        .order_by("-updated_at")
+        .first()
+    )
+    context = {"password_reset_notice": notice}
+    return render(request, "accounts/password_reset.html", context)
 
 
 # --------------------------------

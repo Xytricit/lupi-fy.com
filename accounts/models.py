@@ -99,6 +99,79 @@ class CustomUser(AbstractUser):
         Subscription.objects.get_or_create(user=self, author=author)
 
 
+class BadgeRequirementType(models.TextChoices):
+    GAMES_CREATED = "games_created", "Games Created"
+    POSTS_CREATED = "posts_created", "Posts Written"
+    FOLLOWERS = "followers", "Followers"
+    LIKES_RECEIVED = "likes_received", "Likes Received"
+
+
+class Badge(models.Model):
+    name = models.CharField(max_length=120)
+    description = models.TextField(max_length=240)
+    icon = models.ImageField(upload_to="badges/", blank=True, null=True)
+    requirement_type = models.CharField(
+        max_length=32, choices=BadgeRequirementType.choices
+    )
+    requirement_value = models.PositiveIntegerField()
+    tier = models.CharField(max_length=32, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["requirement_value", "name"]
+
+    def __str__(self):
+        return f"{self.name} ({self.get_requirement_type_display()})"
+
+    def requirement_summary(self):
+        value = self.requirement_value
+        if self.requirement_type == BadgeRequirementType.GAMES_CREATED:
+            suffix = "game" if value == 1 else "games"
+            return f"Create {value} {suffix}"
+        if self.requirement_type == BadgeRequirementType.POSTS_CREATED:
+            suffix = "post" if value == 1 else "posts"
+            return f"Publish {value} {suffix}"
+        if self.requirement_type == BadgeRequirementType.FOLLOWERS:
+            suffix = "follower" if value == 1 else "followers"
+            return f"Gain {value} {suffix}"
+        if self.requirement_type == BadgeRequirementType.LIKES_RECEIVED:
+            suffix = "like" if value == 1 else "likes"
+            return f"Collect {value} post {suffix}"
+        return f"Reach {value} {self.get_requirement_type_display()}"
+
+
+class UserBadge(models.Model):
+    user = models.ForeignKey(
+        CustomUser, on_delete=models.CASCADE, related_name="earned_badges"
+    )
+    badge = models.ForeignKey(Badge, on_delete=models.CASCADE, related_name="holders")
+    awarded_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ("user", "badge")
+        ordering = ["-awarded_at"]
+
+    def __str__(self):
+        return f"{self.user.username} earned {self.badge.name}"
+
+
+class UserStats(models.Model):
+    user = models.OneToOneField(
+        CustomUser, on_delete=models.CASCADE, related_name="stats"
+    )
+    games_created = models.PositiveIntegerField(default=0)
+    posts_created = models.PositiveIntegerField(default=0)
+    followers = models.PositiveIntegerField(default=0)
+    likes_received = models.PositiveIntegerField(default=0)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"{self.user.username} stats"
+
+    def get_stat(self, stat_name):
+        return getattr(self, stat_name, 0)
+
+
 # -------------------------------
 # Moderation Report
 # -------------------------------
@@ -379,6 +452,24 @@ class UserGameSession(models.Model):
 
     def __str__(self):
         return f"{self.user.username} - {self.game or 'unknown'}"
+
+
+class SupportNotice(models.Model):
+    slug = models.SlugField(max_length=50, unique=True)
+    title = models.CharField(max_length=120, blank=True)
+    body = models.TextField(blank=True)
+    contact_email = models.EmailField(blank=True)
+    contact_name = models.CharField(max_length=120, blank=True)
+    cta_label = models.CharField(max_length=80, blank=True)
+    cta_url = models.URLField(blank=True)
+    active = models.BooleanField(default=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-updated_at"]
+
+    def __str__(self):
+        return f"{self.slug} notice"
 
 
 class LetterSetGame(models.Model):

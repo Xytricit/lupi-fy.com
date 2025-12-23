@@ -22,7 +22,12 @@ from django.core.asgi import get_asgi_application  # noqa: E402
 from channels.auth import AuthMiddlewareStack  # noqa: E402
 from channels.routing import ProtocolTypeRouter, URLRouter  # noqa: E402
 
-import mysite.routing  # noqa: E402
+try:
+    import mysite.routing  # noqa: E402
+    websocket_urlpatterns = mysite.routing.websocket_urlpatterns
+except ImportError:
+    # Fallback if routing module has issues
+    websocket_urlpatterns = []
 
 django_asgi_app = get_asgi_application()
 
@@ -30,7 +35,7 @@ application = ProtocolTypeRouter(
     {
         "http": django_asgi_app,
         "websocket": AuthMiddlewareStack(
-            URLRouter(mysite.routing.websocket_urlpatterns)
+            URLRouter(websocket_urlpatterns)
         ),
     }
 )

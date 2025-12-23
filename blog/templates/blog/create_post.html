@@ -1,9 +1,9 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Create Post - Lupify</title>
+{% extends "dashboardhome.html" %}
+
+{% block title %}Create Post - Lupify{% endblock %}
+
+{% block extra_head %}
+{{ block.super }}
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.css">
 <style>
 /* ===================== Wrapper ===================== */
@@ -85,6 +85,14 @@
 .post-wrapper textarea {
     height: 250px;
     resize: vertical;
+}
+
+.post-wrapper .form-hint {
+    color: hsl(var(--muted-foreground));
+    font-size: 0.85rem;
+    text-align: left;
+    margin-bottom: 15px;
+    line-height: 1.4;
 }
 
 /* ===================== Buttons ===================== */
@@ -248,19 +256,9 @@
     }
 }
 </style>
+{% endblock %}
 
-        <script>
-        // Initialize theme early to ensure site-wide dark mode applies
-        (function(){
-            const serverPref = "{{ request.user.theme_preference|default:'' }}";
-            let pref = serverPref || null;
-            try { const local = localStorage.getItem('theme_pref'); if(!pref && local) pref = local; }catch(e){}
-            if(!pref) pref = 'light';
-            document.documentElement.setAttribute('data-theme', pref);
-        })();
-        </script>
-</head>
-<body>
+{% block main_content %}
 
 <div class="post-wrapper">
     <div class="back-button-container">
@@ -281,7 +279,7 @@
 
     <!-- Drag & Drop Zone -->
     <div id="dropZone" style="border:2px dashed var(--border-color,#e5e7eb); border-radius:10px; padding:16px; text-align:center; color:var(--secondary-text,#6b7280); margin-bottom:16px;">
-        Drag & drop images here or click "Add Image"
+        Drag & drop images (at least one required) or click "Add Image"
     </div>
 
     <form method="POST" enctype="multipart/form-data">
@@ -308,6 +306,7 @@
         <!-- Description -->
         <label for="{{ form.description.id_for_label }}">Description</label>
         {{ form.description }}
+        <p class="form-hint">Tag your post by prefixing words with <strong>#</strong> inside the title, description, or content; our ML recommender links those tags to categories so readers who care see it.</p>
 
         <!-- Hidden file input for multiple images -->
         {{ form.images.errors }}
@@ -315,6 +314,7 @@
 
         <!-- Add Image Button -->
         <button type="button" id="addImageBtn" class="btn-primary">Add Image</button>
+        <p class="form-hint">Images are required so the ML recommender can match your story with the right audience.</p>
 
         <!-- Submit Button -->
         <button type="submit" class="btn-primary">Publish</button>
@@ -323,10 +323,14 @@
 
 
 
-<!-- JSON banned words for JS -->
-{{ banned_words|json_script:"bannedWordsJSON" }}
+{% endblock %}
 
+{% block fab_button %}{% endblock %}
+
+{% block scripts %}
+{{ block.super }}
 <script>
+document.addEventListener("DOMContentLoaded", () => {
 // ===================== Variables =====================
 const addImageBtn = document.getElementById('addImageBtn');
 const imageInput = document.getElementById('imageInput');
@@ -334,9 +338,7 @@ const previewContainer = document.getElementById('linkPreviewContainer');
 const popupMessage = document.getElementById('popupMessage');
 const warningBox = document.getElementById('warningBox');
 const form = document.querySelector('form');
-const bannedWordsList = JSON.parse(document.getElementById('bannedWordsJSON').textContent);
-const textarea = document.getElementById("id_content");
-const descriptionField = form.querySelector('[name=\"description\"]');
+const descriptionField = form.querySelector('[name="description"]');
 const dropZone = document.getElementById('dropZone');
 let selectedFiles = [];
 
@@ -481,29 +483,8 @@ function showPopup() {
     };
 }
 
-// ===================== Real-time Banned Words Detection =====================
-textarea.addEventListener("input", () => {
-    let text = textarea.value.toLowerCase();
-    let foundWords = bannedWordsList.filter(word => text.includes(word));
-
-    if(foundWords.length > 0){
-        warningBox.innerHTML = `Banned words detected: <strong>${foundWords.join(", ")}</strong>`;
-        warningBox.style.display = "block";
-    } else {
-        warningBox.style.display = "none";
-    }
-});
-
 // ===================== Form Submission Check =====================
 form.addEventListener('submit', (e) => {
-    let found = false;
-
-    const fields = [
-        form.querySelector('#id_title') || form.querySelector('[name="title"]'),
-        textarea,
-        form.querySelector('#id_tags') || form.querySelector('[name="tags"]')
-    ];
-
     // Check if images are selected (required for blog posts)
     if (selectedFiles.length === 0) {
         e.preventDefault();
@@ -512,20 +493,6 @@ form.addEventListener('submit', (e) => {
         warningBox.scrollIntoView({ behavior: 'smooth', block: 'center' });
         return;
     }
-
-    // Check banned words
-    fields.forEach(field => {
-        if (!field) return;
-        const lines = field.value.split(/\n/);
-        lines.forEach(line => {
-            bannedWordsList.forEach(word => {
-                const regex = new RegExp(`\\b${word}\\b`, 'i');
-                if (regex.test(line)) {
-                    found = true;
-                }
-            });
-        });
-    });
 
     // Check description
     if (!descriptionField.value.trim()) {
@@ -536,33 +503,13 @@ form.addEventListener('submit', (e) => {
         return;
     }
 
-    if(found){
-        e.preventDefault();
-        warningBox.innerHTML = `
-            Your post contains content that is not allowed on this website. Please review our 
-            <a href="/terms-of-service" style="color:white; text-decoration:underline;">Terms of Service</a> 
-            and avoid using inappropriate language. 
-
-            <strong>If you continue, the following may happen:</strong>
-            <ul style="margin-top: 8px; padding-left: 20px;">
-                <li>Your post may be removed by moderators.</li>
-                <li>Your account could be temporarily suspended.</li>
-                <li>Repeated violations may lead to permanent banning.</li>
-            </ul>
-        `;
-        warningBox.style.display = 'block';
-        warningBox.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        return false;
-    } else {
-        warningBox.style.display = 'none';
-    }
+    warningBox.style.display = 'none';
     const dt = new DataTransfer();
     selectedFiles.forEach(f => dt.items.add(f));
     imageInput.files = dt.files;
 });
+});
 </script>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.js"></script>
-
-</body>
-</html>
+{% endblock %}

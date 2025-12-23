@@ -1,6 +1,14 @@
 from django.http import JsonResponse
+from datetime import timedelta
+from types import SimpleNamespace
+from uuid import UUID
+
 from django.contrib.auth.decorators import login_required
+from django.db.models import Count
+from django.http import JsonResponse
 from django.shortcuts import render
+from django.urls import reverse
+from django.utils import timezone
 from django.views.decorators.http import require_http_methods
 import json
 
@@ -521,33 +529,182 @@ def moderation_view(request):
 @login_required
 def games_hub_view(request):
     """Display approved Lupiforge games at /games/."""
-    from .models import Game
+    from accounts.models import UserGameSession
+    from .models import Game, Score
 
-    games_list = []
     error = None
-    try:
-        approved_games = (
-            Game.objects.filter(status='approved')
-            .select_related('creator')
-            .order_by('-created_at')
-        )
-        for game in approved_games:
-            games_list.append({
-                'id': game.id,
-                'name': game.title,
-                'emoji': '🎮',
-                'description': game.description[:150] if game.description else 'No description available',
-                'url': f"/games/play/{game.id}/",
-                'creator': game.creator.username if game.creator else 'Unknown',
-                'thumbnail': game.thumbnail.url if hasattr(game, 'thumbnail') and game.thumbnail else None,
-                'plays': getattr(game, 'play_count', 0),
-            })
-    except Exception:
-        error = 'Games system not available'
+    continue_playing = []
+    recommended_games = []
+    total_games = 0
+    total_players = 0
+    active_status = "Live 24/7"
+    default_continue_playing = []
 
-    context = {'games': games_list}
+    def _serialize_game_card(game_obj):
+        image = (
+            SimpleNamespace(url=game_obj.thumbnail.url)
+            if getattr(game_obj, "thumbnail", None)
+            else None
+        )
+        return SimpleNamespace(
+            id=str(game_obj.id),
+            name=getattr(game_obj, "title", "Untitled Game"),
+            description=(game_obj.description or "")[:140],
+            image=image,
+            likes_count=getattr(game_obj, "likes_count", 0) or 0,
+            players_count=getattr(game_obj, "players_count", 0) or 0,
+            get_absolute_url=reverse("games_dashboard_home"),
+        )
+
+    try:
+        approved_games_qs = (
+            Game.objects.filter(status="approved")
+            .annotate(
+                likes_count=Count("scores", distinct=True),
+                players_count=Count("scores__player", distinct=True),
+            )
+            .order_by("-created_at")
+        )
+        approved_games = list(approved_games_qs)
+        default_continue_playing = [
+            _serialize_game_card(game) for game in approved_games[:4]
+        ]
+        lookup_by_id = {str(game.id): game for game in approved_games}
+        lookup_by_title = {
+            game.title.lower(): game for game in approved_games if game.title
+        }
+
+        sessions = (
+            UserGameSession.objects.filter(user=request.user)
+            .order_by("-last_played")[:6]
+        )
+        seen = set()
+        for session in sessions:
+            identifier = (session.game or "").strip()
+            matched = None
+            if identifier:
+                matched = lookup_by_id.get(identifier)
+                if not matched:
+                    try:
+                        matched = lookup_by_id.get(str(UUID(identifier)))
+                    except (ValueError, TypeError, AttributeError):
+                        matched = None
+                if not matched:
+                    matched = lookup_by_title.get(identifier.lower())
+            if matched and matched.id in seen:
+                continue
+            if matched:
+                continue_playing.append(_serialize_game_card(matched))
+                seen.add(matched.id)
+            elif identifier:
+                continue_playing.append(
+                    SimpleNamespace(
+                        id=None,
+                        name=identifier,
+                        description="Recently played on Lupify",
+                        image=None,
+                        likes_count=0,
+                        players_count=0,
+                        get_absolute_url=reverse("games_dashboard_home"),
+                    )
+                )
+
+        if not continue_playing:
+            continue_playing = default_continue_playing
+
+        # Use AI recommendations for recommended games
+        if request.user.is_authenticated:
+            try:
+                from recommend.ml.torch_recommender_hybrid import recommend_for_user_hybrid
+                recommendations = recommend_for_user_hybrid(
+                    request.user.id,
+                    topn=12,
+                    exclude_seen=True,
+                    diversity_penalty=0.15,
+                    freshness_boost=True,
+                    allowed_content={"games"}
+                )
+
+                game_ids = []
+                for rec_key, score in recommendations:
+                    try:
+                        parts = rec_key.split(':')
+                        if len(parts) == 2 and 'game' in parts[0].lower():
+                            game_ids.append(parts[1])
+                    except Exception:
+                        continue
+
+                if game_ids:
+                    games_dict = {str(g.id): g for g in approved_games}
+                    recommended_games = [
+                        _serialize_game_card(games_dict[gid])
+                        for gid in game_ids
+                        if gid in games_dict
+                    ][:12]
+                else:
+                    # Fallback to popularity
+                    recommended_source = sorted(
+                        approved_games,
+                        key=lambda g: (g.likes_count, g.players_count, g.created_at),
+                        reverse=True,
+                    )
+                    recommended_games = [
+                        _serialize_game_card(game) for game in recommended_source[:12]
+                    ]
+            except Exception as e:
+                print(f"Games recommender error: {e}")
+                # Fallback
+                recommended_source = sorted(
+                    approved_games,
+                    key=lambda g: (g.likes_count, g.players_count, g.created_at),
+                    reverse=True,
+                )
+                recommended_games = [
+                    _serialize_game_card(game) for game in recommended_source[:12]
+                ]
+        else:
+            # Not authenticated, use popularity
+            recommended_source = sorted(
+                approved_games,
+                key=lambda g: (g.likes_count, g.players_count, g.created_at),
+                reverse=True,
+            )
+            recommended_games = [
+                _serialize_game_card(game) for game in recommended_source[:12]
+            ]
+
+        total_games = len(approved_games)
+        if approved_games:
+            game_ids = [game.id for game in approved_games]
+            total_players = (
+                Score.objects.filter(game__in=game_ids)
+                .values("player")
+                .distinct()
+                .count()
+            )
+            recent_activity = Score.objects.filter(
+                game__in=game_ids,
+                created_at__gte=timezone.now() - timedelta(days=1),
+            ).count()
+            active_status = (
+                f"{recent_activity} plays today" if recent_activity else "Live 24/7"
+            )
+    except Exception:
+        error = "Games system not available"
+
+    stat_total_games = f"{total_games:,}" if total_games else "0"
+    stat_total_players = f"{total_players:,}" if total_players else "0"
+
+    context = {
+        "continue_playing": continue_playing,
+        "default_continue_playing": default_continue_playing,
+        "recommended_games": recommended_games,
+        "total_games": stat_total_games,
+        "total_players": stat_total_players,
+        "active_status": active_status,
+    }
     if error:
-        context['error'] = error
+        context["error"] = error
     return render(request, "core/games_hub.html", context)
 
 

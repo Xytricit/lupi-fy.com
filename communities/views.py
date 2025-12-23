@@ -1,11 +1,15 @@
 import base64
+import base64
 import hashlib
+from collections import OrderedDict, namedtuple
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.files.base import ContentFile
+from django.db.models import Count
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
+from django.views.decorators.http import require_http_methods
 
 from accounts.models import Subscription
 
@@ -23,16 +27,80 @@ def _youtube_style_id(value: str) -> str:
 # List all communities
 # -------------------------------
 def communities_list(request):
-    queryset = Community.objects.all().order_by("category", "-created_at")
-    communities = []
-    for community in queryset:
-        community.yt_id = _youtube_style_id(f"community-{community.pk}")
-        communities.append(community)
-    categories = Community.CATEGORY_CHOICES
+    communities_qs = (
+        Community.objects.all()
+        .annotate(member_count=Count("members", distinct=True))
+        .order_by("category", "name")
+    )
+
+    membership_ids = set()
+    if request.user.is_authenticated:
+        membership_ids = set(
+            request.user.joined_communities.values_list("id", flat=True)
+        )
+
+    CategoryMeta = namedtuple("CategoryMeta", ["slug", "name"])
+    category_lookup = {}
+    communities_by_category = OrderedDict()
+    for slug, label in Community.CATEGORY_CHOICES:
+        meta = CategoryMeta(slug=slug, name=label)
+        category_lookup[slug] = meta
+        communities_by_category[meta] = []
+
+    for community in communities_qs:
+        community.is_member = community.id in membership_ids
+        community.image = community.community_image or community.banner_image
+        meta = category_lookup.get(community.category)
+        if meta:
+            communities_by_category[meta].append(community)
+
+    category_filters = [
+        {"slug": meta.slug, "name": meta.name}
+        for meta, entries in communities_by_category.items()
+        if entries
+    ]
+
     return render(
         request,
         "communities/communities_list.html",
-        {"communities": communities, "categories": categories},
+        {
+            "communities_by_category": communities_by_category,
+            "category_filters": category_filters,
+        },
+    )
+
+
+# -------------------------------
+# Join / Leave helpers for AJAX
+# -------------------------------
+@login_required
+@require_http_methods(["POST"])
+def join_community_ajax(request, community_id):
+    community = get_object_or_404(Community, id=community_id)
+    community.members.add(request.user)
+    Subscription.objects.get_or_create(user=request.user, community=community)
+    return JsonResponse(
+        {
+            "status": "success",
+            "member_count": community.members.count(),
+            "is_member": True,
+        }
+    )
+
+
+@login_required
+@require_http_methods(["POST"])
+def leave_community_ajax(request, community_id):
+    community = get_object_or_404(Community, id=community_id)
+    if request.user in community.members.all():
+        community.members.remove(request.user)
+        Subscription.objects.filter(user=request.user, community=community).delete()
+    return JsonResponse(
+        {
+            "status": "success",
+            "member_count": community.members.count(),
+            "is_member": False,
+        }
     )
 
 
@@ -224,6 +292,11 @@ def community_post_detail(request, post_id):
     user_disliked = (
         request.user.is_authenticated and request.user in post.dislikes.all()
     )
+    user_following_author = False
+    if request.user.is_authenticated:
+        user_following_author = Subscription.objects.filter(
+            user=request.user, author=post.author
+        ).exists()
     return render(
         request,
         "communities/community_post_detail.html",
@@ -234,6 +307,7 @@ def community_post_detail(request, post_id):
             "dislikes_count": post.dislikes.count(),
             "user_liked": user_liked,
             "user_disliked": user_disliked,
+            "user_following_author": user_following_author,
         },
     )
 

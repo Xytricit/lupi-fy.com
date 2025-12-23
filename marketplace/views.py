@@ -8,6 +8,7 @@ from django.core.paginator import Paginator
 from django.utils import timezone
 from django.conf import settings
 from decimal import Decimal
+from urllib.parse import urlencode
 import json
 
 from .models import (
@@ -61,9 +62,19 @@ def marketplace_home(request):
     ).order_by('-created_at')[:6]
     
     # Pagination
-    paginator = Paginator(projects, 24)
+    paginator = Paginator(projects, 20)
     page_number = request.GET.get('page', 1)
     page_obj = paginator.get_page(page_number)
+    show_pagination = paginator.count > paginator.per_page
+
+    filter_params = {}
+    if category:
+        filter_params['category'] = category
+    if sort and sort != 'newest':
+        filter_params['sort'] = sort
+    if search:
+        filter_params['q'] = search
+    filter_query = urlencode(filter_params)
     
     context = {
         'projects': page_obj,
@@ -72,6 +83,10 @@ def marketplace_home(request):
         'sort': sort,
         'search': search,
         'categories': Project._meta.get_field('category').choices,
+        'project_count': paginator.count,
+        'page_size': paginator.per_page,
+        'show_pagination': show_pagination,
+        'filter_query': filter_query,
     }
     
     return render(request, 'marketplace/home.html', context)

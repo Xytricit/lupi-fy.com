@@ -40,6 +40,17 @@ BLOG_TAGS = [
 # Community tags (same as blog for now)
 COMMUNITY_TAGS = BLOG_TAGS
 
+ACTION_ENGAGEMENT_BASE_WEIGHTS = {
+    "complete": 2.0,
+    "play": 1.25,
+    "like": 1.5,
+    "dislike": 0.4,
+    "skip": 0.3,
+    "view": 0.8,
+    "impression": 0.6,
+    "click": 1.1,
+}
+
 
 class UserInterests(models.Model):
     """Track user interests across games, blog posts, and community content."""
@@ -99,8 +110,12 @@ class Interaction(models.Model):
     ACTION_CHOICES = [
         ("play", "Play"),
         ("like", "Like"),
+        ("dislike", "Dislike"),
         ("view", "View"),
         ("complete", "Complete"),
+        ("skip", "Skip"),
+        ("impression", "Impression"),
+        ("click", "Click"),
     ]
 
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
@@ -109,6 +124,7 @@ class Interaction(models.Model):
     content_object = GenericForeignKey("content_type", "object_id")
     action = models.CharField(max_length=20, choices=ACTION_CHOICES, default="play")
     value = models.FloatField(default=1.0)
+    metadata = models.JSONField(default=dict, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -120,6 +136,27 @@ class Interaction(models.Model):
 
     def __str__(self):
         return f"{self.user_id} {self.action} {self.content_type_id}:{self.object_id}"
+
+    def engagement_weight(self):
+        weight = max(self.value or 0.5, 0.5)
+        weight *= ACTION_ENGAGEMENT_BASE_WEIGHTS.get(self.action, 1.0)
+        meta = self.metadata or {}
+        duration = meta.get("duration_seconds") or meta.get("duration") or 0
+        try:
+            duration = float(duration)
+        except (TypeError, ValueError):
+            duration = 0.0
+        scroll = meta.get("scroll_depth") or meta.get("scroll_fraction") or 0
+        try:
+            scroll = float(scroll)
+        except (TypeError, ValueError):
+            scroll = 0.0
+        engagement_bonus = min(2.5, duration / 30.0) + min(1.0, scroll)
+        if meta.get("bookmarked") or meta.get("saved") or meta.get("wishlisted"):
+            engagement_bonus += 1.0
+        if meta.get("liked"):
+            engagement_bonus += 0.5
+        return max(0.1, weight + engagement_bonus)
 
 
 class Recommendation(models.Model):

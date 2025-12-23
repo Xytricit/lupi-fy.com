@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Welcome to Lupify - Select Your Interests{% endblock %}
+
+{% block content %}
+<div class="container" style="max-width: 800px; margin: 4rem auto; padding: 2rem;">
+    <div class="text-center mb-8">
+        <h1 class="text-3xl font-bold mb-4">Welcome to Lupify! 👋</h1>
+        <p class="text-muted-foreground text-lg">Help us personalize your feed by selecting topics you're interested in.</p>
+    </div>
+
+    <form id="onboardingForm" class="space-y-8">
+        {% csrf_token %}
+        
+        <div class="bg-card border rounded-xl p-6 shadow-sm">
+            <h2 class="text-xl font-semibold mb-4 flex items-center gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-hash"><line x1="4" x2="20" y1="9" y2="9"/><line x1="4" x2="20" y1="15" y2="15"/><line x1="10" x2="8" y1="3" y2="21"/><line x1="16" x2="14" y1="3" y2="21"/></svg>
+                Topics
+            </h2>
+            <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
+                {% for tag_slug, tag_name in tags %}
+                <label class="cursor-pointer relative">
+                    <input type="checkbox" name="interests" value="{{ tag_slug }}" class="peer sr-only">
+                    <div class="p-4 rounded-lg border-2 border-border hover:border-primary/50 peer-checked:border-primary peer-checked:bg-primary/5 transition-all text-center">
+                        <span class="font-medium">{{ tag_name }}</span>
+                    </div>
+                </label>
+                {% endfor %}
+            </div>
+        </div>
+
+        <div class="flex justify-end">
+            <button type="submit" class="btn btn-primary btn-lg w-full md:w-auto">
+                Continue to Feed
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="ml-2"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+            </button>
+        </div>
+    </form>
+</div>
+
+<script>
+document.getElementById('onboardingForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    
+    const formData = new FormData(e.target);
+    const interests = formData.getAll('interests');
+    
+    if (interests.length === 0) {
+        alert('Please select at least one interest to continue.');
+        return;
+    }
+    
+    const btn = e.target.querySelector('button[type="submit"]');
+    const originalText = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = 'Saving...';
+    
+    try {
+        const response = await fetch("{% url 'save_user_interests' %}", {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+            },
+            body: JSON.stringify({
+                type: 'community',
+                items: interests
+            })
+        });
+        
+        if (response.ok) {
+            window.location.href = "{% url 'dashboard_home' %}";
+        } else {
+            throw new Error('Failed to save interests');
+        }
+    } catch (error) {
+        console.error(error);
+        alert('Something went wrong. Please try again.');
+        btn.disabled = false;
+        btn.innerHTML = originalText;
+    }
+});
+</script>
+{% endblock %}

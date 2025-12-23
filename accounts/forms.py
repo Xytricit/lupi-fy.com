@@ -58,7 +58,7 @@ class CaseSensitiveAuthenticationForm(AuthenticationForm):
 class ProfileUpdateForm(forms.ModelForm):
     class Meta:
         model = CustomUser
-        fields = ["username", "email", "phone_number", "bio", "avatar", "allow_dms"]
+        fields = ["username", "email", "phone_number", "bio", "avatar"]
         widgets = {
             "bio": forms.Textarea(
                 attrs={"rows": 4, "placeholder": "Tell people about yourself..."}

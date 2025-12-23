@@ -30,6 +30,8 @@ except ImportError:  # pragma: no cover
     nn = None
     optim = None
 
+HAS_TORCH = np is not None and torch is not None and nn is not None and optim is not None
+
 MODEL_DIR = getattr(
     settings,
     "RECOMMEND_MODEL_DIR",
@@ -39,28 +41,35 @@ os.makedirs(MODEL_DIR, exist_ok=True)
 MODEL_PATH = os.path.join(MODEL_DIR, "torch_recommender_hybrid.pt")
 
 
-def _require_deps():
-    if np is None or torch is None or nn is None or optim is None:
-        raise ImportError(
-            "Hybrid recommender requires numpy and torch. Install them to use this feature."
-        )
+def _require_deps(strict=True):
+    if not HAS_TORCH:
+        if strict:
+            raise ImportError(
+                "Hybrid recommender requires numpy and torch. Install them to use this feature."
+            )
+        return False
+    return True
 
 
 if nn is not None:
 
     class HybridRecommenderModel(nn.Module):
-        """Enhanced MF with optional content embeddings."""
+        """Enhanced MF with optional content embeddings and regularization."""
 
-        def __init__(self, n_users, n_items, emb_dim=64, content_emb_dim=32):
+        def __init__(self, n_users, n_items, emb_dim=128, content_emb_dim=64, dropout=0.2):
             super().__init__()
             self.user_emb = nn.Embedding(n_users, emb_dim)
             self.item_emb = nn.Embedding(n_items, emb_dim)
             # Content-based embeddings (category/tag vectors)
             self.content_emb = nn.Embedding(n_items, content_emb_dim)
+            
+            self.dropout = nn.Dropout(dropout)
+            self.bn_user = nn.BatchNorm1d(emb_dim)
+            self.bn_item = nn.BatchNorm1d(emb_dim)
 
-            nn.init.normal_(self.user_emb.weight, 0, 0.01)
-            nn.init.normal_(self.item_emb.weight, 0, 0.01)
-            nn.init.normal_(self.content_emb.weight, 0, 0.01)
+            nn.init.xavier_normal_(self.user_emb.weight)
+            nn.init.xavier_normal_(self.item_emb.weight)
+            nn.init.xavier_normal_(self.content_emb.weight)
 
         def forward(self, u_idx, i_idx, use_content=False):
             """
@@ -70,14 +79,29 @@ if nn is not None:
             - Hybrid: weighted sum
             """
             u = self.user_emb(u_idx)  # [batch, emb_dim]
+            i = self.item_emb(i_idx)  # [batch, emb_dim]
+            
+            # Apply regularization
+            u = self.dropout(u)
+            i = self.dropout(i)
+            
+            # Batch norm (requires batch > 1)
+            if u.shape[0] > 1:
+                u = self.bn_user(u)
+                i = self.bn_item(i)
 
             # Collaborative score
-            collab_score = (u * self.item_emb(i_idx)).sum(dim=1)
+            collab_score = (u * i).sum(dim=1)
 
             if use_content:
                 # Project user embedding to content space
-                u_content = u[:, : self.content_emb.embedding_dim]  # Take first content_emb_dim dims
-                content_score = (u_content * self.content_emb(i_idx)).sum(dim=1)
+                # We use the first content_emb_dim dimensions of the user embedding
+                # This assumes the user embedding space captures content preferences in its first dimensions
+                # A better approach might be a separate projection layer, but this keeps it simple
+                u_content = u[:, : self.content_emb.embedding_dim]
+                c = self.content_emb(i_idx)
+                content_score = (u_content * c).sum(dim=1)
+                
                 # Weighted hybrid: 70% collab, 30% content
                 return 0.7 * collab_score + 0.3 * content_score
             return collab_score
@@ -118,10 +142,10 @@ def _build_maps_enhanced(interactions_qs, content_features=None):
 
 def train_and_save_hybrid(
     days=None,
-    emb_dim=64,
-    content_emb_dim=32,
-    epochs=6,
-    lr=0.01,
+    emb_dim=128,
+    content_emb_dim=64,
+    epochs=10,
+    lr=0.005,
     model_path=MODEL_PATH,
     batch_size=1024,
     use_content=True,
@@ -138,7 +162,6 @@ def train_and_save_hybrid(
         cutoff = timezone.now() - timezone.timedelta(days=int(days))
         qs = qs.filter(created_at__gte=cutoff)
 
-    # Build content features (tags/categories)
     content_features = {}
     try:
         for post in Post.objects.all():
@@ -146,7 +169,8 @@ def train_and_save_hybrid(
             tags = getattr(post, 'tags', '')
             content_features[key] = {
                 'tags': tags.split(',') if tags else [],
-                'views': post.views if hasattr(post, 'views') else 0
+                'views': post.views if hasattr(post, 'views') else 0,
+                'created_at': post.created.timestamp() if hasattr(post, 'created') else 0
             }
     except Exception:
         pass
@@ -157,7 +181,8 @@ def train_and_save_hybrid(
             tags = getattr(post, 'tags', '')
             content_features[key] = {
                 'tags': tags.split(',') if tags else [],
-                'likes': post.likes.count() if hasattr(post, 'likes') else 0
+                'likes': post.likes.count() if hasattr(post, 'likes') else 0,
+                'created_at': post.created_at.timestamp() if hasattr(post, 'created_at') else 0
             }
     except Exception:
         pass
@@ -172,86 +197,73 @@ def train_and_save_hybrid(
     n_users = len(user_map)
     n_items = len(item_map)
     
-    # Prepare positive pairs
-    pos_pairs = []
+    pos_samples = []
+    weights = []
     for r in qs:
         try:
-            u = user_map[int(r.user_id)]
-            k = f"{r.content_type.app_label}.{r.content_type.model}:{int(r.object_id)}"
-            i = item_map.get(k)
-            if i is None:
+            uid = int(r.user_id)
+            u_idx = user_map.get(uid)
+            if u_idx is None:
                 continue
-            pos_pairs.append((u, i))
+            key = f"{r.content_type.app_label}.{r.content_type.model}:{int(r.object_id)}"
+            i_idx = item_map.get(key)
+            if i_idx is None:
+                continue
+            weight = r.engagement_weight()
+            if weight <= 0:
+                continue
+            pos_samples.append((u_idx, i_idx, weight))
+            weights.append(weight)
         except Exception:
             continue
 
-    if not pos_pairs:
+    if not pos_samples:
         return None
+
+    user_item_sets = defaultdict(set)
+    for raw_uid, item_set in items_by_user.items():
+        mapped_idx = user_map.get(raw_uid)
+        if mapped_idx is not None:
+            user_item_sets[mapped_idx] = set(item_set)
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model = HybridRecommenderModel(n_users, n_items, emb_dim, content_emb_dim).to(device)
-    opt = optim.Adam(model.parameters(), lr=lr, weight_decay=1e-5)
+    opt = optim.AdamW(model.parameters(), lr=lr, weight_decay=1e-4)
+    loss_fn = nn.MarginRankingLoss(margin=0.2, reduction="none")
     
-    user_pos = defaultdict(list)
-    for u, i in pos_pairs:
-        user_pos[u].append(i)
-    
-    users = list(user_pos.keys())
     all_items = list(range(n_items))
-    loss_fn = nn.MarginRankingLoss(margin=0.1)
-    
+    batch_sample_size = min(batch_size, len(pos_samples))
+    steps_per_epoch = max(1, (len(pos_samples) + batch_sample_size - 1) // batch_sample_size)
+
     model.train()
     for epoch in range(epochs):
-        random.shuffle(users)
         epoch_loss = 0.0
         steps = 0
-        batch = []
-        
-        for u in users:
-            pos_list = user_pos[u]
-            if not pos_list:
-                continue
-            
-            for pos in pos_list:
+        for _ in range(steps_per_epoch):
+            batch_indices = random.choices(range(len(pos_samples)), weights=weights, k=batch_sample_size)
+            batch = [pos_samples[idx] for idx in batch_indices]
+            us = torch.tensor([entry[0] for entry in batch], dtype=torch.long, device=device)
+            ips = torch.tensor([entry[1] for entry in batch], dtype=torch.long, device=device)
+            neg_items = []
+            for entry in batch:
+                user_idx = entry[0]
+                positives = user_item_sets.get(user_idx, set())
                 neg = random.choice(all_items)
-                while neg in pos_list:
+                attempts = 0
+                while neg in positives and attempts < 5:
                     neg = random.choice(all_items)
-                batch.append((u, pos, neg))
-                
-                if len(batch) >= batch_size:
-                    us = torch.tensor(
-                        [b[0] for b in batch], dtype=torch.long, device=device
-                    )
-                    ips = torch.tensor(
-                        [b[1] for b in batch], dtype=torch.long, device=device
-                    )
-                    ins = torch.tensor(
-                        [b[2] for b in batch], dtype=torch.long, device=device
-                    )
-                    
-                    pos_scores = model(us, ips, use_content=use_content)
-                    neg_scores = model(us, ins, use_content=use_content)
-                    target = torch.ones_like(pos_scores, device=device)
-                    
-                    loss = loss_fn(pos_scores, neg_scores, target)
-                    opt.zero_grad()
-                    loss.backward()
-                    opt.step()
-                    
-                    epoch_loss += loss.item()
-                    steps += 1
-                    batch = []
-        
-        if batch:
-            us = torch.tensor([b[0] for b in batch], dtype=torch.long, device=device)
-            ips = torch.tensor([b[1] for b in batch], dtype=torch.long, device=device)
-            ins = torch.tensor([b[2] for b in batch], dtype=torch.long, device=device)
+                    attempts += 1
+                neg_items.append(neg)
+            ins = torch.tensor(neg_items, dtype=torch.long, device=device)
             
             pos_scores = model(us, ips, use_content=use_content)
             neg_scores = model(us, ins, use_content=use_content)
             target = torch.ones_like(pos_scores, device=device)
-            
-            loss = loss_fn(pos_scores, neg_scores, target)
+            sample_weights = torch.tensor(
+                [entry[2] for entry in batch], dtype=torch.float32, device=device
+            ).clamp(0.2, 3.0)
+            loss_values = loss_fn(pos_scores, neg_scores, target)
+            loss = (loss_values * sample_weights).mean()
             opt.zero_grad()
             loss.backward()
             opt.step()
@@ -262,7 +274,6 @@ def train_and_save_hybrid(
         avg_loss = epoch_loss / max(1, steps)
         print(f"Epoch {epoch+1}/{epochs} avg_loss={avg_loss:.4f}")
 
-    # Save model + metadata
     payload = {
         "state_dict": model.state_dict(),
         "user_map": user_map,
@@ -273,13 +284,14 @@ def train_and_save_hybrid(
         "content_emb_dim": content_emb_dim,
     }
     torch.save(payload, model_path)
-    print(f"✓ Hybrid model saved with {len(item_metadata)} content-enhanced items")
+    print(f"[OK] Hybrid model saved with {len(item_metadata)} content-enhanced items")
     return model_path
 
 
 def load_model_hybrid(model_path=MODEL_PATH):
     """Load hybrid model."""
-    _require_deps()
+    if not _require_deps(strict=False):
+        return None
     if not os.path.exists(model_path):
         return None
     return torch.load(model_path, map_location="cpu")
@@ -290,8 +302,9 @@ def recommend_for_user_hybrid(
     model=None,
     topn=20,
     exclude_seen=True,
-    diversity_penalty=0.1,
+    diversity_penalty=0.15,
     freshness_boost=True,
+    allowed_content=None,
 ):
     """
     Enhanced recommendations with:
@@ -299,83 +312,148 @@ def recommend_for_user_hybrid(
     - Freshness: boost recent items
     - Cold-start: fallback to popular items for new users
     """
+    if not _require_deps(strict=False):
+        return []
+    
     if model is None:
         model = load_model_hybrid()
         if model is None:
+            # Model not trained yet, return empty to trigger fallback
             return []
     
-    user_map = model["user_map"]
-    item_map = model["item_map"]
-    item_keys = [model["item_keys"][i] for i in sorted(model["item_keys"].keys())]
-    item_metadata = model.get("item_metadata", {})
-    n_items = len(item_map)
+    try:
+        user_map = model["user_map"]
+        item_map = model["item_map"]
+        item_keys = [model["item_keys"][i] for i in sorted(model["item_keys"].keys())]
+        allowed_content_set = set(allowed_content) if allowed_content else None
+
+        def _matches_allowed(app_label, model_name):
+            if not allowed_content_set:
+                return True
+            candidate = f"{app_label}.{model_name}"
+            if candidate in allowed_content_set:
+                return True
+            return app_label in allowed_content_set
+        item_metadata = model.get("item_metadata", {})
+        n_items = len(item_map)
+    except (KeyError, TypeError) as e:
+        # Model structure invalid, return empty
+        return []
     
     # Cold-start: new user
     if user_id not in user_map:
-        # Return popular items (by recency or view count)
-        return [(item_keys[i], 0.5) for i in range(min(topn, n_items))]
+        # Return empty to trigger fallback to collaborative/content-based
+        return []
     
-    emb_dim = model.get("emb_dim", 64)
-    content_emb_dim = model.get("content_emb_dim", 32)
-    
-    m = HybridRecommenderModel(len(user_map), len(item_map), emb_dim, content_emb_dim)
-    m.load_state_dict(model["state_dict"])
-    m.eval()
-    
-    with torch.no_grad():
-        uidx = user_map[user_id]
-        uvec = m.user_emb(torch.tensor([uidx], dtype=torch.long)).squeeze(0)  # [emb_dim]
+    try:
+        emb_dim = model.get("emb_dim", 128)
+        content_emb_dim = model.get("content_emb_dim", 64)
         
-        # Collaborative score (full embedding)
-        collab_scores = torch.mv(m.item_emb.weight, uvec).numpy()
+        m = HybridRecommenderModel(len(user_map), len(item_map), emb_dim, content_emb_dim)
+        m.load_state_dict(model["state_dict"])
+        m.eval()
         
-        # Content score (project user vec to content space)
-        u_content = uvec[:content_emb_dim]  # [content_emb_dim]
-        content_scores = torch.mv(m.content_emb.weight, u_content).numpy()
-        
-        # Hybrid: 70% collab + 30% content
-        scores = 0.7 * collab_scores + 0.3 * content_scores
+        with torch.no_grad():
+            uidx = user_map[user_id]
+            uvec = m.user_emb(torch.tensor([uidx], dtype=torch.long)).squeeze(0)  # [emb_dim]
+            
+            # Collaborative score (full embedding)
+            collab_scores = torch.mv(m.item_emb.weight, uvec).numpy()
+            
+            # Content score (project user vec to content space)
+            u_content = uvec[:content_emb_dim]  # [content_emb_dim]
+            content_scores = torch.mv(m.content_emb.weight, u_content).numpy()
+            
+            # Hybrid: 70% collab + 30% content
+            scores = 0.7 * collab_scores + 0.3 * content_scores
+    except Exception as e:
+        # Model inference failed, return empty to trigger fallback
+        return []
     
     # Apply freshness boost (prefer recent items)
     if freshness_boost:
-        now = timezone.now()
-        for i, key in enumerate(item_keys):
-            try:
-                # Simplified: boost items from last 30 days
-                age_days = 0  # Would need to fetch actual item creation time
-                if age_days < 30:
-                    scores[i] *= (1.0 + 0.2 * (1 - age_days / 30))
-            except Exception:
-                pass
+        try:
+            now_ts = timezone.now().timestamp()
+            for i, key in enumerate(item_keys):
+                try:
+                    meta = item_metadata.get(i, {})
+                    created_at = meta.get('created_at', 0)
+                    if created_at > 0:
+                        age_days = (now_ts - created_at) / 86400.0
+                        if age_days < 7:
+                            # Boost items from last 7 days significantly
+                            scores[i] *= (1.0 + 0.5 * (1 - age_days / 7))
+                        elif age_days < 30:
+                            # Boost items from last 30 days slightly
+                            scores[i] *= (1.0 + 0.2 * (1 - age_days / 30))
+                except Exception:
+                    pass
+        except Exception:
+            pass
     
     # Apply diversity penalty (suppress similar items)
-    idxs = list(range(len(scores)))
-    idxs.sort(key=lambda i: -scores[i])
-    
-    selected = []
-    selected_indices = set()
-    
-    for idx in idxs:
-        if len(selected) >= topn:
-            break
+    try:
+        idxs = list(range(len(scores)))
+        idxs.sort(key=lambda i: -scores[i])
         
-        # Diversity check: penalize items similar to already-selected
-        if selected and diversity_penalty > 0:
-            current_vec = m.item_emb.weight[idx].detach().numpy()
-            similarity_penalty = 0.0
-            
-            for prev_idx in selected_indices:
-                prev_vec = m.item_emb.weight[prev_idx].detach().numpy()
-                sim = np.dot(current_vec, prev_vec) / (
-                    np.linalg.norm(current_vec) * np.linalg.norm(prev_vec) + 1e-8
-                )
-                similarity_penalty = max(similarity_penalty, sim * diversity_penalty)
-            
-            penalized_score = scores[idx] * (1 - similarity_penalty)
-            if penalized_score < min(s for _, s in selected) * 0.5:
-                continue  # Skip if penalized too much
+        selected = []
+        selected_indices = set()
         
-        selected.append((item_keys[idx], float(scores[idx])))
-        selected_indices.add(idx)
-    
-    return selected
+        for idx in idxs:
+            if len(selected) >= topn:
+                break
+            
+            key = item_keys[idx]
+            parts = key.split(":", 1)
+            if len(parts) != 2:
+                continue
+            app_model = parts[0]
+            if "." not in app_model:
+                continue
+            app_label, model_name = app_model.split(".", 1)
+            if not _matches_allowed(app_label, model_name):
+                continue
+            
+            # Diversity check: penalize items similar to already-selected
+            if selected and diversity_penalty > 0:
+                try:
+                    current_vec = m.item_emb.weight[idx].detach().numpy()
+                    similarity_penalty = 0.0
+                    
+                    for prev_idx in selected_indices:
+                        prev_vec = m.item_emb.weight[prev_idx].detach().numpy()
+                        sim = np.dot(current_vec, prev_vec) / (
+                            np.linalg.norm(current_vec) * np.linalg.norm(prev_vec) + 1e-8
+                        )
+                        similarity_penalty = max(similarity_penalty, sim * diversity_penalty)
+                    
+                    penalized_score = scores[idx] * (1 - similarity_penalty)
+                    if penalized_score < min(s for _, s in selected) * 0.5:
+                        continue
+                except Exception:
+                    pass
+            
+            selected.append((key, float(scores[idx])))
+            selected_indices.add(idx)
+        
+        return selected
+    except Exception as e:
+        # Fallback: return top-N by score without diversity penalty
+        try:
+            idxs = list(range(len(scores)))
+            idxs.sort(key=lambda i: -scores[i])
+            selected = []
+            for idx in idxs:
+                if len(selected) >= topn:
+                    break
+                key = item_keys[idx]
+                parts = key.split(":", 1)
+                if len(parts) == 2:
+                    app_model = parts[0]
+                    if "." in app_model:
+                        app_label, model_name = app_model.split(".", 1)
+                        if _matches_allowed(app_label, model_name):
+                            selected.append((key, float(scores[idx])))
+            return selected
+        except Exception:
+            return []

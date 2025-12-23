@@ -455,6 +455,187 @@ if (saveCommunityBtn) {
 }
 
 // ============================================
+// Like/Dislike Functionality
+// ============================================
+
+// Track interaction with recommendation engine
+async function trackInteraction(postId, action, value = 1.0) {
+    try {
+        await fetch('/api/track-interaction/', {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': getCSRF(),
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            body: JSON.stringify({
+                content_type: 'communities.communitypost',
+                object_id: postId,
+                action: action,
+                value: value
+            })
+        });
+    } catch (error) {
+        console.error('Error tracking interaction:', error);
+    }
+}
+
+// Toggle like on a post
+async function toggleLike(postId, btn) {
+    try {
+        const response = await fetch(`/api/posts/${postId}/like/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': getCSRF(),
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        });
+        
+        const data = await response.json();
+
+        if (data.status === 'liked' || data.status === 'unliked') {
+            // Toggle the 'liked' class on the button
+            btn.classList.toggle('liked', data.status === 'liked');
+            
+            // Update the like count
+            const countElement = btn.querySelector('.count');
+            if (countElement) {
+                countElement.textContent = data.likes_count || '0';
+            }
+
+            // Track interaction for recommendation engine
+            if (data.status === 'liked') {
+                await trackInteraction(postId, 'like', 1.0);
+            }
+
+            // Remove dislike if active
+            const dislikeBtn = btn.closest('.action-buttons').querySelector('.dislike-btn');
+            if (data.status === 'liked' && dislikeBtn && dislikeBtn.classList.contains('disliked')) {
+                dislikeBtn.classList.remove('disliked');
+                const dislikeCount = dislikeBtn.querySelector('.count');
+                if (dislikeCount) {
+                    dislikeCount.textContent = data.dislikes_count || '0';
+                }
+            }
+        }
+    } catch (error) {
+        console.error('Error toggling like:', error);
+    }
+}
+
+// Toggle dislike on a post
+async function toggleDislike(postId, btn) {
+    try {
+        const response = await fetch(`/api/posts/${postId}/dislike/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': getCSRF(),
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        });
+        
+        const data = await response.json();
+
+        if (data.status === 'disliked' || data.status === 'undisliked') {
+            // Toggle the 'disliked' class on the button
+            btn.classList.toggle('disliked', data.status === 'disliked');
+            
+            // Update the dislike count
+            const countElement = btn.querySelector('.count');
+            if (countElement) {
+                countElement.textContent = data.dislikes_count || '0';
+            }
+
+            // Track interaction for recommendation engine
+            if (data.status === 'disliked') {
+                await trackInteraction(postId, 'dislike', -1.0);
+            }
+
+            // Remove like if active
+            const likeBtn = btn.closest('.action-buttons').querySelector('.like-btn');
+            if (data.status === 'disliked' && likeBtn && likeBtn.classList.contains('liked')) {
+                likeBtn.classList.remove('liked');
+                const likeCount = likeBtn.querySelector('.count');
+                if (likeCount) {
+                    likeCount.textContent = data.likes_count || '0';
+                }
+            }
+        }
+    } catch (error) {
+        console.error('Error toggling dislike:', error);
+    }
+}
+
+// Toggle bookmark on a post
+async function toggleBookmark(postId, btn) {
+    try {
+        const response = await fetch(`/api/posts/${postId}/bookmark/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': getCSRF(),
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        });
+        
+        const data = await response.json();
+
+        if (data.status === 'bookmarked' || data.status === 'unbookmarked') {
+            // Toggle the 'bookmarked' class on the button
+            btn.classList.toggle('bookmarked', data.status === 'bookmarked');
+        }
+    } catch (error) {
+        console.error('Error toggling bookmark:', error);
+    }
+}
+
+// Initialize like/dislike/bookmark event listeners
+function initPostInteractions() {
+    // Use event delegation for dynamically loaded content
+    document.addEventListener('click', async (e) => {
+        // Like button
+        if (e.target.closest('.like-btn')) {
+            console.log('Like button clicked');
+            e.preventDefault();
+            const btn = e.target.closest('.like-btn');
+            console.log('Button element:', btn);
+            const postId = btn.dataset.postId;
+            console.log('Post ID:', postId);
+            if (postId) {
+                console.log('Calling toggleLike with postId:', postId);
+                await toggleLike(postId, btn);
+            } else {
+                console.error('No postId found on like button');
+            }
+        }
+        
+        // Dislike button
+        if (e.target.closest('.dislike-btn')) {
+            e.preventDefault();
+            const btn = e.target.closest('.dislike-btn');
+            const postId = btn.dataset.postId;
+            if (postId) {
+                await toggleDislike(postId, btn);
+            }
+        }
+        
+        // Bookmark button
+        if (e.target.closest('.bookmark-btn')) {
+            e.preventDefault();
+            const btn = e.target.closest('.bookmark-btn');
+            const postId = btn.dataset.postId;
+            if (postId) {
+                await toggleBookmark(postId, btn);
+            }
+        }
+    });
+}
+
+// Initialize post interactions when the DOM is loaded
+document.addEventListener('DOMContentLoaded', function() {
+    initPostInteractions();
+});
+
+// ============================================
 // Recommendations
 // ============================================
 async function loadAllRecommendations() {

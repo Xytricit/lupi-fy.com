@@ -6,6 +6,8 @@ urlpatterns = [
     path("", views.communities_list, name="communities_list"),
     path("create/", views.create_community, name="create_community"),
     path("<int:community_id>/", views.community_detail, name="community_detail"),
+    path("<int:community_id>/join/", views.join_community_ajax, name="join_community"),
+    path("<int:community_id>/leave/", views.leave_community_ajax, name="leave_community"),
     path(
         "toggle/<int:community_id>/",
         views.toggle_join_community,

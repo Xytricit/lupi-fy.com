@@ -60,7 +60,7 @@ class SubscriptionPageIntegrationTests(TestCase):
         """Test that subscriptions page loads successfully"""
         response = self.client.get(reverse('subscriptions'))
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, 'Your Subscriptions')
+        self.assertContains(response, 'Subscriptions')
     
     def test_like_button_increments_blog_post(self):
         """Test Like button increments blog post count on subscription page"""
@@ -247,17 +247,33 @@ class SubscriptionPageIntegrationTests(TestCase):
         self.assertIn(self.user1, self.blog_post.likes.all())
         self.assertIn(self.user2, self.blog_post.likes.all())
     
-    def test_bookmark_appears_in_bookmarks_tab(self):
-        """Test that bookmarked post appears in bookmarks tab"""
-        # Bookmark the post
-        self.client.post(f'/posts/post/{self.blog_post.id}/bookmark/')
-        
-        # Load subscriptions page
-        response = self.client.get(reverse('subscriptions'))
-        
-        # Verify bookmarked post appears
+    def test_bookmarked_posts_api_returns_bookmark(self):
+        """Test that bookmarked posts API returns bookmarked content"""
+        self.client.post(
+            f'/communities/api/post/{self.community_post.id}/bookmark/',
+            HTTP_X_REQUESTED_WITH='XMLHttpRequest'
+        )
+        response = self.client.get(reverse('bookmarked_posts_api'))
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, self.blog_post.title)
+        data = json.loads(response.content)
+        titles = [item.get('title') for item in data.get('items', [])]
+        self.assertIn(self.community_post.title, titles)
+    
+    def test_subscription_posts_api_returns_subscribed_posts(self):
+        """Test that subscription posts API returns community posts"""
+        response = self.client.get(reverse('subscription_posts_api'))
+        self.assertEqual(response.status_code, 200)
+        data = json.loads(response.content)
+        ids = [item.get('id') for item in data.get('items', [])]
+        self.assertIn(self.community_post.id, ids)
+    
+    def test_subscription_blogs_api_returns_followed_blogs(self):
+        """Test that subscription blogs API returns followed authors"""
+        response = self.client.get(reverse('subscription_blogs_api'))
+        self.assertEqual(response.status_code, 200)
+        data = json.loads(response.content)
+        ids = [item.get('id') for item in data.get('items', [])]
+        self.assertIn(self.blog_post.id, ids)
 
 
 class SubscriptionPageAuthenticationTests(TestCase):

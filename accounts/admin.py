@@ -4,8 +4,18 @@ from datetime import timedelta
 
 from django.utils import timezone
 
-from .models import (Conversation, CustomUser, DirectMessage, GameLobbyBan,
-                     LetterSetGame, ModerationReport)
+from .models import (
+    Badge,
+    Conversation,
+    CustomUser,
+    DirectMessage,
+    GameLobbyBan,
+    LetterSetGame,
+    ModerationReport,
+    SupportNotice,
+    UserBadge,
+    UserStats,
+)
 
 
 class CustomUserAdmin(UserAdmin):
@@ -123,3 +133,45 @@ class LetterSetGameAdmin(admin.ModelAdmin):
     list_filter = ("created_at", "updated_at")
     search_fields = ("user__username",)
     readonly_fields = ("created_at", "updated_at")
+
+
+@admin.register(SupportNotice)
+class SupportNoticeAdmin(admin.ModelAdmin):
+    list_display = ("slug", "title", "active", "updated_at")
+    list_filter = ("active",)
+    search_fields = ("slug", "title", "body", "contact_email")
+
+
+@admin.register(Badge)
+class BadgeAdmin(admin.ModelAdmin):
+    list_display = (
+        "name",
+        "requirement_type",
+        "requirement_value",
+        "tier",
+        "created_at",
+    )
+    list_filter = ("requirement_type", "tier")
+    search_fields = ("name", "description")
+
+
+@admin.register(UserBadge)
+class UserBadgeAdmin(admin.ModelAdmin):
+    list_display = ("user", "badge", "awarded_at")
+    list_filter = ("badge", "awarded_at")
+    search_fields = ("user__username", "badge__name")
+    readonly_fields = ("awarded_at",)
+
+
+@admin.register(UserStats)
+class UserStatsAdmin(admin.ModelAdmin):
+    list_display = (
+        "user",
+        "games_created",
+        "posts_created",
+        "followers",
+        "likes_received",
+        "updated_at",
+    )
+    search_fields = ("user__username",)
+    readonly_fields = ("updated_at",)

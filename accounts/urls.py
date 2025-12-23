@@ -19,7 +19,27 @@ urlpatterns = [
     path("logout/", views.logout_view, name="logout"),
     path("dashboard/", views.dashboard_view, name="dashboard"),
     path("profile/", views.profile_view, name="profile"),
-    path("subscriptions/", views.subscriptions_view, name="subscriptions"),
+    path("subscriptions/", views.SubscriptionsView.as_view(), name="subscriptions"),
+    path(
+        "api/subscriptions/posts/",
+        views.subscription_posts_api,
+        name="subscription_posts_api",
+    ),
+    path(
+        "api/subscriptions/blogs/",
+        views.subscription_blogs_api,
+        name="subscription_blogs_api",
+    ),
+    path(
+        "api/bookmarked-posts/",
+        views.bookmarked_posts_api,
+        name="bookmarked_posts_api",
+    ),
+    path(
+        "api/author/<int:author_id>/toggle-follow/",
+        views.toggle_follow_author_api,
+        name="toggle_follow_author_api",
+    ),
     path("account/", views.account_dashboard_view, name="account_dashboard"),
     # Email verification (deprecated - kept for backward compatibility)
     # path('verify-email/<int:user_id>/', views.verify_email, name='verify_email'),

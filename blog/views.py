@@ -1,143 +1,62 @@
 # views.py
 import json
 import math
+import os
 from datetime import timedelta
-from django.contrib.auth import get_user_model
+from io import BytesIO
 
 from django.contrib import messages
 from django.contrib.admin.views.decorators import staff_member_required
+from django.contrib.auth import get_user_model
 from django.contrib.auth.decorators import login_required
+from django.core.files.base import ContentFile
+from django.core.paginator import Paginator
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
-from django.core.files.base import ContentFile
-from io import BytesIO
-from PIL import Image
-import os
+from django.utils.html import strip_tags
+from django.utils.text import Truncator
+from django.views.decorators.http import require_POST
+from PIL import Image, ImageOps
 
 from .forms import CommentForm, PostForm
 from .models import Comment, ModerationReport, Post, PostImage, Category, Tag
-
-# -------------------- Banned words --------------------
-banned_words = [
-    "arse",
-    "ass",
-    "asshole",
-    "bastard",
-    "bitch",
-    "bollocks",
-    "bugger",
-    "bullshit",
-    "cunt",
-    "cock",
-    "crap",
-    "damn",
-    "dick",
-    "dickhead",
-    "dyke",
-    "fag",
-    "faggot",
-    "fuck",
-    "fucker",
-    "fucking",
-    "goddamn",
-    "goddammit",
-    "homo",
-    "jerk",
-    "kike",
-    "kraut",
-    "motherfucker",
-    "nigga",
-    "nigger",
-    "prick",
-    "pussy",
-    "shit",
-    "shithead",
-    "slut",
-    "twat",
-    "wanker",
-    "whore",
-    "chink",
-    "spic",
-    "gook",
-    "raghead",
-    "camel jockey",
-    "sand nigger",
-    "coon",
-    "wetback",
-    "cracker",
-    "fagg",
-    "dago",
-    "hebe",
-    "jap",
-    "nip",
-    "paki",
-    "slant",
-    "beaner",
-    "honky",
-    "redneck",
-    "tranny",
-    "tard",
-    "idiot",
-    "moron",
-    "imbecile",
-    "retard",
-    "loser",
-    "scumbag",
-    "bimbo",
-    "skank",
-    "cockhead",
-    "piss",
-    "shitface",
-    "bollock",
-    "tosser",
-    "wank",
-    "twit",
-    "dumbass",
-    "dumbfuck",
-    "fuckface",
-    "shitbag",
-    "cockmunch",
-    "jackass",
-    "cum",
-    "jizz",
-    "blowjob",
-    "dildo",
-    "tit",
-    "tits",
-    "boobs",
-    "clit",
-    "vagina",
-    "penis",
-    "ejaculate",
-    "cumshot",
-    "cumslut",
-    "anal",
-    "anus",
-    "fisting",
-    "orgasm",
-    "masturbate",
-    "sex",
-    "slutty",
-    "whorish",
-    "nude",
-    "naked",
-    "porn",
-    "pornography",
-    "pornstar",
-    "hooker",
-    "escort",
-    "pimp",
-    "stripper",
-    "prostitute",
-]
 
 # -------------------- VIEWS --------------------
 
 
 def posts_list_view(request):
-    posts = Post.objects.all().order_by("-created")
-    return render(request, "blog/blog_list.html", {"posts": posts})
+    posts_qs = (
+        Post.objects.select_related("author", "category")
+        .prefetch_related("images", "tags")
+        .order_by("-created")
+    )
+    paginator = Paginator(posts_qs, 10)
+    page_number = request.GET.get("page", 1)
+    page_obj = paginator.get_page(page_number)
+
+    blog_posts = list(page_obj.object_list)
+    for post in blog_posts:
+        text = strip_tags(post.content or "")
+        post.excerpt = Truncator(text).chars(220)
+        word_count = len(text.split())
+        post.read_time = max(1, math.ceil(word_count / 200)) if word_count else 1
+        post.created_at = post.created
+        first_image = post.images.first()
+        post.primary_image_url = (
+            first_image.image.url
+            if first_image and getattr(first_image, "image", None)
+            else None
+        )
+        primary_tag = post.tags.first()
+        category_name = getattr(post.category, "name", None)
+        post.primary_tag_name = primary_tag.name if primary_tag else category_name
+
+    context = {
+        "blog_posts": blog_posts,
+        "has_more": page_obj.has_next(),
+    }
+    return render(request, "blog/blog_list.html", context)
 
 
 @login_required
@@ -153,87 +72,60 @@ def create_post_view(request):
 
     if request.method == "POST":
         form = PostForm(request.POST, request.FILES)
-        post_content = request.POST.get("content", "").lower()
-        banned_found = [w for w in banned_words if w in post_content]
         description_value = request.POST.get("description", "").strip()
         category_input = request.POST.get("category", "").strip()
-
-        # moderation system
-        if banned_found:
-            user = request.user
-            user.warning_count += 1
-            if user.warning_count == 2:
-                user.suspended_until = timezone.now() + timedelta(hours=24)
-            elif user.warning_count == 3:
-                user.suspended_until = timezone.now() + timedelta(hours=48)
-            elif user.warning_count >= 4:
-                user.suspended_until = timezone.now() + timedelta(days=7)
-            user.save()
-
-            ModerationReport.objects.create(
-                user=user,
-                post_content=post_content,
-                banned_words_found=", ".join(banned_found),
-            )
-
-            messages.error(
-                request, f"Your post contains banned words: {', '.join(banned_found)}."
-            )
-            return redirect("create_post")
 
         # post saving
         if form.is_valid():
             images = request.FILES.getlist("images")
             if not images:
-                messages.error(request, "Please add at least one image to your post.")
-                return render(
-                    request,
-                    "blog/create_post.html",
-                    {"form": form, "banned_words": banned_words},
-                )
+                message = "Please add at least one image to your post."
+                form.add_error(None, message)
+                messages.error(request, message)
+            else:
+                post = form.save(commit=False)
+                post.author = request.user
+                if description_value:
+                    post.description = description_value
+                if category_input:
+                    cat_name = category_input.lstrip("#").strip()
+                    if cat_name:
+                        cat_obj, _ = Category.objects.get_or_create(name=cat_name.title())
+                        post.category = cat_obj
+                post.save()
+                form.save_m2m()
 
-            post = form.save(commit=False)
-            post.author = request.user
-            if description_value:
-                post.description = description_value
-            if category_input:
-                cat_name = category_input.lstrip("#").strip()
-                if cat_name:
-                    cat_obj, _ = Category.objects.get_or_create(name=cat_name.title())
-                    post.category = cat_obj
-            post.save()
-            form.save_m2m()
-
-            max_w, max_h = 1600, 900
-            target_ratio = 16 / 9
-            for img in images:
-                try:
-                    im = Image.open(img)
-                    im = im.convert("RGB")
-                    w, h = im.size
-                    current_ratio = w / h if h else 1
-                    if current_ratio > target_ratio:
-                        new_w = int(h * target_ratio)
-                        left = (w - new_w) // 2
-                        box = (left, 0, left + new_w, h)
-                    else:
-                        new_h = int(w / target_ratio)
-                        top = (h - new_h) // 2
-                        box = (0, top, w, top + new_h)
-                    im = im.crop(box)
-                    im.thumbnail((max_w, max_h), Image.LANCZOS)
-                    out = BytesIO()
-                    im.save(out, format="JPEG", quality=85)
-                    out.seek(0)
-                    base = os.path.splitext(getattr(img, "name", "image"))[0]
-                    filename = f"{base}_cropped.jpg"
-                    content = ContentFile(out.read())
-                    post_image = PostImage()
-                    post_image.image.save(filename, content, save=True)
-                    post.images.add(post_image)
-                except Exception:
-                    post_image = PostImage.objects.create(image=img)
-                    post.images.add(post_image)
+                max_w, max_h = 1600, 900
+                target_ratio = 16 / 9
+                for img in images:
+                    try:
+                        im = Image.open(img)
+                        im = ImageOps.exif_transpose(im)
+                        im = im.convert("RGB")
+                        w, h = im.size
+                        current_ratio = w / h if h else 1
+                        if current_ratio > target_ratio:
+                            new_w = int(h * target_ratio)
+                            left = (w - new_w) // 2
+                            box = (left, 0, left + new_w, h)
+                        else:
+                            new_h = int(w / target_ratio)
+                            top = (h - new_h) // 2
+                            box = (0, top, w, top + new_h)
+                        im = im.crop(box)
+                        im.thumbnail((max_w, max_h), Image.LANCZOS)
+                        out = BytesIO()
+                        im.save(out, format="JPEG", quality=85)
+                        out.seek(0)
+                        base = os.path.splitext(getattr(img, "name", "image"))[0]
+                        filename = f"{base}_cropped.jpg"
+                        content = ContentFile(out.read())
+                        post_image = PostImage()
+                        post_image.image.save(filename, content, save=True)
+                        post.images.add(post_image)
+                    except Exception:
+                        post_image = PostImage.objects.create(image=img)
+                        post.images.add(post_image)
 
             source_texts = [
                 request.POST.get("title", ""),
@@ -258,9 +150,7 @@ def create_post_view(request):
     else:
         form = PostForm()
 
-    return render(
-        request, "blog/create_post.html", {"form": form, "banned_words": banned_words}
-    )
+    return render(request, "blog/create_post.html", {"form": form})
 
 
 # -------------------- STAFF MODERATION --------------------
@@ -311,7 +201,8 @@ def post_detail_view(request, pk):
             new_comment.user = request.user
             new_comment.save()
 
-            if request.is_ajax():  # <-- AJAX request
+            is_ajax = request.headers.get("x-requested-with") == "XMLHttpRequest"
+            if is_ajax:
                 return JsonResponse(
                     {
                         "id": new_comment.id,
@@ -465,6 +356,7 @@ User = get_user_model()
 
 
 @login_required
+@require_POST
 def follow_user(request, author_id):
     if request.method != "POST":
         return JsonResponse({"error": "POST request required."}, status=400)
@@ -484,6 +376,7 @@ def follow_user(request, author_id):
     return JsonResponse({"status": status, "followers_count": author.followers.count()})
 
 
+@require_POST
 def post_comment(request, post_id):
     # Allow AJAX clients to receive JSON errors rather than redirects when not authenticated
     if request.method != "POST":
@@ -522,6 +415,7 @@ def post_comment(request, post_id):
     )
 
 
+@require_POST
 def report_post(request, post_id):
     if request.method != "POST":
         return JsonResponse({"error": "POST request required."}, status=400)
@@ -552,6 +446,7 @@ def report_post(request, post_id):
 
 
 @login_required
+@require_POST
 def delete_post(request, post_id):
     if request.method != "POST":
         return JsonResponse({"error": "POST request required."}, status=400)
@@ -574,15 +469,61 @@ def blog_posts_api(request):
     sort = request.GET.get('sort', 'latest')
     offset = int(request.GET.get('offset', 0))
     limit = int(request.GET.get('limit', 12))
-    
+
     # Build queryset based on sort parameter
-    if sort == 'latest':
+    if sort == 'foryou':
+        if request.user.is_authenticated:
+            try:
+                from recommend.services import get_recommendations
+
+                recommendations = get_recommendations(
+                    user_id=request.user.id,
+                    content_types=["blog"],
+                    topn=limit * 3,
+                    exclude_seen=True,
+                    diversity_penalty=0.15,
+                    freshness_boost=True
+                )
+
+                post_ids = []
+                for rec_key, score in recommendations:
+                    try:
+                        parts = rec_key.split(':')
+                        if len(parts) == 2 and 'post' in parts[0].lower():
+                            post_ids.append(int(parts[1]))
+                    except Exception:
+                        continue
+
+                if post_ids:
+                    posts_dict = {p.id: p for p in Post.objects.filter(id__in=post_ids[:limit])}
+                    posts = [posts_dict[pid] for pid in post_ids if pid in posts_dict]
+                else:
+                    # Fallback to recent posts if no recommendations
+                    posts = list(Post.objects.order_by('-created')[:limit])
+
+                total = len(posts)
+            except Exception as e:
+                logger.warning(f"Blog recommendations failed, using fallback: {e}")
+                posts_qs = Post.objects.all().order_by('-created')
+                total = posts_qs.count()
+                posts = posts_qs[offset:offset + limit]
+        else:
+            posts_qs = Post.objects.all().order_by('-created')
+            total = posts_qs.count()
+            posts = posts_qs[offset:offset + limit]
+    elif sort == 'latest':
         posts_qs = Post.objects.all().order_by('-created')
+        total = posts_qs.count()
+        posts = posts_qs[offset:offset + limit]
     elif sort == 'most_liked':
         from django.db.models import Count
         posts_qs = Post.objects.annotate(like_count=Count('likes')).order_by('-like_count', '-created')
+        total = posts_qs.count()
+        posts = posts_qs[offset:offset + limit]
     elif sort == 'most_viewed':
         posts_qs = Post.objects.all().order_by('-views', '-created')
+        total = posts_qs.count()
+        posts = posts_qs[offset:offset + limit]
     elif sort == 'trending':
         # Trending: posts with high engagement recently
         from django.db.models import Count, Q
@@ -594,44 +535,48 @@ def blog_posts_api(request):
         ).annotate(
             engagement=Count('likes') + Count('comments')
         ).filter(created__gte=week_ago).order_by('-engagement', '-created')
+        total = posts_qs.count()
+        posts = posts_qs[offset:offset + limit]
     elif sort == 'bookmarks':
         # User's bookmarked posts
         posts_qs = request.user.bookmarked_posts.all().order_by('-created')
+        total = posts_qs.count()
+        posts = posts_qs[offset:offset + limit]
     else:
         posts_qs = Post.objects.all().order_by('-created')
-    
-    # Get total count before pagination
-    total = posts_qs.count()
-    
-    # Apply pagination
-    posts = posts_qs[offset:offset + limit]
+        total = posts_qs.count()
+        posts = posts_qs[offset:offset + limit]
     
     # Serialize posts
     posts_data = []
     for post in posts:
-        # Get first image
-        img = None
-        if hasattr(post, 'images') and post.images.exists():
-            first_img = post.images.first()
-            if first_img and hasattr(first_img, 'image'):
-                img = first_img.image.url
-        
-        posts_data.append({
-            'id': post.id,
-            'title': post.title,
-            'content': post.content[:200] if post.content else '',
-            'image': img,
-            'author_id': post.author.id,
-            'author_username': post.author.username,
-            'author_avatar': post.author.avatar.url if post.author.avatar else None,
-            'created': post.created.isoformat(),
-            'likes_count': post.likes.count(),
-            'dislikes_count': post.dislikes.count(),
-            'comments_count': post.comments.count(),
-            'user_liked': request.user in post.likes.all(),
-            'user_disliked': request.user in post.dislikes.all(),
-            'user_bookmarked': request.user in post.bookmarks.all(),
-        })
+        try:
+            # Get first image
+            img = None
+            if hasattr(post, 'images') and post.images.exists():
+                first_img = post.images.first()
+                if first_img and hasattr(first_img, 'image'):
+                    img = first_img.image.url
+
+            posts_data.append({
+                'id': post.id,
+                'title': post.title,
+                'content': post.content[:200] if post.content else '',
+                'image': img,
+                'author_id': post.author.id,
+                'author_username': post.author.username,
+                'author_avatar': post.author.avatar.url if post.author.avatar else None,
+                'created': post.created.isoformat(),
+                'likes_count': post.likes.count(),
+                'dislikes_count': post.dislikes.count(),
+                'comments_count': post.comments.count(),
+                'user_liked': request.user in post.likes.all(),
+                'user_disliked': request.user in post.dislikes.all(),
+                'user_bookmarked': request.user in post.bookmarks.all(),
+            })
+        except Exception as e:
+            logger.warning(f"Error serializing blog post {post.id}: {e}")
+            continue
     
     return JsonResponse({
         'posts': posts_data,

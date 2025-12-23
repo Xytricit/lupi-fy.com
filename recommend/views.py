@@ -52,123 +52,170 @@ def smart_cache(cache_key_prefix, ttl=300, user_specific=True):
     return decorator
 
 
+def _parse_recommendation_key(rec_key):
+    parts = rec_key.split(":", 1)
+    if len(parts) != 2:
+        return None, None, None
+    app_model, object_id = parts
+    if "." not in app_model:
+        return None, None, None
+    return app_model.split(".", 1) + [object_id]
+
+
+def _serialize_recommendation_entry(rec_key, score):
+    app_label, model_name, object_id = _parse_recommendation_key(rec_key)
+    if not app_label:
+        return None
+    if app_label == "blog" and "post" in model_name:
+        try:
+            from blog.models import Post
+            from django.utils.html import strip_tags
+        except Exception:
+            return None
+        try:
+            obj = Post.objects.filter(id=int(object_id)).first()
+        except (TypeError, ValueError):
+            return None
+        if not obj:
+            return None
+        excerpt = strip_tags(obj.content)[:220] if hasattr(obj, "content") else ""
+        image = None
+        if hasattr(obj, "images"):
+            first = obj.images.all().first()
+            if first and hasattr(first, "image"):
+                image = first.image.url
+        return {
+            "type": "blog",
+            "id": obj.id,
+            "title": obj.title,
+            "excerpt": excerpt,
+            "image": image,
+            "score": float(score),
+        }
+    if app_label == "communities" and "post" in model_name:
+        try:
+            from communities.models import CommunityPost
+            from django.utils.html import strip_tags
+        except Exception:
+            return None
+        try:
+            obj = CommunityPost.objects.filter(id=int(object_id)).first()
+        except (TypeError, ValueError):
+            return None
+        if not obj:
+            return None
+        title = obj.title or (obj.content[:80] if obj.content else "Community Post")
+        excerpt = strip_tags(obj.content)[:220] if obj.content else ""
+        return {
+            "type": "community",
+            "id": obj.id,
+            "title": title,
+            "excerpt": excerpt,
+            "image": obj.image.url if obj.image else None,
+            "community_id": obj.community.id,
+            "community_name": obj.community.name,
+            "author_username": obj.author.username,
+            "score": float(score),
+        }
+    if app_label == "games" and "game" in model_name:
+        try:
+            from games.models import Game
+            import uuid
+        except Exception:
+            return None
+        game_id = object_id
+        try:
+            game_id = uuid.UUID(object_id)
+        except (ValueError, TypeError):
+            pass
+        obj = Game.objects.filter(id=game_id).first()
+        if not obj:
+            return None
+        return {
+            "type": "game",
+            "id": str(obj.id),
+            "title": obj.title,
+            "description": getattr(obj, "description", ""),
+            "thumbnail": obj.thumbnail.url if obj.thumbnail else None,
+            "score": float(score),
+        }
+    if app_label == "marketplace" and "project" in model_name:
+        try:
+            from marketplace.models import Project
+            import uuid
+        except Exception:
+            return None
+        project_id = object_id
+        try:
+            project_id = uuid.UUID(object_id)
+        except (ValueError, TypeError):
+            pass
+        proj = Project.objects.filter(id=project_id).first()
+        if not proj:
+            return None
+        return {
+            "type": "marketplace",
+            "id": str(proj.id),
+            "title": proj.title,
+            "short_description": getattr(proj, "short_description", ""),
+            "thumbnail": proj.thumbnail.url if proj.thumbnail else None,
+            "price": float(proj.price) if hasattr(proj, "price") else None,
+            "is_free": getattr(proj, "is_free", False),
+            "score": float(score),
+        }
+    return None
+
+
+def _hydrate_hybrid_recommendations(raw_recs):
+    if not raw_recs:
+        return []
+    results = []
+    for rec_key, score in raw_recs:
+        entry = _serialize_recommendation_entry(rec_key, score)
+        if entry:
+            results.append(entry)
+    return results
+
+
+def _run_hybrid_recommendation(user_id, allowed_content, topn=12, exclude_seen=True):
+    try:
+        from recommend.ml.torch_recommender_hybrid import load_model_hybrid, recommend_for_user_hybrid
+    except Exception:
+        return []
+    model = load_model_hybrid()
+    if not model:
+        return []
+    try:
+        recommendations = recommend_for_user_hybrid(
+            user_id,
+            model=model,
+            topn=topn,
+            exclude_seen=exclude_seen,
+            diversity_penalty=0.15,
+            freshness_boost=True,
+            allowed_content=allowed_content,
+        )
+    except Exception:
+        return []
+    return _hydrate_hybrid_recommendations(recommendations)
+
+
 @login_required
 def for_you_recommendations(request):
-    """Get top recommendations for logged-in user (YouTube-like)."""
-    from recommend.utils import compute_recommendations_for_user
-    
+    """Get PyTorch hybrid recommendations for logged-in user."""
     user = request.user
-    cache_key = f"for_you:{user.id}"
+    cache_key = f"for_you_pytorch:{user.id}"
     
     # Check cache first
     data = cache.get(cache_key)
     if data is not None:
         return JsonResponse({"results": data})
     
-    # Compute recommendations using YouTube-like engine
-    try:
-        compute_recommendations_for_user(user, content_type='mixed', limit=24)
-    except Exception as e:
-        print(f"Error computing recommendations: {e}")
-        import traceback
-        traceback.print_exc()
-    
-    # Fetch from DB
-    recs = Recommendation.objects.filter(user=user).select_related("content_type")[:24]
-    results = []
-    for r in recs:
-        try:
-            ct = ContentType.objects.get_for_id(r.content_type_id)
-            app = ct.app_label
-            model = ct.model
-            # Blog posts
-            if app == "blog" and model in ("post", "post"):
-                try:
-                    from blog.models import Post
-
-                    obj = Post.objects.filter(id=r.object_id).first()
-                    if obj:
-                        from django.utils.html import strip_tags
-
-                        excerpt = (
-                            strip_tags(obj.content)[:220]
-                            if hasattr(obj, "content")
-                            else ""
-                        )
-                        img = None
-                        if hasattr(obj, "images"):
-                            first = obj.images.all().first()
-                            if first and hasattr(first, "image"):
-                                img = first.image.url
-                        results.append(
-                            {
-                                "type": "blog",
-                                "id": obj.id,
-                                "title": obj.title,
-                                "excerpt": excerpt,
-                                "image": img,
-                                "score": r.score,
-                            }
-                        )
-                        continue
-                except Exception:
-                    pass
-
-            # Community posts
-            if app == "communities" and model in ("communitypost", "community_post"):
-                try:
-                    from communities.models import CommunityPost
-
-                    obj = CommunityPost.objects.filter(id=r.object_id).first()
-                    if obj:
-                        title = getattr(
-                            obj,
-                            "title",
-                            (getattr(obj, "content", "")[:80] or "Community Post"),
-                        )
-                        excerpt = ""
-                        if hasattr(obj, "content"):
-                            from django.utils.html import strip_tags
-
-                            excerpt = strip_tags(obj.content)[:220]
-                        img = None
-                        if hasattr(obj, "image") and obj.image:
-                            img = obj.image.url
-                        results.append(
-                            {
-                                "type": "community",
-                                "id": obj.id,
-                                "title": title,
-                                "excerpt": excerpt,
-                                "image": img,
-                                "score": r.score,
-                            }
-                        )
-                        continue
-                except Exception:
-                    pass
-
-            # Games or other content types: surface minimal info (frontend will decide where to show)
-            if "game" in model or app in ("core", "games"):
-                results.append(
-                    {"type": "game", "object_id": r.object_id, "score": r.score}
-                )
-                continue
-
-            # Fallback: include raw content_type and id so frontend can decide
-            results.append(
-                {
-                    "type": "unknown",
-                    "content_type": f"{app}.{model}",
-                    "object_id": r.object_id,
-                    "score": r.score,
-                }
-            )
-        except Exception:
-            # on any unexpected error, include minimal data
-            results.append(
-                {"type": "unknown", "object_id": r.object_id, "score": r.score}
-            )
+    results = _run_hybrid_recommendation(
+        user.id,
+        {"blog", "communities", "games", "marketplace"},
+        topn=24,
+    )
 
     # Fallback: if no recommendations, show recent posts
     if not results:
@@ -215,8 +262,8 @@ def for_you_recommendations(request):
         except Exception as e:
             print(f"Error generating fallback: {e}")
 
-    cache.set(cache_key, results, 60)
-    return JsonResponse({"results": results})
+    cache.set(cache_key, results, 300)  # Cache for 5 minutes
+    return JsonResponse({"results": results, "method": "pytorch_hybrid"})
 
 
 @login_required
@@ -253,6 +300,60 @@ def get_user_interests(request):
             }
         )
 
+
+@login_required
+def onboarding_view(request):
+    """Render the onboarding page for new users to select interests."""
+    from django.shortcuts import render, redirect
+    
+    # If already completed, redirect to dashboard
+    try:
+        interests = UserInterests.objects.get(user=request.user)
+        if interests.completed_community_onboarding:
+            return redirect('dashboard_home')
+    except UserInterests.DoesNotExist:
+        pass
+        
+    return render(request, 'onboarding.html', {
+        'categories': GAME_CATEGORIES, # Using game categories as general interest categories for now
+        'tags': COMMUNITY_TAGS
+    })
+
+@login_required
+def log_interaction_api(request):
+    """API to log client-side interactions like clicks."""
+    if request.method != "POST":
+        return JsonResponse({"error": "Method not allowed"}, status=405)
+        
+    try:
+        data = json.loads(request.body)
+        action = data.get('action')
+        object_id = data.get('object_id')
+        content_type_str = data.get('content_type', 'communities.communitypost')
+        
+        if not action or not object_id:
+            return JsonResponse({"error": "Missing parameters"}, status=400)
+            
+        # Parse content type
+        try:
+            app_label, model = content_type_str.split('.')
+            ct = ContentType.objects.get(app_label=app_label, model=model)
+        except (ValueError, ContentType.DoesNotExist):
+            return JsonResponse({"error": "Invalid content type"}, status=400)
+            
+        from recommend.models import Interaction
+        
+        Interaction.objects.create(
+            user=request.user,
+            content_type=ct,
+            object_id=object_id,
+            action=action,
+            value=1.0
+        )
+        
+        return JsonResponse({"success": True})
+    except Exception as e:
+        return JsonResponse({"error": str(e)}, status=400)
 
 @login_required
 def save_user_interests(request):
@@ -306,6 +407,12 @@ def get_blog_recommendations(request):
     if cached:
         return JsonResponse({"results": cached})
 
+    user_id = getattr(user, "id", None)
+    hybrid_results = _run_hybrid_recommendation(user_id, {"blog"}, topn=12)
+    if hybrid_results:
+        cache.set(cache_key, hybrid_results, 60)
+        return JsonResponse({"results": hybrid_results, "method": "hybrid"})
+
     # Only attempt to fetch UserInterests when user is authenticated
     if getattr(user, 'is_authenticated', False):
         try:
@@ -318,6 +425,8 @@ def get_blog_recommendations(request):
     else:
         blog_tags = []
 
+    normalized_blog_tags = {tag.strip().lower() for tag in blog_tags if tag}
+
     # Import blog models
     from blog.models import Post
 
@@ -328,7 +437,6 @@ def get_blog_recommendations(request):
 
     for post in all_posts:
         score = 0
-        # Score by tag match (if blog posts have tags)
         if hasattr(post, "tags"):
             post_tags = []
             try:
@@ -345,11 +453,15 @@ def get_blog_recommendations(request):
                 post_tags = []
 
             for tag in post_tags:
-                try:
-                    if tag and tag.strip().lower() in [t.lower() for t in blog_tags]:
-                        score += 2.0
-                except Exception:
+                if not tag:
                     continue
+                normalized_tag = tag.strip().lower()
+                if normalized_tag in normalized_blog_tags:
+                    score += 2.0
+
+        category_name = getattr(post.category, "name", "")
+        if category_name and category_name.strip().lower() in normalized_blog_tags:
+            score += 1.5
 
         # Boost by recency
         from django.utils import timezone
@@ -358,7 +470,7 @@ def get_blog_recommendations(request):
         recency_boost = max(0, 5 - days_old * 0.1)
         score += recency_boost
 
-        if score > 0 or not blog_tags:  # Show all if no tags selected
+        if score > 0 or not normalized_blog_tags:  # Show all if no tags selected
             # Provide a short excerpt to the frontend (do not expose score unnecessarily)
             excerpt = ""
             try:
@@ -392,6 +504,11 @@ def get_community_recommendations(request):
     cached = cache.get(cache_key)
     if cached:
         return JsonResponse({"results": cached})
+
+    hybrid_results = _run_hybrid_recommendation(user.id, {"communities"}, topn=12)
+    if hybrid_results:
+        cache.set(cache_key, hybrid_results, 60)
+        return JsonResponse({"results": hybrid_results, "method": "hybrid"})
 
     try:
         interests = UserInterests.objects.get(user=user)
@@ -466,6 +583,64 @@ def get_community_recommendations(request):
     return JsonResponse({"results": results})
 
 
+@login_required
+def get_game_recommendations(request):
+    cache_key = f"game_recs:{request.user.id}"
+    cached = cache.get(cache_key)
+    if cached:
+        return JsonResponse({"results": cached})
+
+    results = _run_hybrid_recommendation(request.user.id, {"games"}, topn=12)
+    if not results:
+        try:
+            from games.models import Game
+        except Exception:
+            Game = None
+        if Game:
+            fallback_games = Game.objects.filter(visibility="public").order_by("-created_at")[:12]
+            for game in fallback_games:
+                results.append({
+                    "type": "game",
+                    "id": str(game.id),
+                    "title": game.title,
+                    "description": getattr(game, "description", ""),
+                    "thumbnail": game.thumbnail.url if game.thumbnail else None,
+                    "score": 0.5,
+                })
+    cache.set(cache_key, results, 60)
+    return JsonResponse({"results": results})
+
+
+@login_required
+def get_marketplace_recommendations(request):
+    cache_key = f"marketplace_recs:{request.user.id}"
+    cached = cache.get(cache_key)
+    if cached:
+        return JsonResponse({"results": cached})
+
+    results = _run_hybrid_recommendation(request.user.id, {"marketplace"}, topn=12)
+    if not results:
+        try:
+            from marketplace.models import Project
+        except Exception:
+            Project = None
+        if Project:
+            fallback_projects = Project.objects.filter(status="approved").order_by("-published_at", "-created_at")[:12]
+            for proj in fallback_projects:
+                results.append({
+                    "type": "marketplace",
+                    "id": str(proj.id),
+                    "title": proj.title,
+                    "short_description": getattr(proj, "short_description", ""),
+                    "thumbnail": proj.thumbnail.url if proj.thumbnail else None,
+                    "price": float(proj.price) if hasattr(proj, "price") else None,
+                    "is_free": getattr(proj, "is_free", False),
+                    "score": 0.5,
+                })
+    cache.set(cache_key, results, 60)
+    return JsonResponse({"results": results})
+
+
 def get_tag_options(request):
     """Get available tag options for selection."""
     content_type = request.GET.get("type", "blog")
@@ -496,6 +671,13 @@ def get_hybrid_recommendations(request):
     """
     user = request.user
     topn = int(request.GET.get("topn", 12))
+    content_filter_arg = request.GET.get("content_type")
+    if content_filter_arg:
+        allowed_content = {
+            part.strip() for part in content_filter_arg.split(",") if part.strip()
+        }
+    else:
+        allowed_content = {"blog", "communities", "games", "marketplace"}
     
     try:
         from recommend.ml.torch_recommender_hybrid import (
@@ -513,7 +695,8 @@ def get_hybrid_recommendations(request):
                 model=model, 
                 topn=topn,
                 diversity_penalty=0.15,
-                freshness_boost=True
+                freshness_boost=True,
+                allowed_content=allowed_content
             )
             # Convert raw recommendations to database lookups
             recs = []
@@ -596,4 +779,80 @@ def get_hybrid_recommendations(request):
             pass
     
     return JsonResponse({"results": results, "method": "hybrid"})
+
+
+@login_required
+def track_interaction(request):
+    """Track user interactions for recommendation engine."""
+    if request.method != 'POST':
+        return JsonResponse({"error": "Method not allowed"}, status=405)
+    
+    try:
+        data = json.loads(request.body)
+        content_type_str = data.get('content_type')  # e.g., 'blog.post' or 'communities.communitypost'
+        object_id = int(data.get('object_id'))
+        action = data.get('action', 'view')  # 'view', 'like', 'dislike', 'complete', 'skip'
+        metadata = data.get('metadata') or {}
+        if not isinstance(metadata, dict):
+            metadata = {}
+        for field in (
+            'duration',
+            'duration_seconds',
+            'scroll_depth',
+            'scroll_fraction',
+            'bookmarked',
+            'saved',
+            'wishlisted',
+            'liked',
+            'disliked',
+        ):
+            if field in data:
+                metadata[field] = data[field]
+        raw_value = data.get('value')
+        if raw_value is not None:
+            try:
+                value = float(raw_value)
+            except (TypeError, ValueError):
+                value = 1.0
+        else:
+            duration_guess = metadata.get('duration_seconds') or metadata.get('duration')
+            try:
+                value = float(duration_guess)
+            except (TypeError, ValueError):
+                value = 1.0
+        value = max(value, 0.1)
+        
+        # Parse content_type
+        if '.' in content_type_str:
+            app_label, model_name = content_type_str.split('.', 1)
+            ct = ContentType.objects.get(app_label=app_label, model=model_name.lower())
+        else:
+            return JsonResponse({"error": "Invalid content_type format"}, status=400)
+        
+        # Create or update interaction
+        interaction, created = Interaction.objects.get_or_create(
+            user=request.user,
+            content_type=ct,
+            object_id=object_id,
+            action=action,
+            defaults={'value': value, 'metadata': metadata}
+        )
+        
+        if not created:
+            current_meta = interaction.metadata or {}
+            current_meta.update(metadata)
+            interaction.metadata = current_meta
+            interaction.value = max(interaction.value, value)
+            interaction.save()
+        
+        return JsonResponse({
+            "success": True,
+            "created": created,
+            "interaction_id": interaction.id
+        })
+    except Exception as e:
+        print(f"Error tracking interaction: {e}")
+        import traceback
+        traceback.print_exc()
+        return JsonResponse({"error": str(e)}, status=400)
 

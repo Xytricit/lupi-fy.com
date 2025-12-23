@@ -33,6 +33,6 @@ urlpatterns = [
         communities_views.toggle_join_community,
         name="toggle_join_community",
     ),
-    path("subscriptions/", accounts_views.subscriptions_view, name="subscriptions"),
+    path("subscriptions/", accounts_views.SubscriptionsView.as_view(), name="subscriptions"),
     # path("subscribe/<int:community_id>/", core_views.toggle_subscription, name="toggle_subscription"),  # optional, remove or comment
 ]

@@ -2,809 +2,665 @@
 
 {% block title %}Subscriptions - Lupify{% endblock %}
 
-{% block content %}
-<div class="feed-wrapper">
-
-    <!-- Header -->
-    <div class="feed-header">
-        <div style="display: flex; align-items: center; gap: 12px;">
-            <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-bookmark-check-icon lucide-bookmark-check"><path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2Z"/><path d="m9 10 2 2 4-4"/></svg>
-            <h2>Your Subscriptions & Bookmarks</h2>
-        </div>
-        <div class="subscription-tabs">
-            <button class="tab-btn active" data-target="community-posts">Community Posts</button>
-            <button class="tab-btn" data-target="blog-posts">Blog Articles</button>
-            <button class="tab-btn" data-target="bookmarks" style="display: flex; align-items: center; gap: 6px;"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" class="lucide lucide-bookmark-check-icon lucide-bookmark-check"><path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2Z"/><path d="m9 10 2 2 4-4"/></svg>Bookmarks</button>
-        </div>
-    </div>
-
-    {% if joined_communities %}
-    <div class="joined-communities-section">
-        <h3 class="joined-heading">Your Communities</h3>
-        <div class="joined-communities-wrapper">
-            <button id="comm-prev" class="comm-arrow comm-prev" aria-label="Previous community">
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-chevron-left-icon lucide-chevron-left"><path d="m15 18-6-6 6-6"/></svg>
-            </button>
-
-            <div class="community-slider" id="community-slider">
-                {% for comm in joined_communities %}
-                <a href="{% url 'community_detail' comm.id %}" class="community-slide">
-                    {% if comm.community_image %}
-                    <img src="{{ comm.community_image.url }}" alt="{{ comm.name }}" class="community-slide-thumb">
-                    {% else %}
-                    <div class="community-slide-thumb placeholder"></div>
-                    {% endif %}
-                    <div class="community-slide-name">{{ comm.name }}</div>
-                    <div class="community-slide-meta">{{ comm.members.count }} members</div>
-                </a>
-                {% endfor %}
-            </div>
-
-            <button id="comm-next" class="comm-arrow comm-next" aria-label="Next community">
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-chevron-right-icon lucide-chevron-right"><path d="m9 18 6-6-6-6"/></svg>
-            </button>
-        </div>
-    </div>
-    {% endif %}
-
-    {% if subscribed_communities or subscribed_authors %}
-    <div class="subscription-list">
-        {% for sub in subs %}
-        {% if sub.community %}
-            {% if sub.community not in joined_communities %}
-            <div class="subscription-card" data-type="community">
-                <h4>{{ sub.community.name }}</h4>
-                <p class="card-meta">{{ sub.community.members.count }} <span>members</span></p>
-                {% if sub.community.community_image %}<img src="{{ sub.community.community_image.url }}" alt="{{ sub.community.name }}" class="subscription-thumb">{% endif %}
-                <a class="unsubscribe-btn" href="{% url 'toggle_subscription' sub.community.id %}">Unsubscribe</a>
-            </div>
-            {% endif %}
-        {% elif sub.author %}
-            <div class="subscription-card" data-type="author">
-                <h4>{{ sub.author.username }}</h4>
-                <p class="card-meta">Author {% if sub.author.is_verified %}<span class="verified-badge">✓</span>{% endif %}</p>
-                {% if sub.author.avatar %}<img src="{{ sub.author.avatar.url }}" alt="{{ sub.author.username }}" class="subscription-thumb">{% endif %}
-                <a class="unsubscribe-btn" href="{% url 'toggle_subscription_author' sub.author.id %}">Unsubscribe</a>
-            </div>
-        {% endif %}
-        {% endfor %}
-    </div>
-
-    <!-- Tab Content -->
-    <div class="tab-content">
-        <!-- Community Posts Tab -->
-        <div id="community-posts" class="tab-panel active">
-            {% if community_posts %}
-                {% for post in community_posts %}
-                    <article class="unified-post-card full-bleed">
-                    <div class="post-card-wrapper">
-                        <div class="post-content">
-                            <div class="author-line">
-                                <span style="font-weight:600;color:var(--secondary-text);font-size:0.9rem;">{{ post.community.name }}</span>
-                            </div>
-                            <h3 class="post-title"><a href="{% url 'community_post_detail' post.id %}">{{ post.title }}</a></h3>
-                            <div class="engage-row">
-                                <div class="engage-left">
-                                    <div class="engage-controls" style="display:flex;gap:12px;align-items:center;">
-                                        <button class="like-btn" data-post-id="{{ post.id }}" data-post-type="community" style="border:none;background:none;cursor:pointer;padding:0;display:flex;align-items:center;gap:6px;color:var(--secondary-text);font-size:0.9rem;transition:color 0.2s;">
-                                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-thumbs-up-icon lucide-thumbs-up"><path d="M15 5.88 14 10h5.83a2 2 0 0 1 1.92 2.56l-2.33 8A2 2 0 0 1 17.5 22H4a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2h2.76a2 2 0 0 0 1.79-1.11L12 2a3.13 3.13 0 0 1 3 3.88Z"/><path d="M7 10v12"/></svg>
-                                            <span class="like-count">{{ post.likes.count }}</span>
-                                        </button>
-                                        <button class="dislike-btn" data-post-id="{{ post.id }}" data-post-type="community" style="border:none;background:none;cursor:pointer;padding:0;display:flex;align-items:center;gap:6px;color:var(--secondary-text);font-size:0.9rem;transition:color 0.2s;">
-                                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-thumbs-down-icon lucide-thumbs-down"><path d="M9 18.12 10 14H4.17a2 2 0 0 1-1.92-2.56l2.33-8A2 2 0 0 1 6.5 2H20a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-2.76a2 2 0 0 0-1.79 1.11L12 22a3.13 3.13 0 0 1-3-3.88Z"/><path d="M17 14V2"/></svg>
-                                            <span class="dislike-count">{{ post.dislikes.count }}</span>
-                                        </button>
-                                        <button class="comment-btn" data-post-id="{{ post.id }}" data-post-type="community" style="border:none;background:none;cursor:pointer;padding:0;display:flex;align-items:center;gap:6px;color:var(--secondary-text);font-size:0.9rem;transition:color 0.2s;">
-                                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-message-square-icon lucide-message-square"><path d="M22 17a2 2 0 0 1-2 2H6.828a2 2 0 0 0-1.414.586l-2.202 2.202A.71.71 0 0 1 2 21.286V5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2z"/></svg>
-                                            <span class="comment-count">{{ post.comments.count }}</span>
-                                        </button>
-                                        <button class="bookmark-btn" data-post-id="{{ post.id }}" data-post-type="community" style="border:none;background:none;cursor:pointer;padding:0;display:flex;align-items:center;gap:6px;color:var(--secondary-text);font-size:0.9rem;transition:color 0.2s;">
-                                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-bookmark-check-icon lucide-bookmark-check"><path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2Z"/><path d="m9 10 2 2 4-4"/></svg>
-                                        </button>
-                                        <div class="options-menu-wrapper" style="position:relative;">
-                                            <button class="options-menu-trigger" aria-expanded="false" style="border:none;background:none;cursor:pointer;padding:0;display:flex;align-items:center;gap:6px;color:var(--secondary-text);font-size:0.9rem;transition:color 0.2s;">
-                                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-ellipsis-icon lucide-ellipsis"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg>
-                                            </button>
-                                            <div class="options-menu" aria-hidden="true" style="position:absolute;top:100%;right:0;background:var(--card-bg);border:1px solid var(--border-color);border-radius:8px;min-width:150px;z-index:10;display:none;flex-direction:column;">
-                                                <button class="menu-item report-btn hover-bg-gray" data-post-id="{{ post.id }}" data-post-type="community">
-                                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 24 24" style="display:inline;"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>
-                                                    Report
-                                                </button>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                            <p style="color:var(--secondary-text);margin-top:8px;line-height:1.5;">{{ post.content|truncatewords:30 }}</p>
-                        </div>
-                    </div>
-                </article>
-                {% endfor %}
-            {% else %}
-                <div class="empty-state">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="opacity: 0.5; margin: 0 auto 16px; display: block;">
-                        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
-                    </svg>
-                    <p>No posts from your subscribed communities yet.</p>
-                </div>
-            {% endif %}
-        </div>
-
-        <!-- Blog Posts Tab -->
-        <div id="blog-posts" class="tab-panel">
-            {% if author_posts %}
-                {% for blog in author_posts %}
-                <article class="post-card full-bleed">
-                    <div class="post-card-wrapper">
-                        <div class="post-content">
-                            <div class="author-line">
-                                <span style="font-weight:600;color:var(--secondary-text);font-size:0.9rem;">By {{ blog.author.get_full_name|default:blog.author.username }}</span>
-                            </div>
-                            <h3 class="post-title"><a href="{% url 'post_detail' blog.id %}">{{ blog.title }}</a></h3>
-                            <div class="engage-row">
-                                <div class="engage-left">
-                                    <div class="engage-controls" style="display:flex;gap:12px;align-items:center;">
-                                        <button class="like-btn" data-post-id="{{ blog.id }}" data-post-type="blog" style="border:none;background:none;cursor:pointer;padding:0;display:flex;align-items:center;gap:6px;color:var(--secondary-text);font-size:0.9rem;transition:color 0.2s;">
-                                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-thumbs-up-icon lucide-thumbs-up"><path d="M15 5.88 14 10h5.83a2 2 0 0 1 1.92 2.56l-2.33 8A2 2 0 0 1 17.5 22H4a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2h2.76a2 2 0 0 0 1.79-1.11L12 2a3.13 3.13 0 0 1 3 3.88Z"/><path d="M7 10v12"/></svg>
-                                            <span class="like-count">{{ blog.likes.count }}</span>
-                                        </button>
-                                        <button class="dislike-btn" data-post-id="{{ blog.id }}" data-post-type="blog" style="border:none;background:none;cursor:pointer;padding:0;display:flex;align-items:center;gap:6px;color:var(--secondary-text);font-size:0.9rem;transition:color 0.2s;">
-                                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-thumbs-down-icon lucide-thumbs-down"><path d="M9 18.12 10 14H4.17a2 2 0 0 1-1.92-2.56l2.33-8A2 2 0 0 1 6.5 2H20a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-2.76a2 2 0 0 0-1.79 1.11L12 22a3.13 3.13 0 0 1-3-3.88Z"/><path d="M17 14V2"/></svg>
-                                            <span class="dislike-count">{{ blog.dislikes.count }}</span>
-                                        </button>
-                                        <button class="comment-btn" data-post-id="{{ blog.id }}" data-post-type="blog" style="border:none;background:none;cursor:pointer;padding:0;display:flex;align-items:center;gap:6px;color:var(--secondary-text);font-size:0.9rem;transition:color 0.2s;">
-                                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-message-square-icon lucide-message-square"><path d="M22 17a2 2 0 0 1-2 2H6.828a2 2 0 0 0-1.414.586l-2.202 2.202A.71.71 0 0 1 2 21.286V5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2z"/></svg>
-                                            <span class="comment-count">{{ blog.comments.count }}</span>
-                                        </button>
-                                        <button class="bookmark-btn" data-post-id="{{ blog.id }}" data-post-type="blog" style="border:none;background:none;cursor:pointer;padding:0;display:flex;align-items:center;gap:6px;color:var(--secondary-text);font-size:0.9rem;transition:color 0.2s;">
-                                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-bookmark-check-icon lucide-bookmark-check"><path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2Z"/><path d="m9 10 2 2 4-4"/></svg>
-                                        </button>
-                                        <div class="options-menu-wrapper" style="position:relative;">
-                                            <button class="options-menu-trigger" aria-expanded="false" style="border:none;background:none;cursor:pointer;padding:0;display:flex;align-items:center;gap:6px;color:var(--secondary-text);font-size:0.9rem;transition:color 0.2s;">
-                                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-ellipsis-icon lucide-ellipsis"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg>
-                                            </button>
-                                            <div class="options-menu" aria-hidden="true" style="position:absolute;top:100%;right:0;background:var(--card-bg);border:1px solid var(--border-color);border-radius:8px;min-width:150px;z-index:10;display:none;flex-direction:column;">
-                                                <button class="menu-item report-btn hover-bg-gray" data-post-id="{{ blog.id }}" data-post-type="blog">
-                                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 24 24" style="display:inline;"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>
-                                                    Report
-                                                </button>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                            <p style="color:var(--secondary-text);margin-top:8px;line-height:1.5;">{{ blog.content|truncatewords:30 }}</p>
-                        </div>
-                    </div>
-                </article>
-                {% endfor %}
-            {% else %}
-                <div class="empty-state">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="opacity: 0.5; margin: 0 auto 16px; display: block;">
-                        <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
-                        <path d="M6.5 2H20a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H6.5a2.5 2.5 0 0 1 0-5H20"></path>
-                    </svg>
-                    <p>No blogs from your subscribed authors yet.</p>
-                </div>
-            {% endif %}
-        </div>
-
-        <!-- Bookmarks Tab -->
-        <div id="bookmarks" class="tab-panel">
-            {% if user.bookmarked_community_posts.all %}
-                <div class="bookmarks-section">
-                    <h5 style="margin-bottom: 16px; color: var(--text-dark);">Community Posts</h5>
-                    {% for post in user.bookmarked_community_posts.all %}
-                    <article class="unified-post-card full-bleed">
-                        <div class="post-card-wrapper">
-                            <div class="post-content">
-                                <div class="author-line">
-                                    <span style="font-weight:600;color:var(--secondary-text);font-size:0.9rem;">{{ post.community.name }}</span>
-                                </div>
-                                <h3 class="post-title"><a href="{% url 'community_post_detail' post.id %}">{{ post.title }}</a></h3>
-                                <div class="engage-row">
-                                    <div class="engage-left">
-                                        <div class="engage-controls" style="display:flex;gap:12px;align-items:center;">
-                                            <button class="like-btn" data-post-id="{{ post.id }}" data-post-type="community" style="border:none;background:none;cursor:pointer;padding:0;display:flex;align-items:center;gap:6px;color:var(--secondary-text);font-size:0.9rem;transition:color 0.2s;">
-                                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-thumbs-up-icon lucide-thumbs-up"><path d="M15 5.88 14 10h5.83a2 2 0 0 1 1.92 2.56l-2.33 8A2 2 0 0 1 17.5 22H4a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2h2.76a2 2 0 0 0 1.79-1.11L12 2a3.13 3.13 0 0 1 3 3.88Z"/><path d="M7 10v12"/></svg>
-                                                <span class="like-count">{{ post.likes.count }}</span>
-                                            </button>
-                                            <button class="dislike-btn" data-post-id="{{ post.id }}" data-post-type="community" style="border:none;background:none;cursor:pointer;padding:0;display:flex;align-items:center;gap:6px;color:var(--secondary-text);font-size:0.9rem;transition:color 0.2s;">
-                                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-thumbs-down-icon lucide-thumbs-down"><path d="M9 18.12 10 14H4.17a2 2 0 0 1-1.92-2.56l2.33-8A2 2 0 0 1 6.5 2H20a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-2.76a2 2 0 0 0-1.79 1.11L12 22a3.13 3.13 0 0 1-3-3.88Z"/><path d="M17 14V2"/></svg>
-                                                <span class="dislike-count">{{ post.dislikes.count }}</span>
-                                            </button>
-                                            <button class="comment-btn" data-post-id="{{ post.id }}" data-post-type="community" style="border:none;background:none;cursor:pointer;padding:0;display:flex;align-items:center;gap:6px;color:var(--secondary-text);font-size:0.9rem;transition:color 0.2s;">
-                                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-message-square-icon lucide-message-square"><path d="M22 17a2 2 0 0 1-2 2H6.828a2 2 0 0 0-1.414.586l-2.202 2.202A.71.71 0 0 1 2 21.286V5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2z"/></svg>
-                                                <span class="comment-count">{{ post.comments.count }}</span>
-                                            </button>
-                                            <button class="bookmark-btn" data-post-id="{{ post.id }}" data-post-type="community" style="border:none;background:none;cursor:pointer;padding:0;display:flex;align-items:center;gap:6px;color:var(--secondary-text);font-size:0.9rem;transition:color 0.2s;">
-                                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-bookmark-check-icon lucide-bookmark-check"><path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2Z"/><path d="m9 10 2 2 4-4"/></svg>
-                                            </button>
-                                        </div>
-                                    </div>
-                                </div>
-                                <p style="color:var(--secondary-text);margin-top:8px;line-height:1.5;">{{ post.content|truncatewords:30 }}</p>
-                            </div>
-                        </div>
-                    </article>
-                    {% endfor %}
-                </div>
-            {% endif %}
-
-            {% if user.bookmarked_posts.all %}
-                <div class="bookmarks-section">
-                    <h5 style="margin-bottom: 16px; color: var(--text-dark);">Blog Articles</h5>
-                    {% for blog in user.bookmarked_posts.all %}
-                    <article class="post-card full-bleed">
-                        <div class="post-card-wrapper">
-                            <div class="post-content">
-                                <div class="author-line">
-                                    <span style="font-weight:600;color:var(--secondary-text);font-size:0.9rem;">By {{ blog.author.get_full_name|default:blog.author.username }}</span>
-                                </div>
-                                <h3 class="post-title"><a href="{% url 'post_detail' blog.id %}">{{ blog.title }}</a></h3>
-                                <div class="engage-row">
-                                    <div class="engage-left">
-                                        <div class="engage-controls" style="display:flex;gap:12px;align-items:center;">
-                                            <button class="like-btn" data-post-id="{{ blog.id }}" data-post-type="blog" style="border:none;background:none;cursor:pointer;padding:0;display:flex;align-items:center;gap:6px;color:var(--secondary-text);font-size:0.9rem;transition:color 0.2s;">
-                                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-thumbs-up-icon lucide-thumbs-up"><path d="M15 5.88 14 10h5.83a2 2 0 0 1 1.92 2.56l-2.33 8A2 2 0 0 1 17.5 22H4a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2h2.76a2 2 0 0 0 1.79-1.11L12 2a3.13 3.13 0 0 1 3 3.88Z"/><path d="M7 10v12"/></svg>
-                                                <span class="like-count">{{ blog.likes.count }}</span>
-                                            </button>
-                                            <button class="dislike-btn" data-post-id="{{ blog.id }}" data-post-type="blog" style="border:none;background:none;cursor:pointer;padding:0;display:flex;align-items:center;gap:6px;color:var(--secondary-text);font-size:0.9rem;transition:color 0.2s;">
-                                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-thumbs-down-icon lucide-thumbs-down"><path d="M9 18.12 10 14H4.17a2 2 0 0 1-1.92-2.56l2.33-8A2 2 0 0 1 6.5 2H20a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-2.76a2 2 0 0 0-1.79 1.11L12 22a3.13 3.13 0 0 1-3-3.88Z"/><path d="M17 14V2"/></svg>
-                                                <span class="dislike-count">{{ blog.dislikes.count }}</span>
-                                            </button>
-                                            <button class="comment-btn" data-post-id="{{ blog.id }}" data-post-type="blog" style="border:none;background:none;cursor:pointer;padding:0;display:flex;align-items:center;gap:6px;color:var(--secondary-text);font-size:0.9rem;transition:color 0.2s;">
-                                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-message-square-icon lucide-message-square"><path d="M22 17a2 2 0 0 1-2 2H6.828a2 2 0 0 0-1.414.586l-2.202 2.202A.71.71 0 0 1 2 21.286V5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2z"/></svg>
-                                                <span class="comment-count">{{ blog.comments.count }}</span>
-                                            </button>
-                                            <button class="bookmark-btn" data-post-id="{{ blog.id }}" data-post-type="blog" style="border:none;background:none;cursor:pointer;padding:0;display:flex;align-items:center;gap:6px;color:var(--secondary-text);font-size:0.9rem;transition:color 0.2s;">
-                                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-bookmark-check-icon lucide-bookmark-check"><path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2Z"/><path d="m9 10 2 2 4-4"/></svg>
-                                            </button>
-                                        </div>
-                                    </div>
-                                </div>
-                                <p style="color:var(--secondary-text);margin-top:8px;line-height:1.5;">{{ blog.content|truncatewords:30 }}</p>
-                            </div>
-                        </div>
-                    </article>
-                    {% endfor %}
-                </div>
-            {% endif %}
-
-            {% if not user.bookmarked_community_posts.all and not user.bookmarked_posts.all %}
-                <div class="empty-state">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="opacity: 0.5; margin: 0 auto 16px; display: block;">
-                        <path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path>
-                    </svg>
-                    <p>You haven't bookmarked anything yet. Start bookmarking posts to save them here!</p>
-                </div>
-            {% endif %}
-        </div>
-    </div>
-
-    {% else %}
-    <div class="empty-state" style="padding: 60px 20px; text-align: center;">
-        <p style="font-size: 1.1rem;">You haven't subscribed to any communities or authors yet.</p>
-        <p style="color: var(--secondary-text); margin-top: 8px;">Explore communities and follow authors to see their content here.</p>
-    </div>
-    {% endif %}
-</div>
-
+{% block extra_head %}
 <style>
-/* Tabs */
-.subscription-tabs {
-    display: flex;
-    gap: 1rem;
-    margin-top: 0.5rem;
-    margin-bottom: 1rem;
-}
-
-.feed-wrapper { padding: 20px; }
-
-.feed-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; }
-.feed-header h2 { margin:0; font-size:1.5rem; }
-
-.subscription-tabs { align-items:center; }
-
-.tab-btn {
-    padding: 0.6rem 1.2rem;
-    background: var(--card-bg);
-    border: 1px solid var(--primary);
-    border-radius: 10px;
-    cursor: pointer;
-    font-weight: 600;
-    transition: background 0.2s;
-    text-align: center;
-}
-
-.tab-btn.active {
-    background: var(--primary);
-    color: #fff;
-}
-
-.tab-btn:hover {
-    background: var(--primary-dark);
-    color: #fff;
-}
-
-.tab-panel { display: none; }
-.tab-panel.active { display: block; }
-
-.subscription-list {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.2rem;
-    margin-bottom: 1.5rem;
-}
-
-.subscription-card {
-    background: var(--card-bg);
-    box-shadow: var(--card-shadow);
-    padding: 1.2rem 1.5rem;
-    border-radius: 12px;
-    flex: 1 1 250px;
-    min-width: 250px;
-}
-
-.subscription-card:hover { transform: translateY(-4px); box-shadow: 0 12px 30px rgba(2,6,23,0.08); }
-
-.subscription-thumb { width:64px; height:64px; object-fit:cover; border-radius:8px; margin-top:8px; }
-
-.subscription-card h4 { margin:0 0 6px 0; }
-
-.subscription-list { align-items: flex-start; }
-
-.unsubscribe-btn {
-    padding: 0.5rem 1rem;
-    background: var(--primary);
-    color: #fff;
-    border-radius: 8px;
-    text-decoration: none;
-    font-weight: bold;
-}
-
-.post-card { 
-    background: var(--card-bg);
-    box-shadow: var(--card-shadow);
-    padding: 1rem 1.2rem;
-    margin-bottom: 1rem;
-    border-radius: 12px;
-}
-.unified-post-card { 
-    background: var(--card-bg);
-    box-shadow: var(--card-shadow);
-    padding: 1rem 1.2rem;
-    margin-bottom: 1rem;
-    border-radius: 12px;
-}
-.unified-post-card h4 { margin-bottom: 0.5rem; }
-.unified-post-card p { color: var(--secondary-text); margin-bottom: 0.5rem; }
-.unified-post-card a { color: var(--primary); font-weight: 600; text-decoration: none; }
-.post-card-subscription { background: var(--card-bg); box-shadow: var(--card-shadow); padding: 1rem; border-radius: 12px; margin-bottom: 12px; }
-.post-card h4 { margin-bottom: 0.5rem; }
-.post-card p { color: var(--secondary-text); margin-bottom: 0.5rem; }
-.post-card a { color: var(--primary); font-weight: 600; text-decoration: none; }
-
-.no-subs {
-    font-size: 1rem;
-    color: var(--secondary-text);
-    text-align: center;
-    margin-top: 1rem;
-}
-
-/* Dark mode text color for subscription bubbles */
-@media (prefers-color-scheme: dark) {
-    .tab-btn {
-        color: #fff;
+    /* Subscriptions-specific styles */
+    .page-header {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        margin-bottom: 1.5rem;
+        animation: fadeIn 0.3s ease-out;
     }
-    
-    .tab-btn:not(.active) {
-        color: var(--text-light);
-        background: var(--card-bg);
-        border-color: var(--border-color);
+
+    .page-icon {
+        width: 3rem;
+        height: 3rem;
+        border-radius: 0.75rem;
+        background: linear-gradient(to bottom right, hsl(var(--primary)), hsl(var(--primary-dark)));
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: var(--shadow-lg);
     }
-}
 
-/* Fallback for dark mode using dark class or data attribute */
-body.dark .tab-btn,
-body[data-theme="dark"] .tab-btn,
-:root[data-theme="dark"] .tab-btn {
-    color: #fff;
-}
+    .page-icon svg {
+        width: 1.5rem;
+        height: 1.5rem;
+        color: hsl(var(--primary-foreground));
+    }
 
-body.dark .tab-btn:not(.active),
-body[data-theme="dark"] .tab-btn:not(.active),
-:root[data-theme="dark"] .tab-btn:not(.active) {
-    color: #fff;
-    background: var(--card-bg);
-    border-color: var(--border-color);
-}
+    .page-info h1 {
+        margin-bottom: 0.25rem;
+    }
 
-/* Joined communities horizontal slider */
-.community-slider {
-    display: flex;
-    gap: 4px;
-    overflow-x: auto;
-    padding: 8px 2px 16px 2px;
-    margin-bottom: 12px;
-}
-.community-slide {
-    min-width: 180px;
-    background: var(--card-bg);
-    box-shadow: var(--card-shadow);
-    border-radius: 10px;
-    padding: 10px;
-    text-decoration: none;
-    color: inherit;
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    align-items: flex-start;
-}
-.community-slide-thumb { width: 100%; height: 80px; object-fit: cover; border-radius: 8px; }
-.community-slide-thumb.placeholder { background: linear-gradient(135deg,#f3f4f6,#e5e7eb); width:100%; height:80px; border-radius:8px; }
-.community-slide-name { font-weight:700; font-size:0.95rem; }
-.community-slide-meta { color: var(--secondary-text); font-size:0.85rem; }
+    .page-info p {
+        font-size: 0.875rem;
+        color: hsl(var(--muted-foreground));
+    }
 
-/* Hide native scrollbar */
-.community-slider {
-    -ms-overflow-style: none;  /* IE and Edge */
-    scrollbar-width: none;  /* Firefox */
-}
-.community-slider::-webkit-scrollbar { display: none; }
+    /* Tab Navigation */
+    .tabs-wrapper {
+        position: relative;
+        display: flex;
+        gap: 0.25rem;
+        padding: 0.25rem;
+        background-color: hsl(var(--muted) / 0.5);
+        border-radius: 0.75rem;
+        border: 1px solid hsl(var(--border) / 0.5);
+        margin-bottom: 1.5rem;
+    }
 
-/* Arrow controls */
-.joined-communities-wrapper { display:flex; align-items:center; gap:12px; }
-.comm-arrow {
-    width:40px; height:40px; border-radius:50%; border:none; background:var(--card-bg); box-shadow:var(--card-shadow); display:flex; align-items:center; justify-content:center; cursor:pointer; transition:transform 0.15s, background 0.15s; color:var(--text-dark);
-}
-.comm-arrow:hover { transform: scale(1.05); }
-.comm-arrow:active { transform: scale(0.98); }
-.comm-arrow.hidden { display:none; }
+    .tab-button {
+        position: relative;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.625rem 1rem;
+        border-radius: 0.5rem;
+        font-weight: 500;
+        font-size: 0.875rem;
+        transition: all 0.2s;
+        border: none;
+        background: transparent;
+        color: hsl(var(--muted-foreground));
+        cursor: pointer;
+        flex: 1;
+        justify-content: center;
+    }
 
-/* Larger slides and hover/touch scale */
-.community-slide { min-width: 220px; padding:14px; }
-.community-slide-thumb { height: 100px; }
-.community-slide { transition: transform 0.18s, box-shadow 0.18s; }
-.community-slide:hover, .community-slide:active { transform: scale(1.04); box-shadow: 0 18px 40px rgba(2,6,23,0.12); }
+    .tab-button:hover {
+        color: hsl(var(--foreground));
+        background-color: hsl(var(--background) / 0.5);
+    }
 
-/* Like/Dislike fill styles (only visually applied within community posts panel) */
-#community-posts .like-btn.liked svg,
-#community-posts .like-btn.liked {
-    color: var(--primary);
-}
-#community-posts .like-btn.liked svg { stroke: currentColor; fill: currentColor; }
+    .tab-button.active {
+        background-color: hsl(var(--background));
+        color: hsl(var(--foreground));
+        box-shadow: var(--shadow-sm);
+    }
 
-#community-posts .dislike-btn.disliked svg,
-#community-posts .dislike-btn.disliked {
-    color: #e11d48;
-}
-#community-posts .dislike-btn.disliked svg { stroke: currentColor; fill: currentColor; }
+    .tab-button svg {
+        width: 1rem;
+        height: 1rem;
+    }
 
-#community-posts .bookmark-btn.bookmarked svg,
-#community-posts .bookmark-btn.bookmarked { color: var(--primary); }
-#community-posts .bookmark-btn.bookmarked svg { stroke: currentColor; fill: currentColor; }
+    .tab-button .badge {
+        position: static;
+        min-width: 1.25rem;
+        height: 1.25rem;
+        padding: 0 0.375rem;
+        font-size: 0.75rem;
+        font-weight: 600;
+        border-radius: 9999px;
+        transition: all 0.2s;
+    }
 
-.menu-item {
-    border: none;
-    background: none;
-    cursor: pointer;
-    padding: 10px 12px;
-    text-align: left;
-    color: var(--text-dark);
-    font-size: 0.9rem;
-    transition: background 0.2s;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    width: 100%;
-}
+    .tab-button:not(.active) .badge {
+        background-color: hsl(var(--muted));
+        color: hsl(var(--muted-foreground));
+    }
 
-.menu-item.hover-bg-gray:hover {
-    background: #f5f5f5 !important;
-}
+    .tab-button.active .badge {
+        background-color: hsl(var(--primary));
+        color: hsl(var(--primary-foreground));
+    }
+
+    .tab-label {
+        display: none;
+    }
+
+    /* Filter Bar */
+    .filter-bar {
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+        margin-bottom: 1.5rem;
+    }
+
+    .filter-bar .search-input {
+        flex: 1;
+    }
+
+    .sort-select {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        width: 100%;
+        height: 2.5rem;
+        padding: 0 0.75rem;
+        border-radius: calc(var(--radius) - 2px);
+        background-color: hsl(var(--background));
+        border: 1px solid hsl(var(--border) / 0.5);
+        font-size: 0.875rem;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+
+    .sort-select:focus {
+        outline: none;
+        border-color: hsl(var(--primary) / 0.5);
+        box-shadow: 0 0 0 2px hsl(var(--primary) / 0.2);
+    }
+
+    .sort-select svg {
+        width: 1rem;
+        height: 1rem;
+        opacity: 0.5;
+    }
+
+    /* Post Cards - Enhanced */
+    .subscriptions-feed .post-card {
+        padding: 1rem;
+    }
+
+    .post-card .post-header {
+        padding: 0;
+        margin-bottom: 0.75rem;
+    }
+
+    .post-card .post-author .avatar {
+        width: 2.5rem;
+        height: 2.5rem;
+    }
+
+    .post-card .post-title {
+        padding: 0;
+        margin-bottom: 0.375rem;
+        font-size: 1rem;
+        line-height: 1.375;
+        cursor: pointer;
+        transition: color 0.2s;
+    }
+
+    .post-card .post-title:hover {
+        color: hsl(var(--primary));
+    }
+
+    .post-card .post-content {
+        padding: 0;
+        margin-bottom: 1rem;
+        font-size: 0.875rem;
+        line-height: 1.625;
+    }
+
+    .post-card .post-actions {
+        padding: 0;
+        border-top: none;
+        margin-top: 1rem;
+    }
+
+    .post-meta {
+        display: flex;
+        align-items: center;
+        gap: 0.375rem;
+        font-size: 0.75rem;
+        color: hsl(var(--muted-foreground));
+    }
+
+    .post-meta svg {
+        width: 0.75rem;
+        height: 0.75rem;
+    }
+
+    /* More Button */
+    .more-button {
+        display: flex;
+        justify-content: center;
+        padding-top: 1rem;
+    }
+
+    /* Responsive */
+    @media (min-width: 640px) {
+        .tab-label {
+            display: inline;
+        }
+
+        .filter-bar {
+            flex-direction: row;
+        }
+
+        .sort-select {
+            width: 10rem;
+        }
+    }
 </style>
-</style>
+{% endblock %}
 
+{% block main_content %}
+<div class="container" style="max-width: 56rem;">
+    <!-- Page Header -->
+    <div class="page-header">
+        <div class="page-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"></path>
+                <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"></path>
+            </svg>
+        </div>
+        <div class="page-info">
+            <h1>Subscriptions</h1>
+            <p>Stay updated with your favorite communities and authors</p>
+        </div>
+    </div>
+
+    <!-- Tab Navigation -->
+    <div class="tabs-wrapper">
+        <button class="tab-button active" data-tab="posts">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path>
+                <circle cx="9" cy="7" r="4"></circle>
+                <path d="M22 21v-2a4 4 0 0 0-3-3.87"></path>
+                <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+            </svg>
+            <span class="tab-label">Community Posts</span>
+            <span class="badge">{{ community_posts_count }}</span>
+        </button>
+        <button class="tab-button" data-tab="blogs">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"></path>
+                <path d="M14 2v4a2 2 0 0 0 2 2h4"></path>
+            </svg>
+            <span class="tab-label">Blog Articles</span>
+            <span class="badge">{{ blog_articles_count }}</span>
+        </button>
+        <button class="tab-button" data-tab="bookmarks">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z"></path>
+            </svg>
+            <span class="tab-label">Bookmarks</span>
+            <span class="badge">{{ bookmarks_count }}</span>
+        </button>
+    </div>
+
+    <!-- Filter Bar -->
+    <div class="filter-bar">
+        <div class="search-wrapper" style="flex: 1; max-width: 100%;">
+            <svg class="search-icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="11" cy="11" r="8"></circle>
+                <path d="m21 21-4.3-4.3"></path>
+            </svg>
+            <input type="text" id="subscriptionSearch" placeholder="Search subscriptions..." class="search-input">
+        </div>
+        <select class="sort-select" id="sortSelect">
+            <option value="newest">Newest</option>
+            <option value="oldest">Oldest</option>
+            <option value="most_liked">Most Liked</option>
+            <option value="most_commented">Most Commented</option>
+        </select>
+    </div>
+
+    <!-- Posts Feed -->
+    <div class="subscriptions-feed" id="subscriptionsFeed">
+        <p style="text-align: center; padding: 2rem; color: hsl(var(--muted-foreground));">Loading subscriptions...</p>
+    </div>
+
+    <!-- Load More Button -->
+    <div class="more-button" id="loadMoreContainer" style="display: none;">
+        <button class="btn btn-ghost" id="loadMoreBtn" style="padding: 0.5rem 2rem;">
+            Load More
+        </button>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{{ block.super }}
 <script>
-const tabs = document.querySelectorAll('.tab-btn');
-const panels = document.querySelectorAll('.tab-panel');
+    const subscriptionsConfig = {
+        currentTab: 'posts',
+        currentSort: 'newest',
+        currentOffset: 0,
+        itemsPerPage: 10,
+        hasMore: true,
+        urlTemplates: {
+            subscriptionPosts: "{% url 'subscription_posts_api' %}",
+            subscriptionBlogs: "{% url 'subscription_blogs_api' %}",
+            bookmarkedPosts: "{% url 'bookmarked_posts_api' %}",
+            toggleLike: "{% url 'toggle_community_post_like' 0 %}",
+            toggleBookmark: "{% url 'toggle_community_post_bookmark' 0 %}",
+            postDetail: "{% url 'community_post_detail' 0 %}",
+            communityDetail: "{% url 'community_detail' 0 %}",
+            blogDetail: "{% url 'post_detail' 0 %}"
+        }
+    };
 
-tabs.forEach(tab => {
-    tab.addEventListener('click', () => {
-        tabs.forEach(t => t.classList.remove('active'));
-        tab.classList.add('active');
+    // Helper function to build URLs with IDs
+    function buildUrl(template, id) {
+        return template.replace(/0(?=\/)/, id);
+    }
 
-        const target = tab.dataset.target;
-        panels.forEach(panel => {
-            panel.classList.toggle('active', panel.id === target);
+    function getEmptyStateMessage(tab) {
+        if (tab === 'blogs') {
+            return 'No blog updates yet. Follow authors to see their posts here.';
+        }
+        if (tab === 'bookmarks') {
+            return 'No bookmarks yet. Save posts you love to revisit them.';
+        }
+        return 'No community posts yet. Join communities to see their updates.';
+    }
+
+    // Tab Switching
+    document.querySelectorAll('.tab-button').forEach(btn => {
+        btn.addEventListener('click', () => {
+            document.querySelectorAll('.tab-button').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            subscriptionsConfig.currentTab = btn.dataset.tab;
+            subscriptionsConfig.currentOffset = 0;
+            loadSubscriptions(true);
         });
     });
-});
 
-// Show/hide community slider arrows depending on active tab
-const commPrev = document.getElementById('comm-prev');
-const commNext = document.getElementById('comm-next');
-const commSlider = document.getElementById('community-slider');
-
-function updateCommArrows(activePanelId) {
-    const show = activePanelId === 'community-posts';
-    if (commPrev) commPrev.classList.toggle('hidden', !show);
-    if (commNext) commNext.classList.toggle('hidden', !show);
-}
-
-// Initialize arrows visibility
-updateCommArrows(document.querySelector('.tab-btn.active')?.dataset.target || '');
-
-tabs.forEach(tab => {
-    tab.addEventListener('click', () => {
-        updateCommArrows(tab.dataset.target);
-        // show/hide joined-communities-section based on active tab
-        const joinedSect = document.querySelector('.joined-communities-section');
-        if (joinedSect) joinedSect.style.display = (tab.dataset.target === 'community-posts') ? 'block' : 'none';
+    // Sort Change
+    document.getElementById('sortSelect').addEventListener('change', (e) => {
+        subscriptionsConfig.currentSort = e.target.value;
+        subscriptionsConfig.currentOffset = 0;
+        loadSubscriptions(true);
     });
-});
 
-if (commPrev && commNext && commSlider) {
-    const scrollAmount = window.innerWidth < 768 ? 200 : 260;
-    
-    const scrollLeft = () => {
-        commSlider.scrollBy({ left: -scrollAmount, behavior: 'smooth' });
-    };
-    const scrollRight = () => {
-        commSlider.scrollBy({ left: scrollAmount, behavior: 'smooth' });
-    };
-    
-    commPrev.addEventListener('click', scrollLeft);
-    commNext.addEventListener('click', scrollRight);
-    
-    // Add touch support
-    commPrev.addEventListener('touchstart', (e) => { e.preventDefault(); scrollLeft(); });
-    commNext.addEventListener('touchstart', (e) => { e.preventDefault(); scrollRight(); });
-    
-    // Optional: hide arrows when slider is at start/end
-    commSlider.addEventListener('scroll', () => {
-        const atStart = commSlider.scrollLeft <= 10;
-        const atEnd = commSlider.scrollWidth - commSlider.clientWidth - commSlider.scrollLeft <= 10;
-        commPrev.style.opacity = atStart ? '0.5' : '1';
-        commNext.style.opacity = atEnd ? '0.5' : '1';
+    // Search
+    let searchTimeout;
+    document.getElementById('subscriptionSearch').addEventListener('input', (e) => {
+        clearTimeout(searchTimeout);
+        searchTimeout = setTimeout(() => {
+            subscriptionsConfig.currentOffset = 0;
+            loadSubscriptions(true);
+        }, 300);
     });
-}
 
-// AJAX Action Handlers
-function getCSRFToken() {
-    let token = '';
-    const cookies = document.cookie.split(';');
-    for (let cookie of cookies) {
-        cookie = cookie.trim();
-        if (cookie.startsWith('csrftoken=')) {
-            token = cookie.substring('csrftoken='.length);
-            break;
+    // Load Subscriptions
+    async function loadSubscriptions(clear = false) {
+        const feed = document.getElementById('subscriptionsFeed');
+        const loadMoreContainer = document.getElementById('loadMoreContainer');
+        const searchQuery = document.getElementById('subscriptionSearch').value;
+
+        if (clear) {
+            feed.innerHTML = '<p style="text-align: center; padding: 2rem; color: hsl(var(--muted-foreground));">Loading...</p>';
+            loadMoreContainer.style.display = 'none';
+        }
+
+        try {
+            let url;
+            switch (subscriptionsConfig.currentTab) {
+                case 'blogs':
+                    url = subscriptionsConfig.urlTemplates.subscriptionBlogs;
+                    break;
+                case 'bookmarks':
+                    url = subscriptionsConfig.urlTemplates.bookmarkedPosts;
+                    break;
+                default:
+                    url = subscriptionsConfig.urlTemplates.subscriptionPosts;
+            }
+
+            url += `?sort=${subscriptionsConfig.currentSort}&offset=${subscriptionsConfig.currentOffset}&limit=${subscriptionsConfig.itemsPerPage}`;
+            if (searchQuery) {
+                url += `&q=${encodeURIComponent(searchQuery)}`;
+            }
+
+            const response = await fetch(url);
+            const data = await response.json();
+
+            if (clear) {
+                feed.innerHTML = '';
+            }
+
+            if (data.items && data.items.length === 0 && clear) {
+                feed.innerHTML = `<p style="text-align: center; padding: 2rem; color: hsl(var(--muted-foreground));">${getEmptyStateMessage(subscriptionsConfig.currentTab)}</p>`;
+                return;
+            }
+
+            data.items.forEach(item => {
+                const element = subscriptionsConfig.currentTab === 'blogs' 
+                    ? createBlogElement(item) 
+                    : createPostElement(item);
+                feed.appendChild(element);
+            });
+
+            subscriptionsConfig.currentOffset += data.items.length;
+            subscriptionsConfig.hasMore = data.has_more;
+
+            if (subscriptionsConfig.hasMore) {
+                loadMoreContainer.style.display = 'flex';
+            } else {
+                loadMoreContainer.style.display = 'none';
+            }
+
+            // Track views
+            observeItems();
+        } catch (error) {
+            console.error('Error loading subscriptions:', error);
+            feed.innerHTML = '<p style="text-align: center; padding: 2rem; color: hsl(var(--destructive));">Error loading subscriptions.</p>';
         }
     }
-    return token || document.querySelector('[name=csrfmiddlewaretoken]')?.value || '';
-}
 
-document.querySelectorAll('.like-btn').forEach(btn => {
-    btn.addEventListener('click', async (e) => {
-        e.preventDefault();
-        const postId = btn.dataset.postId;
-        const postType = btn.dataset.postType;
-        const endpoint = postType === 'blog' ? `/posts/post/${postId}/like/` : `/communities/api/post/${postId}/like/`;
+    // Create Post Element
+    function createPostElement(post) {
+        const article = document.createElement('article');
+        article.className = 'post-card animate-fade-in';
+        article.dataset.postId = post.id;
 
-        try {
-            const res = await fetch(endpoint, {
-                method: 'POST',
-                headers: {
-                    'X-CSRFToken': getCSRFToken(),
-                    'Content-Type': 'application/json'
-                }
-            });
-            if (res.ok) {
-                const data = await res.json();
-                const countEl = btn.querySelector('.like-count');
-                if (countEl) {
-                    countEl.textContent = data.likes_count ?? 0;
-                    // Force re-render
-                    countEl.style.opacity = '0';
-                    setTimeout(() => { countEl.style.opacity = '1'; }, 50);
-                }
-                // Visual state: prefer CSS class for community posts so fill appears only there
-                if (postType === 'community') {
-                    btn.classList.toggle('liked', !!data.liked);
-                } else {
-                    btn.style.color = data.liked ? 'var(--primary)' : 'var(--secondary-text)';
-                }
-                // Unset dislike if user liked
-                if (data.liked) {
-                    const dislikeBtn = btn.closest('.engage-controls')?.querySelector('.dislike-btn');
-                    if (dislikeBtn) {
-                        dislikeBtn.classList.remove('disliked');
-                        if (postType === 'community') {
-                            dislikeBtn.classList.remove('disliked');
-                        } else {
-                            dislikeBtn.style.color = 'var(--secondary-text)';
-                        }
-                        const dislikeCount = dislikeBtn.querySelector('.dislike-count');
-                        if (dislikeCount) dislikeCount.textContent = data.dislikes_count ?? 0;
+        const communityInitial = post.community_name.charAt(0).toUpperCase();
+        const postDate = new Date(post.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+
+        article.innerHTML = `
+            <div class="post-header">
+                <div class="post-author">
+                    ${post.community_image ? 
+                        `<div class="avatar" style="background-image: url('${post.community_image}'); background-size: cover;"></div>` :
+                        `<div class="avatar">${communityInitial}</div>`
                     }
+                    <div style="flex: 1; min-width: 0;">
+                        <a href="${buildUrl(subscriptionsConfig.urlTemplates.communityDetail, post.community_id)}" style="font-weight: 600; font-size: 0.875rem; text-decoration: none; color: hsl(var(--foreground));" class="truncate">${post.community_name}</a>
+                        <div class="post-meta">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <circle cx="12" cy="12" r="10"></circle>
+                                <polyline points="12 6 12 12 16 14"></polyline>
+                            </svg>
+                            <span>${postDate}</span>
+                            <span>•</span>
+                            <span>by ${post.author_username}</span>
+                        </div>
+                    </div>
+                </div>
+                <button class="btn btn-icon btn-ghost">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="1"></circle>
+                        <circle cx="19" cy="12" r="1"></circle>
+                        <circle cx="5" cy="12" r="1"></circle>
+                    </svg>
+                </button>
+            </div>
+            
+            <h3 class="post-title line-clamp-2" onclick="window.location.href='${buildUrl(subscriptionsConfig.urlTemplates.postDetail, post.id)}'">${post.title}</h3>
+            
+            <div class="post-content line-clamp-2">${post.content}</div>
+            
+            <div class="post-actions">
+                <div class="action-buttons">
+                    <button class="action-btn like-btn ${post.user_liked ? 'liked' : ''}" data-post-id="${post.id}">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M7 10v12"></path>
+                            <path d="M15 5.88 14 10h5.83a2 2 0 0 1 1.92 2.56l-2.33 8A2 2 0 0 1 17.5 22H4a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2h2.76a2 2 0 0 0 1.79-1.11L12 2a3.13 3.13 0 0 1 3 3.88Z"></path>
+                        </svg>
+                        <span class="count">${post.likes_count}</span>
+                    </button>
+                    <button class="action-btn dislike-btn ${post.user_disliked ? 'disliked' : ''}" data-post-id="${post.id}">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M17 14V2"></path>
+                            <path d="M9 18.12 10 14H4.17a2 2 0 0 1-1.92-2.56l2.33-8A2 2 0 0 1 6.5 2H20a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-2.76a2 2 0 0 0-1.79 1.11L12 22a3.13 3.13 0 0 1-3-3.88Z"></path>
+                        </svg>
+                        <span class="count">${post.dislikes_count}</span>
+                    </button>
+                    <a href="${buildUrl(subscriptionsConfig.urlTemplates.postDetail, post.id)}" class="action-btn">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"></path>
+                        </svg>
+                        <span class="count">${post.comments_count}</span>
+                    </a>
+                </div>
+                <button class="action-btn bookmark-btn ${post.user_bookmarked ? 'bookmarked' : ''}" data-post-id="${post.id}">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z"></path>
+                    </svg>
+                </button>
+            </div>
+        `;
+
+        return article;
+    }
+
+    // Create Blog Element
+    function createBlogElement(blog) {
+        const article = document.createElement('article');
+        article.className = 'post-card animate-fade-in';
+        article.dataset.blogId = blog.id;
+
+        const authorInitial = blog.author_username.charAt(0).toUpperCase();
+        const blogDate = new Date(blog.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+
+        article.innerHTML = `
+            <div class="post-header">
+                <div class="post-author">
+                    ${blog.author_avatar ? 
+                        `<div class="avatar" style="background-image: url('${blog.author_avatar}'); background-size: cover;"></div>` :
+                        `<div class="avatar">${authorInitial}</div>`
+                    }
+                    <div style="flex: 1; min-width: 0;">
+                        <div style="font-weight: 600; font-size: 0.875rem;" class="truncate">${blog.author_username}</div>
+                        <div class="post-meta">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <circle cx="12" cy="12" r="10"></circle>
+                                <polyline points="12 6 12 12 16 14"></polyline>
+                            </svg>
+                            <span>${blogDate}</span>
+                            <span>•</span>
+                            <span>${blog.read_time} min read</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <h3 class="post-title line-clamp-2" onclick="window.location.href='${buildUrl(subscriptionsConfig.urlTemplates.blogDetail, blog.id)}'">${blog.title}</h3>
+            
+            ${blog.excerpt ? `<div class="post-content line-clamp-2">${blog.excerpt}</div>` : ''}
+            
+            <div class="post-actions">
+                <div class="action-buttons">
+                    <button class="action-btn">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"></path>
+                            <circle cx="12" cy="12" r="3"></circle>
+                        </svg>
+                        <span class="count">${blog.views_count}</span>
+                    </button>
+                    <button class="action-btn">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M7 10v12"></path>
+                            <path d="M15 5.88 14 10h5.83a2 2 0 0 1 1.92 2.56l-2.33 8A2 2 0 0 1 17.5 22H4a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2h2.76a2 2 0 0 0 1.79-1.11L12 2a3.13 3.13 0 0 1 3 3.88Z"></path>
+                        </svg>
+                        <span class="count">${blog.likes_count}</span>
+                    </button>
+                </div>
+            </div>
+        `;
+
+        return article;
+    }
+
+    // Load More Handler
+    document.getElementById('loadMoreBtn').addEventListener('click', () => {
+        loadSubscriptions(false);
+    });
+
+    // Intersection Observer for view tracking
+    const viewObserver = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                const id = entry.target.dataset.postId || entry.target.dataset.blogId;
+                if (id) {
+                    // Track view - you can implement this
+                    console.log('Viewing:', id);
                 }
             }
-        } catch (err) {
-            console.error('Like failed:', err);
-        }
-    });
-});
-
-document.querySelectorAll('.dislike-btn').forEach(btn => {
-    btn.addEventListener('click', async (e) => {
-        e.preventDefault();
-        const postId = btn.dataset.postId;
-        const postType = btn.dataset.postType;
-        const endpoint = postType === 'blog' ? `/posts/post/${postId}/dislike/` : `/communities/api/post/${postId}/dislike/`;
-
-        try {
-            const res = await fetch(endpoint, {
-                method: 'POST',
-                headers: {
-                    'X-CSRFToken': getCSRFToken(),
-                    'Content-Type': 'application/json'
-                }
-            });
-            if (res.ok) {
-                const data = await res.json();
-                const countEl = btn.querySelector('.dislike-count');
-                if (countEl) countEl.textContent = data.dislikes_count ?? 0;
-                if (postType === 'community') {
-                    btn.classList.toggle('disliked', !!data.disliked);
-                } else {
-                    btn.style.color = data.disliked ? '#e11d48' : 'var(--secondary-text)';
-                }
-                // Unset like if user disliked
-                if (data.disliked) {
-                    const likeBtn = btn.closest('.engage-controls')?.querySelector('.like-btn');
-                    if (likeBtn) {
-                        likeBtn.classList.remove('liked');
-                        if (postType !== 'community') likeBtn.style.color = 'var(--secondary-text)';
-                        const likeCount = likeBtn.querySelector('.like-count');
-                        if (likeCount) likeCount.textContent = data.likes_count ?? 0;
-                    }
-                }
-            }
-        } catch (err) {
-            console.error('Dislike failed:', err);
-        }
-    });
-});
-
-document.querySelectorAll('.bookmark-btn').forEach(btn => {
-    btn.addEventListener('click', async (e) => {
-        e.preventDefault();
-        const postId = btn.dataset.postId;
-        const postType = btn.dataset.postType;
-        const endpoint = postType === 'blog' ? `/posts/post/${postId}/bookmark/` : `/communities/api/post/${postId}/bookmark/`;
-
-        try {
-            const res = await fetch(endpoint, {
-                method: 'POST',
-                headers: {
-                    'X-CSRFToken': getCSRFToken(),
-                    'Content-Type': 'application/json'
-                }
-            });
-            if (res.ok) {
-                const data = await res.json();
-                const svg = btn.querySelector('svg');
-                if (data.bookmarked) {
-                    if (postType === 'community') {
-                        btn.classList.add('bookmarked');
-                    } else {
-                        btn.style.color = 'var(--primary)';
-                    }
-                    if (svg) {
-                        svg.setAttribute('fill', 'currentColor');
-                        svg.setAttribute('class', 'lucide lucide-bookmark-check-icon lucide-bookmark-check');
-                    }
-                } else {
-                    if (postType === 'community') {
-                        btn.classList.remove('bookmarked');
-                    } else {
-                        btn.style.color = 'var(--secondary-text)';
-                    }
-                    if (svg) {
-                        svg.setAttribute('fill', 'none');
-                        svg.setAttribute('class', 'lucide lucide-bookmark-icon lucide-bookmark');
-                    }
-                }
-            }
-        } catch (err) {
-            console.error('Bookmark failed:', err);
-        }
-    });
-});
-
-document.querySelectorAll('.comment-btn').forEach(btn => {
-    btn.addEventListener('click', (e) => {
-        e.preventDefault();
-        const postId = btn.dataset.postId;
-        const postType = btn.dataset.postType;
-        if (postType === 'blog') {
-            window.location.href = `/posts/${postId}/#comments`;
-        } else {
-            window.location.href = `/communities/post/${postId}/#comments`;
-        }
-    });
-});
-
-// Ellipsis menu toggle
-document.querySelectorAll('.options-menu-trigger').forEach(trigger => {
-    trigger.addEventListener('click', (e) => {
-        e.stopPropagation();
-        const menu = trigger.nextElementSibling;
-        const isHidden = menu.getAttribute('aria-hidden') === 'true';
-        document.querySelectorAll('.options-menu').forEach(m => {
-            m.setAttribute('aria-hidden', 'true');
-            m.style.display = 'none';
         });
-        if (isHidden) {
-            menu.setAttribute('aria-hidden', 'false');
-            menu.style.display = 'flex';
-        }
-    });
-});
+    }, { threshold: 0.5 });
 
-document.addEventListener('click', () => {
-    document.querySelectorAll('.options-menu').forEach(m => {
-        m.setAttribute('aria-hidden', 'true');
-        m.style.display = 'none';
-    });
-});
+    function observeItems() {
+        document.querySelectorAll('.post-card').forEach(card => {
+            viewObserver.observe(card);
+        });
+    }
 
-// Report button handler - prompt user for reason, then submit JSON
-document.querySelectorAll('.report-btn').forEach(btn => {
-    btn.addEventListener('click', async (e) => {
-        e.preventDefault();
-        
-        // Close the options menu
-        const menu = btn.closest('.options-menu');
-        if (menu) {
-            menu.setAttribute('aria-hidden', 'true');
-            menu.style.display = 'none';
-        }
+    // Action buttons functionality
+    document.addEventListener('click', async (e) => {
+        const btn = e.target.closest('.like-btn, .dislike-btn, .bookmark-btn');
+        if (!btn) return;
 
         const postId = btn.dataset.postId;
-        const postType = btn.dataset.postType || 'blog';
-        const endpoint = postType === 'blog' ? `/posts/post/${postId}/report/` : `/communities/api/post/${postId}/report/`;
+        if (!postId) return;
 
-        // Ask user for a reason (simple prompt for now)
-        const reason = window.prompt('Please enter a reason for reporting (spam, harassment, other):');
-        if (!reason) {
-            // user cancelled or empty
-            return;
-        }
+        const isBlog = btn.closest('.post-card').dataset.blogId !== undefined;
 
-        try {
-            const res = await fetch(endpoint, {
-                method: 'POST',
-                headers: {
-                    'X-CSRFToken': getCSRFToken(),
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({ reason })
-            });
-            if (res.ok) {
-                const data = await res.json().catch(() => ({}));
-                alert(data.message || 'Report submitted successfully');
-            } else {
-                const err = await res.json().catch(() => ({}));
-                alert(err.message || 'Failed to submit report');
-            }
-        } catch (err) {
-            console.error('Report failed:', err);
-            alert('Report failed');
+        if (btn.classList.contains('like-btn')) {
+            await toggleLike(postId, btn, isBlog);
+        } else if (btn.classList.contains('dislike-btn')) {
+            await toggleDislike(postId, btn, isBlog);
+        } else if (btn.classList.contains('bookmark-btn')) {
+            await toggleBookmark(postId, btn, isBlog);
         }
     });
-});
-</script>
 
+    async function toggleLike(postId, btn, isBlog) {
+        try {
+            const url = isBlog ? buildUrl(subscriptionsConfig.urlTemplates.toggleLike, postId) : buildUrl("{% url 'toggle_community_post_like' 0 %}", postId);
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': csrfToken,
+                    'Content-Type': 'application/json'
+                }
+            });
+            const data = await response.json();
+            // Update UI if needed
+        } catch (error) {
+            console.error('Error toggling like:', error);
+        }
+    }
+
+    async function toggleDislike(postId, btn, isBlog) {
+        try {
+            const url = isBlog ? buildUrl(subscriptionsConfig.urlTemplates.toggleDislike, postId) : buildUrl("{% url 'toggle_community_post_dislike' 0 %}", postId);
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': csrfToken,
+                    'Content-Type': 'application/json'
+                }
+            });
+            const data = await response.json();
+            // Update UI if needed
+        } catch (error) {
+            console.error('Error toggling dislike:', error);
+        }
+    }
+
+    async function toggleBookmark(postId, btn, isBlog) {
+        try {
+            const url = isBlog ? buildUrl(subscriptionsConfig.urlTemplates.toggleBookmark, postId) : buildUrl("{% url 'toggle_community_post_bookmark' 0 %}", postId);
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': csrfToken,
+                    'Content-Type': 'application/json'
+                }
+            });
+            const data = await response.json();
+            btn.classList.toggle('bookmarked');
+        } catch (error) {
+            console.error('Error toggling bookmark:', error);
+        }
+    }
+
+    // Initial load
+    loadSubscriptions(true);
+</script>
 {% endblock %}

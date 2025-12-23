@@ -73,6 +73,13 @@
             <div class="flex items-center gap-4">
                 {% if request.user.is_authenticated %}
                     <span class="text-sm">{{ request.user.username }}</span>
+                    <a href="{% url 'marketplace:upload' %}" class="px-4 py-2 bg-white text-purple-600 rounded font-semibold hover:opacity-90 flex items-center gap-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M5 12h14"/>
+                            <path d="M12 5v14"/>
+                        </svg>
+                        Create
+                    </a>
                     <a href="{% url 'dashboard_home' %}" class="px-4 py-2 bg-white text-purple-600 rounded font-semibold hover:opacity-90">Profile</a>
                 {% else %}
                     <a href="{% url 'login' %}" class="px-4 py-2 border border-white rounded hover:bg-white hover:text-purple-600">Login</a>

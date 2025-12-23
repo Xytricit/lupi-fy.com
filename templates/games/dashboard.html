@@ -619,11 +619,13 @@
       opacity: 0;
       transition: opacity 0.2s ease;
       padding: 1rem;
+      pointer-events: none;
     }
 
     .modal-overlay.show {
       display: flex;
       opacity: 1;
+      pointer-events: auto;
     }
 
     .modal-content {
@@ -638,10 +640,13 @@
       box-shadow: var(--shadow-xl);
       transform: scale(0.9);
       transition: transform 0.2s ease;
+      position: relative;
+      z-index: 1001;
     }
 
     .modal-overlay.show .modal-content {
       transform: scale(1);
+      visibility: visible;
     }
 
     .modal-header {
@@ -993,11 +998,27 @@
     }
 
     function showModal(id) {
-      document.getElementById(id).classList.add('show');
+      const modal = document.getElementById(id);
+      if (modal) {
+        modal.classList.add('show');
+        modal.style.display = 'flex';
+        modal.style.visibility = 'visible';
+        console.log(`Modal ${id} shown`, modal);
+      } else {
+        console.error(`Modal ${id} not found`);
+      }
     }
 
     function hideModal(id) {
-      document.getElementById(id).classList.remove('show');
+      const modal = document.getElementById(id);
+      if (modal) {
+        modal.classList.remove('show');
+        setTimeout(() => {
+          if (!modal.classList.contains('show')) {
+            modal.style.display = 'none';
+          }
+        }, 200);
+      }
     }
 
     function formatNumber(num) {
@@ -1233,14 +1254,26 @@
     });
 
     // New game buttons
-    document.getElementById('newGameBtn').addEventListener('click', () => showModal('newGameModal'));
-    document.getElementById('heroNewGame').addEventListener('click', () => showModal('newGameModal'));
-    document.getElementById('cancelNewGame').addEventListener('click', () => {
-      hideModal('newGameModal');
-      document.getElementById('newGameForm').reset();
-    });
+    const newGameBtn = document.getElementById('newGameBtn');
+    if (newGameBtn) {
+      newGameBtn.addEventListener('click', () => showModal('newGameModal'));
+    }
+    const heroNewGame = document.getElementById('heroNewGame');
+    if (heroNewGame) {
+      heroNewGame.addEventListener('click', () => showModal('newGameModal'));
+    }
+    const cancelNewGame = document.getElementById('cancelNewGame');
+    if (cancelNewGame) {
+      cancelNewGame.addEventListener('click', () => {
+        hideModal('newGameModal');
+        const newGameForm = document.getElementById('newGameForm');
+        if (newGameForm) newGameForm.reset();
+      });
+    }
 
-    document.getElementById('confirmNewGame').addEventListener('click', async () => {
+    const confirmNewGame = document.getElementById('confirmNewGame');
+    if (confirmNewGame) {
+      confirmNewGame.addEventListener('click', async () => {
       const title = document.getElementById('gameTitle').value.trim();
       const thumbnail = document.getElementById('gameThumbnail').files[0];
       const description = document.getElementById('gameDescription').value.trim();
@@ -1282,24 +1315,33 @@
         button.disabled = false;
         button.innerHTML = 'Create Game';
       }
-    });
+      });
+    }
 
     // Open last project
-    document.getElementById('heroOpenLast').addEventListener('click', () => {
-      if (gamesData.length === 0) {
-        showToast('No games to open. Create your first game!', 'info');
-        return;
-      }
-      editGame(gamesData[0].id);
-    });
+    const heroOpenLast = document.getElementById('heroOpenLast');
+    if (heroOpenLast) {
+      heroOpenLast.addEventListener('click', () => {
+        if (gamesData.length === 0) {
+          showToast('No games to open. Create your first game!', 'info');
+          return;
+        }
+        editGame(gamesData[0].id);
+      });
+    }
 
     // Delete confirmation
-    document.getElementById('cancelDelete').addEventListener('click', () => {
-      hideModal('confirmDeleteModal');
-      currentDeleteGameId = null;
-    });
+    const cancelDelete = document.getElementById('cancelDelete');
+    if (cancelDelete) {
+      cancelDelete.addEventListener('click', () => {
+        hideModal('confirmDeleteModal');
+        currentDeleteGameId = null;
+      });
+    }
 
-    document.getElementById('confirmDelete').addEventListener('click', async () => {
+    const confirmDelete = document.getElementById('confirmDelete');
+    if (confirmDelete) {
+      confirmDelete.addEventListener('click', async () => {
       if (!currentDeleteGameId) return;
 
       const button = document.getElementById('confirmDelete');
@@ -1326,13 +1368,14 @@
         console.error('Error:', error);
         showToast('Failed to delete game', 'error');
       } finally {
-        button.disabled = false;
-        button.innerHTML = 'Delete Forever';
-        currentDeleteGameId = null;
+         button.disabled = false;
+         button.innerHTML = 'Delete Forever';
+         currentDeleteGameId = null;
+       }
+      });
       }
-    });
 
-    // Close modals on outside click
+      // Close modals on outside click
     document.addEventListener('click', (e) => {
       if (e.target.closest('.game-menu-btn')) {
         const button = e.target.closest('.game-menu-btn');

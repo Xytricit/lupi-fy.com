@@ -1,5 +1,10 @@
+import json
+import logging
 from datetime import timedelta
 import os
+from types import SimpleNamespace
+
+logger = logging.getLogger(__name__)
 
 from django.conf import settings
 from django.contrib.auth import get_user_model
@@ -10,9 +15,11 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
 
-from accounts.models import WordListGame
+from accounts.models import Subscription, WordListGame
 from blog.models import Post
 from communities.models import Community, CommunityPost
+from games.models import Game
+from marketplace.models import Project
 
 
 def _dashboard_home_context(request):
@@ -24,6 +31,10 @@ def _dashboard_home_context(request):
     from accounts.models import UserGameSession, WordListGame
     from django.db import DatabaseError
 
+    def _recent_game_entry(label, played_at):
+        title = (label or "Word Game").strip() or "Word Game"
+        return SimpleNamespace(game_type=title, last_played=played_at)
+
     # Recently played (current user's last 8 game sessions by last_played)
     if request.user.is_authenticated:
         try:
@@ -31,11 +42,19 @@ def _dashboard_home_context(request):
                 UserGameSession.objects.filter(user=request.user)
                 .order_by("-last_played")[:8]
             )
-            recent_games = list(recent_games_qs)
+            recent_games = [
+                _recent_game_entry(session.game, session.last_played)
+                for session in recent_games_qs
+            ]
         except DatabaseError:
-            recent_games = list(
-                WordListGame.objects.select_related("user").order_by("-updated_at")[:8]
-            )
+            fallback_games = WordListGame.objects.select_related("user").order_by("-updated_at")[:8]
+            recent_games = [
+                _recent_game_entry(
+                    f"{game.user.username}'s Word Challenge",
+                    game.updated_at,
+                )
+                for game in fallback_games
+            ]
     else:
         recent_games = []
 
@@ -68,7 +87,7 @@ def community_posts_api(request):
     """API endpoint to return community posts paginated and sorted.
 
     Query params:
-      - sort: 'latest' (default), 'engaged', 'popular'
+      - sort: 'latest' (default), 'engaged', 'popular', 'foryou'
       - offset: integer
       - limit: integer
     Returns JSON list of posts with minimal fields.
@@ -86,6 +105,7 @@ def community_posts_api(request):
     qs = CommunityPost.objects.select_related("community", "author")
 
     # Enhanced sorting strategies
+    # - foryou: AI-powered recommendations using PyTorch model
     # - latest: newest first
     # - most_liked: order by likes count desc
     # - engaged: order by comments count desc then likes
@@ -94,7 +114,45 @@ def community_posts_api(request):
 
     result = []
 
-    if sort == "most_liked":
+    if sort == "foryou":
+        if request.user.is_authenticated:
+            try:
+                from recommend.services import get_recommendations
+                recommendations = get_recommendations(
+                    user_id=request.user.id,
+                    content_types=["communities"],
+                    topn=limit * 3,
+                    exclude_seen=True,
+                    diversity_penalty=0.15,
+                    freshness_boost=True
+                )
+    
+                post_ids = []
+                for rec_key, score in recommendations:
+                    try:
+                        parts = rec_key.split(':')
+                        if len(parts) == 2 and 'communitypost' in parts[0].lower():
+                            post_ids.append(int(parts[1]))
+                    except Exception:
+                        continue
+    
+                if post_ids:
+                    posts_dict = {p.id: p for p in qs.filter(id__in=post_ids[:limit])}
+                    posts = [posts_dict[pid] for pid in post_ids if pid in posts_dict]
+                else:
+                    posts = list(qs.order_by('-created_at')[:limit])
+    
+                total = len(posts)
+            except Exception as e:
+                logger.warning(f"Community recommendations failed, using fallback: {e}")
+                qs = qs.order_by('-created_at')
+                total = qs.count()
+                posts = qs[offset:offset + limit]
+        else:
+            qs = qs.order_by('-created_at')
+            total = qs.count()
+            posts = qs[offset:offset + limit]
+    elif sort == "most_liked":
         qs = qs.annotate(likes_count=Count("likes")).order_by(
             "-likes_count", "-created_at"
         )
@@ -159,7 +217,25 @@ def community_posts_api(request):
         posts = qs[offset : offset + limit]
 
     # Build JSON result list
+    from recommend.models import Interaction
+    from django.contrib.contenttypes.models import ContentType
+    
+    ct_community = ContentType.objects.get_for_model(CommunityPost)
+    
     for p in posts:
+        # Log impression if user is authenticated
+        if request.user.is_authenticated:
+            try:
+                Interaction.objects.get_or_create(
+                    user=request.user,
+                    content_type=ct_community,
+                    object_id=p.id,
+                    action='impression',
+                    defaults={'value': 1.0}
+                )
+            except Exception:
+                pass
+
         user_liked = (
             request.user in p.likes.all() if request.user.is_authenticated else False
         )
@@ -172,32 +248,36 @@ def community_posts_api(request):
             else False
         )
 
-        result.append(
-            {
-                "id": p.id,
-                "title": p.title,
-                "content": p.content[:240],
-                "image": p.image.url if p.image else None,
-                "community_id": p.community.id,
-                "community_name": p.community.name,
-                "community_image": (
-                    p.community.community_image.url
-                    if p.community.community_image
-                    else None
-                ),
-                "author_id": p.author.id,
-                "author_username": p.author.username,
-                "author_avatar": p.author.avatar.url if p.author.avatar else None,
-                "created_at": p.created_at.isoformat(),
-                "likes_count": p.likes.count(),
-                "dislikes_count": p.dislikes.count(),
-                "comments_count": p.comments.count(),
-                "bookmarks_count": p.bookmarks.count(),
-                "user_liked": user_liked,
-                "user_disliked": user_disliked,
-                "user_bookmarked": user_bookmarked,
-            }
-        )
+        try:
+            result.append(
+                {
+                    "id": p.id,
+                    "title": p.title,
+                    "content": p.content[:240],
+                    "image": p.image.url if p.image else None,
+                    "community_id": p.community.id,
+                    "community_name": p.community.name,
+                    "community_image": (
+                        p.community.community_image.url
+                        if p.community.community_image
+                        else None
+                    ),
+                    "author_id": p.author.id,
+                    "author_username": p.author.username,
+                    "author_avatar": p.author.avatar.url if p.author.avatar else None,
+                    "created_at": p.created_at.isoformat(),
+                    "likes_count": p.likes.count(),
+                    "dislikes_count": p.dislikes.count(),
+                    "comments_count": p.comments.count(),
+                    "bookmarks_count": p.bookmarks.count(),
+                    "user_liked": user_liked,
+                    "user_disliked": user_disliked,
+                    "user_bookmarked": user_bookmarked,
+                }
+            )
+        except Exception as e:
+            logger.warning(f"Error serializing community post {p.id}: {e}")
+            continue
 
     return JsonResponse(
         {"total": total, "offset": offset, "limit": limit, "posts": result}
@@ -207,18 +287,22 @@ def community_posts_api(request):
 def search_suggestions(request):
     """Return up to 10 mixed-type suggestions for the given query term.
     Types: user, blog, community_post, game
+    Always returns results - falls back to popular content if no matches.
     """
-    q = request.GET.get("q", "").strip()
-    if not q:
-        return JsonResponse({"results": []})
-
-    # Build grouped suggestions. We intentionally support opting out of user suggestions
+    q_raw = request.GET.get("q", "").strip()
+    
+    # Normalize query: remove extra spaces, lowercase
+    q = " ".join(q_raw.split()).lower() if q_raw else ""
+    
+    # Build grouped suggestions
     include_users = getattr(settings, "SEARCH_INCLUDE_USERS", False)
     grouped = {"users": [], "blogs": [], "community_posts": [], "games": []}
     User = get_user_model()
+    
+    has_results = False
 
     # users (max 4) - only if allowed
-    if include_users:
+    if include_users and q:
         users = User.objects.filter(username__icontains=q, public_profile=True)[:4]
         for u in users:
             grouped["users"].append(
@@ -230,10 +314,15 @@ def search_suggestions(request):
                     "image": u.avatar.url if getattr(u, "avatar", None) else None,
                 }
             )
+            has_results = True
 
-    # blog posts (max 4) - try exact/prefix first by ordering
-    blog_posts = Post.objects.filter(title__icontains=q).order_by("-created")[:6]
-    for p in blog_posts[:4]:
+    # blog posts (max 5)
+    if q:
+        blog_posts = Post.objects.filter(title__icontains=q).order_by("-created")[:5]
+    else:
+        blog_posts = Post.objects.all().order_by("-created")[:5]
+    
+    for p in blog_posts:
         img = None
         try:
             first = p.images.first()
@@ -249,12 +338,15 @@ def search_suggestions(request):
                 "image": img,
             }
         )
+        has_results = True
 
-    # community posts (max 4)
-    cposts = CommunityPost.objects.filter(title__icontains=q).order_by("-created_at")[
-        :6
-    ]
-    for cp in cposts[:4]:
+    # community posts (max 5)
+    if q:
+        cposts = CommunityPost.objects.filter(title__icontains=q).order_by("-created_at")[:5]
+    else:
+        cposts = CommunityPost.objects.all().order_by("-created_at")[:5]
+    
+    for cp in cposts:
         grouped["community_posts"].append(
             {
                 "id": cp.id,
@@ -264,11 +356,16 @@ def search_suggestions(request):
                 "image": cp.image.url if getattr(cp, "image", None) else None,
             }
         )
+        has_results = True
 
-    # games (max 2)
-    games = WordListGame.objects.select_related("user").filter(
-        user__username__icontains=q
-    )[:2]
+    # games (max 3)
+    if q:
+        games = WordListGame.objects.select_related("user").filter(
+            user__username__icontains=q
+        )[:3]
+    else:
+        games = WordListGame.objects.select_related("user").all().order_by("-updated_at")[:3]
+    
     for g in games:
         grouped["games"].append(
             {
@@ -279,8 +376,30 @@ def search_suggestions(request):
                 "image": None,
             }
         )
+        has_results = True
 
-    return JsonResponse({"groups": grouped, "include_users": include_users})
+    # If no results at all (very specific nonsense query), show popular content
+    if not has_results:
+        # Show popular posts
+        popular_posts = Post.objects.all().order_by("-created")[:3]
+        for p in popular_posts:
+            img = None
+            try:
+                first = p.images.first()
+                img = first.image.url if first else None
+            except Exception:
+                img = None
+            grouped["blogs"].append(
+                {
+                    "id": p.id,
+                    "title": p.title,
+                    "subtitle": "Popular post",
+                    "url": reverse("post_detail", args=[p.id]),
+                    "image": img,
+                }
+            )
+
+    return JsonResponse({"groups": grouped, "include_users": include_users, "query": q_raw})
 
 
 def lupiforge_guide_view(request):
@@ -303,11 +422,12 @@ def lupiforge_guide_view(request):
 
 def search_api(request):
     """Return paginated mixed search results for the search page.
-    Query params: q, offset, limit
+    Query params: q, offset, limit, sort
     """
     q = request.GET.get("q", "").strip()
-    # protect against extremely short or long queries
-    if not q or len(q) < 2 or len(q) > 300:
+    sort = request.GET.get("sort", "relevance")
+    # protect against extremely long queries
+    if len(q) > 300:
         return JsonResponse({"total": 0, "results": []})
 
     # -----------------------
@@ -328,9 +448,17 @@ def search_api(request):
                 ip = request.META.get("REMOTE_ADDR", "anon")
             client_key = f"search_rl_ip:{ip}"
 
-        # allow 10 search API requests per 60 seconds per client
+        # allow 10 search API requests per 60 seconds per client (higher in DEBUG/staff)
         LIMIT = 10
         WINDOW = 60
+        try:
+            if getattr(settings, 'DEBUG', False) or (
+                request.user.is_authenticated and getattr(request.user, 'is_staff', False)
+            ):
+                LIMIT = 120
+                WINDOW = 30
+        except Exception:
+            pass
         cur = cache.get(client_key) or 0
         if cur >= LIMIT:
             return JsonResponse({"error": "Rate limit exceeded"}, status=429)
@@ -347,12 +475,65 @@ def search_api(request):
         from django.core.cache import cache
 
         qlow = q.lower()
-        cache_key = f"search_cache:{qlow}"
+        cache_key = f"search_cache_v2:{qlow}"
         cached = cache.get(cache_key)
         if cached is not None:
             # cached contains the precomputed 'scored' list and optional include_users
             scored = cached.get("scored", [])
             include_users = cached.get("include_users", False)
+            # If cache has empty results for a non-empty query, provide fallback feed
+            if (not scored) and qlow:
+                try:
+                    recent_blogs = list(Post.objects.order_by("-created")[:50])
+                    recent_cposts = list(CommunityPost.objects.order_by("-created_at")[:50])
+                    recent_games = list(WordListGame.objects.select_related("user").order_by("-updated_at")[:50])
+                    users_fb = list(get_user_model().objects.filter(public_profile=True)[:20]) if include_users else []
+                    for p in recent_blogs:
+                        scored.append({
+                            "type": "blog",
+                            "id": p.id,
+                            "title": p.title,
+                            "subtitle": p.content[:120] if p.content else "",
+                            "url": reverse("post_detail", args=[p.id]),
+                            "score": 50 + p.likes.count() * 2 + p.bookmarks.count() * 3,
+                            "created_at": p.created.isoformat(),
+                            "popularity": (p.bookmarks.count() * 3 + p.likes.count() * 2 + getattr(p, "views", 0) * 0.1),
+                        })
+                    for cp in recent_cposts:
+                        scored.append({
+                            "type": "community_post",
+                            "id": cp.id,
+                            "title": cp.title,
+                            "subtitle": cp.community.name if cp.community else "",
+                            "url": f"/communities/post/{cp.id}/",
+                            "score": 50 + cp.likes.count() * 2 + cp.bookmarks.count() * 3 + cp.comments.count(),
+                            "created_at": cp.created_at.isoformat(),
+                            "popularity": (cp.bookmarks.count() * 3 + cp.likes.count() * 2 + cp.comments.count()),
+                        })
+                    for g in recent_games:
+                        scored.append({
+                            "type": "game",
+                            "id": g.id,
+                            "title": f"Game by {g.user.username}",
+                            "subtitle": f"Score: {getattr(g,'score','')}",
+                            "url": reverse("games_hub"),
+                            "score": 40 + (g.user.followers.count() if hasattr(g.user, "followers") else 0),
+                            "created_at": g.updated_at.isoformat(),
+                            "popularity": (g.user.followers.count() if hasattr(g.user, "followers") else 0),
+                        })
+                    for u in users_fb:
+                        scored.append({
+                            "type": "user",
+                            "id": u.id,
+                            "title": u.username,
+                            "subtitle": "",
+                            "url": reverse("public_profile_view", args=[u.id]),
+                            "score": 30 + (u.followers.count() if hasattr(u, "followers") else 0),
+                            "created_at": getattr(u, "date_joined", None).isoformat() if getattr(u, "date_joined", None) else "",
+                            "popularity": (u.followers.count() if hasattr(u, "followers") else 0),
+                        })
+                except Exception:
+                    pass
         else:
             cached = None
             qlow = q.lower()
@@ -376,89 +557,271 @@ def search_api(request):
     include_users = getattr(settings, "SEARCH_INCLUDE_USERS", False)
 
     if cached is None:
-        # not cached: perform DB queries and scoring
-        if include_users:
-            users = list(
-                User.objects.filter(username__icontains=q, public_profile=True)[:50]
-            )
-        else:
-            users = []
-
-        blogs = list(Post.objects.filter(title__icontains=q)[:200])
-        cposts = list(CommunityPost.objects.filter(title__icontains=q)[:200])
-        games = list(
-            WordListGame.objects.select_related("user").filter(
-                user__username__icontains=q
-            )[:200]
-        )
-
+        # Handle special category searches and empty query fallback
         qlow = q.lower()
+        if qlow == "":
+            # Default feed when no query: latest/popular mixed content
+            recent_blogs = list(Post.objects.order_by("-created")[:50])
+            recent_cposts = list(CommunityPost.objects.order_by("-created_at")[:50])
+            recent_games = list(WordListGame.objects.select_related("user").order_by("-updated_at")[:50])
+            users = list(get_user_model().objects.filter(public_profile=True)[:20]) if include_users else []
 
-        def score_text(text):
-            if not text:
-                return 0
-            t = text.lower()
-            if t == qlow:
-                return 200
-            if t.startswith(qlow):
-                return 150
-            if qlow in t:
-                return 100
-            return 0
-
-        scored = []
-        for u in users:
-            scored.append(
-                {
-                    "type": "user",
-                    "id": u.id,
-                    "title": u.username,
-                    "subtitle": "",
-                    "url": reverse("public_profile_view", args=[u.id]),
-                    "score": 120 if u.username.lower().startswith(qlow) else 80,
-                }
-            )
-
-        for p in blogs:
-            s = score_text(p.title) + (
-                50 if p.content and qlow in p.content.lower() else 0
-            )
-            scored.append(
-                {
+            for p in recent_blogs:
+                scored.append({
                     "type": "blog",
                     "id": p.id,
                     "title": p.title,
                     "subtitle": p.content[:120] if p.content else "",
                     "url": reverse("post_detail", args=[p.id]),
-                    "score": s,
-                }
-            )
-
-        for cp in cposts:
-            s = score_text(cp.title)
-            scored.append(
-                {
+                    "score": 50 + p.likes.count() * 2 + p.bookmarks.count() * 3,
+                    "created_at": p.created.isoformat(),
+                    "popularity": (p.bookmarks.count() * 3 + p.likes.count() * 2 + getattr(p, "views", 0) * 0.1),
+                })
+            for cp in recent_cposts:
+                scored.append({
                     "type": "community_post",
                     "id": cp.id,
                     "title": cp.title,
                     "subtitle": cp.community.name if cp.community else "",
                     "url": f"/communities/post/{cp.id}/",
-                    "score": s,
-                }
-            )
-
-        for g in games:
-            s = 90 if g.user.username.lower().startswith(qlow) else 60
-            scored.append(
-                {
+                    "score": 50 + cp.likes.count() * 2 + cp.bookmarks.count() * 3 + cp.comments.count(),
+                    "created_at": cp.created_at.isoformat(),
+                    "popularity": (cp.bookmarks.count() * 3 + cp.likes.count() * 2 + cp.comments.count()),
+                })
+            for g in recent_games:
+                scored.append({
                     "type": "game",
                     "id": g.id,
                     "title": f"Game by {g.user.username}",
                     "subtitle": f"Score: {getattr(g,'score','')}",
                     "url": reverse("games_hub"),
-                    "score": s,
-                }
-            )
+                    "score": 40 + (g.user.followers.count() if hasattr(g.user, "followers") else 0),
+                    "created_at": g.updated_at.isoformat(),
+                    "popularity": (g.user.followers.count() if hasattr(g.user, "followers") else 0),
+                })
+            for u in users:
+                scored.append({
+                    "type": "user",
+                    "id": u.id,
+                    "title": u.username,
+                    "subtitle": "",
+                    "url": reverse("public_profile_view", args=[u.id]),
+                    "score": 30 + (u.followers.count() if hasattr(u, "followers") else 0),
+                    "created_at": getattr(u, "date_joined", None).isoformat() if getattr(u, "date_joined", None) else "",
+                    "popularity": (u.followers.count() if hasattr(u, "followers") else 0),
+                })
+        elif qlow == "games":
+            # Return all games
+            games = list(WordListGame.objects.select_related("user").order_by("-updated_at")[:200])
+            for g in games:
+                scored.append(
+                    {
+                        "type": "game",
+                        "id": g.id,
+                        "title": f"Game by {g.user.username}",
+                        "subtitle": f"Score: {getattr(g,'score','')}",
+                        "url": reverse("games_hub"),
+                        "score": 100,
+                        "created_at": g.updated_at.isoformat(),
+                        "popularity": (g.user.followers.count() if hasattr(g.user, "followers") else 0),
+                    }
+                )
+        elif qlow == "blogs":
+            # Return all blog posts
+            blogs = list(Post.objects.order_by("-created")[:200])
+            for p in blogs:
+                scored.append(
+                    {
+                        "type": "blog",
+                        "id": p.id,
+                        "title": p.title,
+                        "subtitle": p.content[:120] if p.content else "",
+                        "url": reverse("post_detail", args=[p.id]),
+                        "score": 100,
+                        "created_at": p.created.isoformat(),
+                        "popularity": (p.bookmarks.count() * 3 + p.likes.count() * 2 + getattr(p, "views", 0) * 0.1),
+                    }
+                )
+        elif qlow == "communities":
+            # Return all community posts
+            cposts = list(CommunityPost.objects.order_by("-created_at")[:200])
+            for cp in cposts:
+                scored.append(
+                    {
+                        "type": "community_post",
+                        "id": cp.id,
+                        "title": cp.title,
+                        "subtitle": cp.community.name if cp.community else "",
+                        "url": f"/communities/post/{cp.id}/",
+                        "score": 100,
+                        "created_at": cp.created_at.isoformat(),
+                        "popularity": (cp.bookmarks.count() * 3 + cp.likes.count() * 2 + cp.comments.count()),
+                    }
+                )
+        elif qlow == "users":
+            # Return all users with public profiles
+            if include_users:
+                users = list(User.objects.filter(public_profile=True)[:200])
+                for u in users:
+                    scored.append(
+                        {
+                            "type": "user",
+                            "id": u.id,
+                            "title": u.username,
+                            "subtitle": "",
+                            "url": reverse("public_profile_view", args=[u.id]),
+                            "score": 100,
+                            "created_at": u.date_joined.isoformat(),
+                            "popularity": (u.followers.count() if hasattr(u, "followers") else 0),
+                            }
+                            )
+        else:
+            # Normal search logic for queries that are at least 1 character
+            if len(q) < 1:
+                scored = []
+            else:
+                # not cached: perform DB queries and scoring
+                if include_users:
+                    users = list(
+                        User.objects.filter(username__icontains=q, public_profile=True)[:50]
+                    )
+                else:
+                    users = []
+
+                blogs = list(Post.objects.filter(title__icontains=q)[:200])
+                cposts = list(CommunityPost.objects.filter(title__icontains=q)[:200])
+                games = list(
+                    WordListGame.objects.select_related("user").filter(
+                        user__username__icontains=q
+                    )[:200]
+                )
+
+                def score_text(text):
+                    if not text:
+                        return 0
+                    t = text.lower()
+                    if t == qlow:
+                        return 200
+                    if t.startswith(qlow):
+                        return 150
+                    if qlow in t:
+                        return 100
+                    return 0
+
+                for u in users:
+                    scored.append(
+                        {
+                            "type": "user",
+                            "id": u.id,
+                            "title": u.username,
+                            "subtitle": "",
+                            "url": reverse("public_profile_view", args=[u.id]),
+                            "score": 120 if u.username.lower().startswith(qlow) else 80,
+                            "created_at": getattr(u, "date_joined", None).isoformat() if getattr(u, "date_joined", None) else "",
+                            "popularity": (u.followers.count() if hasattr(u, "followers") else 0),
+                        }
+                    )
+
+                for p in blogs:
+                    s = score_text(p.title) + (
+                        50 if p.content and qlow in p.content.lower() else 0
+                    )
+                    scored.append(
+                        {
+                            "type": "blog",
+                            "id": p.id,
+                            "title": p.title,
+                            "subtitle": p.content[:120] if p.content else "",
+                            "url": reverse("post_detail", args=[p.id]),
+                            "score": s,
+                            "created_at": p.created.isoformat(),
+                            "popularity": (p.bookmarks.count() * 3 + p.likes.count() * 2 + getattr(p, "views", 0) * 0.1),
+                        }
+                    )
+
+                for cp in cposts:
+                    s = score_text(cp.title)
+                    scored.append(
+                        {
+                            "type": "community_post",
+                            "id": cp.id,
+                            "title": cp.title,
+                            "subtitle": cp.community.name if cp.community else "",
+                            "url": f"/communities/post/{cp.id}/",
+                            "score": s,
+                            "created_at": cp.created_at.isoformat(),
+                            "popularity": (cp.bookmarks.count() * 3 + cp.likes.count() * 2 + cp.comments.count()),
+                        }
+                    )
+
+                for g in games:
+                    s = 90 if g.user.username.lower().startswith(qlow) else 60
+                    scored.append(
+                        {
+                            "type": "game",
+                            "id": g.id,
+                            "title": f"Game by {g.user.username}",
+                            "subtitle": f"Score: {getattr(g,'score','')}",
+                            "url": reverse("games_hub"),
+                            "score": s,
+                            "created_at": g.updated_at.isoformat(),
+                            "popularity": (g.user.followers.count() if hasattr(g.user, "followers") else 0),
+                        }
+                    )
+
+        # If query produced no results, fall back to default feed (popular/recent mix)
+        if (not scored) and qlow != "":
+            try:
+                recent_blogs = list(Post.objects.order_by("-created")[:50])
+                recent_cposts = list(CommunityPost.objects.order_by("-created_at")[:50])
+                recent_games = list(WordListGame.objects.select_related("user").order_by("-updated_at")[:50])
+                users_fb = list(get_user_model().objects.filter(public_profile=True)[:20]) if include_users else []
+                for p in recent_blogs:
+                    scored.append({
+                        "type": "blog",
+                        "id": p.id,
+                        "title": p.title,
+                        "subtitle": p.content[:120] if p.content else "",
+                        "url": reverse("post_detail", args=[p.id]),
+                        "score": 50 + p.likes.count() * 2 + p.bookmarks.count() * 3,
+                        "created_at": p.created.isoformat(),
+                        "popularity": (p.bookmarks.count() * 3 + p.likes.count() * 2 + getattr(p, "views", 0) * 0.1),
+                    })
+                for cp in recent_cposts:
+                    scored.append({
+                        "type": "community_post",
+                        "id": cp.id,
+                        "title": cp.title,
+                        "subtitle": cp.community.name if cp.community else "",
+                        "url": f"/communities/post/{cp.id}/",
+                        "score": 50 + cp.likes.count() * 2 + cp.bookmarks.count() * 3 + cp.comments.count(),
+                        "created_at": cp.created_at.isoformat(),
+                        "popularity": (cp.bookmarks.count() * 3 + cp.likes.count() * 2 + cp.comments.count()),
+                    })
+                for g in recent_games:
+                    scored.append({
+                        "type": "game",
+                        "id": g.id,
+                        "title": f"Game by {g.user.username}",
+                        "subtitle": f"Score: {getattr(g,'score','')}",
+                        "url": reverse("games_hub"),
+                        "score": 40 + (g.user.followers.count() if hasattr(g.user, "followers") else 0),
+                        "created_at": g.updated_at.isoformat(),
+                        "popularity": (g.user.followers.count() if hasattr(g.user, "followers") else 0),
+                    })
+                for u in users_fb:
+                    scored.append({
+                        "type": "user",
+                        "id": u.id,
+                        "title": u.username,
+                        "subtitle": "",
+                        "url": reverse("public_profile_view", args=[u.id]),
+                        "score": 30 + (u.followers.count() if hasattr(u, "followers") else 0),
+                        "created_at": getattr(u, "date_joined", None).isoformat() if getattr(u, "date_joined", None) else "",
+                        "popularity": (u.followers.count() if hasattr(u, "followers") else 0),
+                    })
+            except Exception:
+                pass
 
         # cache the computed scored list for this query to reduce DB load
         try:
@@ -470,8 +833,23 @@ def search_api(request):
         except Exception:
             pass
 
-    # sort by score desc, then (for posts) by recency where possible
-    scored.sort(key=lambda x: x.get("score", 0), reverse=True)
+    # sort based on sort param
+    try:
+        if sort == "relevance":
+            scored.sort(key=lambda x: x.get("score", 0), reverse=True)
+        elif sort == "title_asc":
+            scored.sort(key=lambda x: x["title"].lower())
+        elif sort == "title_desc":
+            scored.sort(key=lambda x: x["title"].lower(), reverse=True)
+        elif sort == "recent":
+            scored.sort(key=lambda x: x.get("created_at") or "", reverse=True)
+        elif sort == "popular":
+            scored.sort(key=lambda x: x.get("popularity", 0), reverse=True)
+        else:
+            scored.sort(key=lambda x: x.get("score", 0), reverse=True)
+    except Exception as e:
+        logger.warning(f"Error sorting search results: {e}")
+        scored.sort(key=lambda x: x.get("score", 0), reverse=True)
 
     total = len(scored)
     slice_results = scored[offset : offset + limit]
@@ -500,9 +878,13 @@ def search_api(request):
 
 
 def search_page(request):
-    """Render the full search results page. The frontend will call `search_api` to get results and implement infinite scroll."""
+    """Render the search results page."""
     q = request.GET.get("q", "").strip()
-    return render(request, "search_results.html", {"q": q})
+
+    context = {
+        "q": q,
+    }
+    return render(request, "search_results.html", context)
 
 
 def communities_view(request):

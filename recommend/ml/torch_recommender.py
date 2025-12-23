@@ -186,29 +186,48 @@ def load_model(model_path=MODEL_PATH):
 
 
 def recommend_for_user(user_id, model=None, topn=20, exclude_seen=True):
-    _require_torch()
+    """Get recommendations for a user using the trained model."""
+    try:
+        _require_torch()
+    except ImportError:
+        return []
+    
     if model is None:
         model = load_model()
         if model is None:
             return []
-    user_map = model["user_map"]
-    item_map = model["item_map"]
-    item_keys = [model["item_keys"][i] for i in sorted(model["item_keys"].keys())]
-    n_items = len(item_map)
+    
+    try:
+        user_map = model["user_map"]
+        item_map = model["item_map"]
+        item_keys = [model["item_keys"][i] for i in sorted(model["item_keys"].keys())]
+        n_items = len(item_map)
+    except (KeyError, TypeError):
+        return []
+    
+    # Cold-start: new user, return popular items
     if user_id not in user_map:
-        return [(item_keys[i], 0.0) for i in range(min(topn, n_items))]
-    emb_dim = model.get("emb_dim", 64)
-    m = MFModel(len(user_map), len(item_map), emb_dim)
-    m.load_state_dict(model["state_dict"])
-    m.eval()
-    with torch.no_grad():
-        uidx = user_map[user_id]
-        uvec = m.user_emb(torch.tensor([uidx], dtype=torch.long)).squeeze(0)
-        item_embs = m.item_emb.weight
-        scores = torch.mv(item_embs, uvec).numpy()
-    idxs = list(range(len(scores)))
-    idxs.sort(key=lambda i: -scores[i])
-    out = []
-    for i in idxs[:topn]:
-        out.append((item_keys[i], float(scores[i])))
-    return out
+        return [(item_keys[i], 0.5) for i in range(min(topn, n_items))]
+    
+    try:
+        emb_dim = model.get("emb_dim", 64)
+        m = MFModel(len(user_map), len(item_map), emb_dim)
+        m.load_state_dict(model["state_dict"])
+        m.eval()
+        
+        with torch.no_grad():
+            uidx = user_map[user_id]
+            uvec = m.user_emb(torch.tensor([uidx], dtype=torch.long)).squeeze(0)
+            item_embs = m.item_emb.weight
+            scores = torch.mv(item_embs, uvec).numpy()
+        
+        idxs = list(range(len(scores)))
+        idxs.sort(key=lambda i: -scores[i])
+        
+        out = []
+        for i in idxs[:topn]:
+            out.append((item_keys[i], float(scores[i])))
+        return out
+    except Exception as e:
+        # Fallback on error
+        return [(item_keys[i], 0.5) for i in range(min(topn, n_items))]

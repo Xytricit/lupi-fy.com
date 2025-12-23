@@ -1,541 +1,410 @@
 {% extends "dashboardhome.html" %}
 {% load static %}
-{% block title %}Games - Lupify{% endblock %}
 
-{% block content %}
+{# 
+    Games Hub Template
+    
+    Expected context variables from view:
+    - continue_playing: QuerySet of Game objects recently played by user
+    - recommended_games: QuerySet of Game objects recommended for user
+    - total_games: str (optional, defaults to "50+")
+    - total_players: str (optional, defaults to "10K+")
+    - active_status: str (optional, defaults to "24/7")
+    
+    Game object/dict should have:
+    - name: str
+    - image: ImageField or URL string
+    - likes_count: int (optional, defaults to 0)
+    - players_count: int (optional, defaults to 0)
+#}
 
+{% block title %}Games Hub - Lupify{% endblock %}
+
+{% block extra_head %}
+{{ block.super }}
 <style>
-.game-card:hover {
-    transform: translateY(-12px) scale(1.01);
-    box-shadow: 0 20px 48px rgba(0, 0, 0, 0.15);
-    background: var(--card-bg);
-}
-
-.game-card-header {
-    padding: 48px 28px;
-    text-align: center;
-    background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
-    color: #fff;
-    position: relative;
-}
-
-.game-card-header::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    right: 0;
-    width: 150px;
-    height: 150px;
-    background: rgba(255, 255, 255, 0.05);
-    border-radius: 50%;
-    transform: translate(40%, -40%);
-}
-
-.game-emoji {
-    font-size: 4.2rem;
-    margin-bottom: 16px;
-    display: block;
-    position: relative;
-    z-index: 1;
-    animation: bounce 3s ease-in-out infinite;
-}
-
-@keyframes bounce {
-    0%, 100% { transform: translateY(0); }
-    50% { transform: translateY(-8px); }
-}
-
-.game-card-header h2 {
-    margin: 0;
-    font-size: 1.55rem;
-    font-weight: 800;
-    line-height: 1.3;
-    position: relative;
-    z-index: 1;
-    letter-spacing: -0.3px;
-}
-
-.game-card-body {
-    padding: 24px 28px;
-}
-
-.game-description {
-    color: var(--secondary-text);
-    margin: 0 0 18px;
-    font-size: 0.98rem;
-    line-height: 1.6;
-}
-
-.game-rules {
-    background: linear-gradient(135deg, var(--primary)08, var(--primary)12);
-    padding: 16px 18px;
-    border-radius: 10px;
-    margin-bottom: 18px;
-    border-left: 4px solid var(--primary);
-    transition: all 0.3s ease;
-}
-
-.game-rules:hover {
-    background: linear-gradient(135deg, var(--primary)12, var(--primary)16);
-}
-
-.game-rules h4 {
-    margin: 0 0 12px;
-    font-size: 0.95rem;
-    font-weight: 700;
-    color: var(--text-dark);
-    text-transform: uppercase;
-    letter-spacing: 0.3px;
-}
-
-.game-rules ul {
-    margin: 0;
-    padding-left: 20px;
-    color: var(--secondary-text);
-}
-
-.game-rules li {
-    font-size: 0.91rem;
-    margin-bottom: 8px;
-    line-height: 1.5;
-}
-
-.game-rules li:last-child {
-    margin-bottom: 0;
-}
-
-.game-footer {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: 14px;
-    margin-top: 18px;
-    padding-top: 18px;
-    border-top: 1px solid var(--border-color);
-}
-
-.badge {
-    display: inline-block;
-    background: linear-gradient(135deg, var(--primary)20, var(--primary)30);
-    color: var(--primary);
-    padding: 8px 14px;
-    border-radius: 22px;
-    font-size: 0.85rem;
-    font-weight: 700;
-    text-transform: capitalize;
-    letter-spacing: 0.3px;
-}
-
-.play-button {
-    background: linear-gradient(135deg, var(--primary), var(--primary-dark));
-    color: #fff;
-    padding: 11px 20px;
-    border-radius: 10px;
-    text-decoration: none;
-    font-weight: 700;
-    font-size: 0.95rem;
-    transition: all 0.28s cubic-bezier(0.34, 1.56, 0.64, 1);
-    display: inline-block;
-    box-shadow: 0 4px 12px rgba(31, 156, 238, 0.2);
-    letter-spacing: 0.3px;
-}
-
-.play-button:hover {
-    transform: translateY(-3px);
-    box-shadow: 0 8px 20px rgba(31, 156, 238, 0.35);
-}
-
-.play-button:active {
-    transform: translateY(-1px);
-}
-
-.games-container {
-    display: flex;
-    flex-direction: column;
-    gap: 32px;
-}
-
-.games-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-    gap: 28px;
-    margin-bottom: 32px;
-}
-
-.games-empty-state {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 80px 20px;
-}
-
-.games-empty-card {
-    max-width: 520px;
-    width: 100%;
-    text-align: center;
-    background: var(--card-bg);
-    border: 1px solid var(--border-color);
-    border-radius: 28px;
-    padding: 48px 36px;
-    box-shadow: 0 30px 80px rgba(15, 23, 42, 0.15);
-    display: flex;
-    flex-direction: column;
-    gap: 16px;
-}
-
-.games-empty-card h2 {
-    margin: 0;
-    font-size: 1.8rem;
-    color: var(--text-dark);
-}
-
-.games-empty-card p {
-    margin: 0;
-    color: var(--secondary-text);
-    line-height: 1.6;
-    font-size: 1rem;
-}
-
-.games-empty-cta {
-    margin: 12px auto 0;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    padding: 12px 28px;
-    border-radius: 999px;
-    background: var(--primary);
-    color: #fff;
-    font-weight: 700;
-    letter-spacing: 0.2px;
-    text-decoration: none;
-    box-shadow: 0 15px 45px rgba(31, 156, 238, 0.35);
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
-}
-
-.games-empty-cta:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 20px 55px rgba(31, 156, 238, 0.45);
-}
-
-#gamesForYouContainer {
-    display: flex;
-    gap: 16px;
-    overflow-x: auto;
-    padding-bottom: 10px;
-    scroll-behavior: smooth;
-    scrollbar-width: thin;
-}
-
-#gamesForYouContainer::-webkit-scrollbar {
-    height: 8px;
-}
-
-#gamesForYouContainer::-webkit-scrollbar-track {
-    background: transparent;
-}
-
-#gamesForYouContainer::-webkit-scrollbar-thumb {
-    background: var(--border-color);
-    border-radius: 4px;
-    transition: background 0.3s;
-}
-
-#gamesForYouContainer::-webkit-scrollbar-thumb:hover {
-    background: var(--secondary-text);
-}
-
-.for-you-game-card {
-    background: linear-gradient(135deg, var(--primary)12, var(--primary)18);
-    padding: 18px 16px;
-    border-radius: 14px;
-    border: 1.5px solid var(--primary);
-    transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
-    text-decoration: none;
-    color: inherit;
-    min-width: 180px;
-    flex-shrink: 0;
-    cursor: pointer;
-    position: relative;
-    overflow: hidden;
-}
-
-.for-you-game-card::before {
-    content: '';
-    position: absolute;
-    top: -50%;
-    right: -50%;
-    width: 100%;
-    height: 100%;
-    background: linear-gradient(45deg, transparent, rgba(255, 255, 255, 0.1), transparent);
-    transform: translateX(100%) rotate(45deg);
-}
-
-.for-you-game-card:hover {
-    border-color: var(--primary-dark);
-    background: linear-gradient(135deg, var(--primary)20, var(--primary)28);
-    transform: translateY(-4px) scale(1.02);
-    box-shadow: 0 10px 24px rgba(31, 156, 238, 0.2);
-}
-
-.for-you-game-icon {
-    font-size: 2.4rem;
-    margin-bottom: 10px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.for-you-game-icon img {
-    width: 40px;
-    height: 40px;
-    filter: brightness(1.2);
-}
-
-.for-you-game-label {
-    font-weight: 700;
-    font-size: 0.98rem;
-    color: var(--text-dark);
-    margin-bottom: 6px;
-    letter-spacing: -0.2px;
-}
-
-.for-you-game-tag {
-    color: var(--primary);
-    font-weight: 800;
-    font-size: 1.15rem;
-    position: relative;
-    z-index: 1;
-}
-
-@media (max-width: 768px) {
-    .games-hero {
-        padding: 40px 24px;
-        margin-bottom: 32px;
+    /* Games Hub Specific Styles */
+    .hero-banner {
+        position: relative;
+        background: linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(var(--primary-dark)) 100%);
+        border-radius: 1rem;
+        padding: 2rem;
+        margin-bottom: 2rem;
+        overflow: hidden;
     }
-
-    .games-hero h1 {
-        font-size: 2.2rem;
+    
+    .hero-banner::before,
+    .hero-banner::after {
+        content: '';
+        position: absolute;
+        border-radius: 50%;
+        background-color: rgba(255, 255, 255, 0.05);
     }
-
-    .games-hero p {
-        font-size: 1rem;
+    
+    .hero-banner::before {
+        width: 16rem;
+        height: 16rem;
+        top: -5rem;
+        right: -5rem;
     }
-
-    .games-grid {
-        grid-template-columns: 1fr;
-        gap: 20px;
-        margin-bottom: 32px;
+    
+    .hero-banner::after {
+        width: 12rem;
+        height: 12rem;
+        bottom: -4rem;
+        left: -4rem;
     }
-
-    .games-empty-state {
-        padding: 60px 16px;
+    
+    .hero-float {
+        position: absolute;
+        width: 8rem;
+        height: 8rem;
+        border-radius: 50%;
+        background-color: rgba(255, 255, 255, 0.05);
+        top: 50%;
+        right: 25%;
+        animation: float 3s ease-in-out infinite;
     }
-
-    .games-empty-card {
-        padding: 32px 24px;
+    
+    .hero-icon {
+        position: absolute;
+        color: rgba(255, 255, 255, 0.2);
+        animation: float 3s ease-in-out infinite;
     }
-
-    .games-empty-card h2 {
+    
+    .hero-icon:nth-child(1) {
+        width: 2rem;
+        height: 2rem;
+        top: 2rem;
+        right: 3rem;
+        animation-delay: 0.5s;
+    }
+    
+    .hero-icon:nth-child(2) {
+        width: 1.5rem;
+        height: 1.5rem;
+        bottom: 3rem;
+        right: 8rem;
+        animation-delay: 1s;
+    }
+    
+    .hero-content {
+        position: relative;
+        z-index: 10;
+    }
+    
+    .hero-title {
         font-size: 1.5rem;
+        font-weight: 800;
+        color: hsl(var(--primary-foreground));
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        margin-bottom: 1rem;
+        letter-spacing: -0.025em;
+    }
+    
+    .hero-title svg {
+        width: 2rem;
+        height: 2rem;
+    }
+    
+    .hero-description {
+        font-size: 1.125rem;
+        color: rgba(255, 255, 255, 0.9);
+        max-width: 42rem;
+        line-height: 1.625;
+    }
+    
+    .hero-stats {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 1.5rem;
+        margin-top: 1.5rem;
+    }
+    
+    .stat-card {
+        background-color: rgba(255, 255, 255, 0.1);
+        backdrop-filter: blur(4px);
+        border-radius: 0.5rem;
+        padding: 0.5rem 1rem;
+    }
+    
+    .stat-value {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: hsl(var(--primary-foreground));
+    }
+    
+    .stat-label {
+        font-size: 0.75rem;
+        color: rgba(255, 255, 255, 0.7);
+    }
+    
+    .game-card-wide {
+        flex-shrink: 0;
+        width: 10rem;
+    }
+    
+    .game-card-grid {
+        width: 100%;
+        cursor: pointer;
+        transition: transform 0.2s;
+    }
+    
+    .game-card-grid:hover {
+        transform: translateY(-4px);
+    }
+    
+    .game-image {
+        aspect-ratio: 1;
+        border-radius: 0.5rem;
+        overflow: hidden;
+        background-color: hsl(var(--secondary));
+        margin-bottom: 0.75rem;
+        position: relative;
+    }
+    
+    .game-image img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        transition: transform 0.3s;
+    }
+    
+    .game-card-grid:hover .game-image img {
+        transform: scale(1.05);
+    }
+    
+    .game-image-overlay {
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(to top, rgba(0, 0, 0, 0.4), transparent);
+        opacity: 0;
+        transition: opacity 0.3s;
+    }
+    
+    .game-card-grid:hover .game-image-overlay {
+        opacity: 1;
+    }
+    
+    .game-meta {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        font-size: 0.75rem;
+        color: hsl(var(--muted-foreground));
+        padding-top: 0.5rem;
+        border-top: 1px solid hsl(var(--border));
+    }
+    
+    .game-meta-item {
+        display: flex;
+        align-items: center;
+        gap: 0.25rem;
+    }
+    
+    .game-meta-item svg {
+        width: 0.75rem;
+        height: 0.75rem;
+    }
+    
+    .game-meta-item.primary {
+        color: hsl(var(--primary));
+    }
+    
+    .recommended-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 1rem;
     }
 
-    .game-card-header {
-        padding: 36px 20px;
+    .empty-state {
+        padding: 2rem;
+        border-radius: 1rem;
+        background-color: hsl(var(--card));
+        border: 1px dashed hsl(var(--border));
+        color: hsl(var(--muted-foreground));
+        text-align: center;
     }
 
-    .game-emoji {
-        font-size: 3.2rem;
-        margin-bottom: 12px;
+    @media (min-width: 640px) {
+        .hero-title {
+            font-size: 1.875rem;
+        }
+        .hero-title svg {
+            width: 2.5rem;
+            height: 2.5rem;
+        }
+        .recommended-grid {
+            grid-template-columns: repeat(3, 1fr);
+        }
     }
-
-    .game-card-header h2 {
-        font-size: 1.3rem;
+    
+    @media (min-width: 768px) {
+        .hero-banner {
+            padding: 2.5rem;
+        }
+        .hero-title {
+            font-size: 2.25rem;
+        }
+        .recommended-grid {
+            grid-template-columns: repeat(4, 1fr);
+        }
     }
-
-    #gamesForYouSection > div:first-child {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 12px;
+    
+    @media (min-width: 1024px) {
+        .hero-banner {
+            padding: 3rem;
+        }
+        .recommended-grid {
+            grid-template-columns: repeat(5, 1fr);
+        }
     }
-
-    #gamesForYouSection h2 {
-        font-size: 1.4rem;
+    
+    @media (min-width: 1280px) {
+        .recommended-grid {
+            grid-template-columns: repeat(6, 1fr);
+        }
     }
-}
-
-@media (max-width: 480px) {
-    .games-hero h1 {
-        font-size: 1.8rem;
-    }
-
-    .games-hero p {
-        font-size: 0.95rem;
-        margin-top: 12px;
-    }
-
-    .game-emoji {
-        font-size: 2.8rem;
-    }
-
-    .play-button {
-        padding: 9px 16px;
-        font-size: 0.9rem;
-    }
-
-    .games-empty-card {
-        padding: 24px 18px;
-    }
-
-    .badge {
-        padding: 6px 12px;
-        font-size: 0.8rem;
-    }
-}
 </style>
+{% endblock %}
 
-<div class="games-hero">
-    <h1><svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-gamepad2-icon lucide-gamepad-2" style="display: inline-block; vertical-align: middle; margin-right: 8px; color: var(--primary);"><line x1="6" x2="10" y1="11" y2="11"/><line x1="8" x2="8" y1="9" y2="13"/><line x1="15" x2="15.01" y1="12" y2="12"/><line x1="18" x2="18.01" y1="10" y2="10"/><path d="M17.32 5H6.68a4 4 0 0 0-3.978 3.59c-.006.052-.01.101-.017.152C2.604 9.416 2 14.456 2 16a3 3 0 0 0 3 3c1 0 1.5-.5 2-1l1.414-1.414A2 2 0 0 1 9.828 16h4.344a2 2 0 0 1 1.414.586L17 18c.5.5 1 1 2 1a3 3 0 0 0 3-3c0-1.545-.604-6.584-.685-7.258-.007-.05-.011-.1-.017-.151A4 4 0 0 0 17.32 5z"/></svg>Games</h1>
-    <p>Play quick social games, compete with friends, and earn points — built into Lupify.</p>
-</div>
-
-<div class="games-container">
-    <!-- For You Games (populated from sessionStorage when available) -->
-    <section id="gamesForYouSection" style="display:none;">
-        <div>
-            <h2>Recommended Games</h2>
-            <a href="{% url 'games_hub' %}">See all →</a>
-        </div>
-        <div id="gamesForYouContainer"></div>
-    </section>
-
-    <!-- All Games Grid -->
-    {% if games %}
-    <div class="games-grid">
-        {% for game in games %}
-        <a href="{% url game.url %}" class="game-card-link">
-            <div class="game-card">
-                <div class="game-card-header">
-                    <span class="game-emoji">{{ game.emoji }}</span>
-                    <h2>{{ game.name }}</h2>
+{% block main_content %}
+<div class="animate-fade-in">
+    <!-- Hero Banner -->
+    <div class="hero-banner">
+        <div class="hero-float"></div>
+        <svg class="hero-icon" style="top: 2rem; right: 3rem;" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"></path>
+            <path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"></path>
+            <path d="M4 22h16"></path>
+            <path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"></path>
+            <path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"></path>
+            <path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"></path>
+        </svg>
+        <svg class="hero-icon" style="bottom: 3rem; right: 8rem;" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"></path>
+        </svg>
+        
+        <div class="hero-content">
+            <h1 class="hero-title">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="6" x2="10" y1="11" y2="11"></line>
+                    <line x1="8" x2="8" y1="9" y2="13"></line>
+                    <line x1="15" x2="15.01" y1="12" y2="12"></line>
+                    <line x1="18" x2="18.01" y1="10" y2="10"></line>
+                    <path d="M17.32 5H6.68a4 4 0 0 0-3.978 3.59c-.006.052-.01.101-.017.152C2.604 9.416 2 14.456 2 16a3 3 0 0 0 3 3c1 0 1.5-.5 2-1l1.414-1.414A2 2 0 0 1 9.828 16h4.344a2 2 0 0 1 1.414.586L17 18c.5.5 1 1 2 1a3 3 0 0 0 3-3c0-1.545-.604-6.584-.685-7.258-.007-.05-.011-.1-.017-.151A4 4 0 0 0 17.32 5z"></path>
+                </svg>
+                Games Hub
+            </h1>
+            <p class="hero-description">Play quick social games, compete with friends, and earn points — all built into Lupify.</p>
+            
+            <div class="hero-stats">
+                <div class="stat-card">
+                    <div class="stat-value">{{ total_games|default:"50+" }}</div>
+                    <div class="stat-label">Games</div>
                 </div>
-                <div class="game-card-body">
-                    <p class="game-description">{{ game.description }}</p>
-                    <div class="game-rules">
-                        {% if game.id == 'try-not-to-get-banned' %}
-                            <h4>Quick Rules</h4>
-                            <ul>
-                                <li>Chat with other players</li>
-                                <li>Play carefully — some words will cause a temporary ban</li>
-                                <li>Use challenge letters to score points</li>
-                            </ul>
-                        {% else %}
-                            <h4>Quick Rules</h4>
-                            <ul>
-                                <li>Quick social game</li>
-                                <li>Earn points and climb the leaderboard</li>
-                            </ul>
-                        {% endif %}
-                    </div>
-                    <div class="game-footer">
-                        <span class="badge">{{ game.tag|default:'Casual' }}</span>
-                        <a class="play-button" href="{% url game.url %}">Play Now</a>
-                    </div>
+                <div class="stat-card">
+                    <div class="stat-value">{{ total_players|default:"10K+" }}</div>
+                    <div class="stat-label">Players</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">{{ active_status|default:"24/7" }}</div>
+                    <div class="stat-label">Active</div>
                 </div>
             </div>
-        </a>
-        {% endfor %}
+        </div>
     </div>
-    {% else %}
-    <section class="games-empty-state">
-        <div class="games-empty-card">
-            <h2>No games yet</h2>
-            <p>You haven’t created any games yet. Launch the dashboard to build your first experience.</p>
-            <a class="games-empty-cta" href="/games/dashboard/home/">Create One</a>
+    
+    <!-- Continue Playing Section -->
+    <section class="games-section">
+        <div class="section-header">
+            <h2 class="section-title">Continue Playing</h2>
+            <a href="{% url 'games_hub' %}" class="section-link">See all →</a>
+        </div>
+        
+        <div class="games-grid">
+            {% if continue_playing %}
+                {% for game in continue_playing %}
+                <a href="{{ game.get_absolute_url|default:'#' }}" class="game-card game-card-wide" style="text-decoration: none; color: inherit;">
+                    <div class="game-image">
+                        <img src="{{ game.image.url|default:'https://images.unsplash.com/photo-1606092195730-5d7b9af1efc5?w=400&h=400&fit=crop' }}" alt="{{ game.name }}">
+                        <div class="game-image-overlay"></div>
+                    </div>
+                    <h3 class="game-title truncate">{{ game.name }}</h3>
+                    <div class="game-meta">
+                        <div class="game-meta-item">
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"></path>
+                            </svg>
+                            <span>{{ game.likes_count|default:0 }}</span>
+                        </div>
+                        <div class="game-meta-item primary">
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path>
+                                <circle cx="9" cy="7" r="4"></circle>
+                                <path d="M22 21v-2a4 4 0 0 0-3-3.87"></path>
+                                <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+                            </svg>
+                            <span>{{ game.players_count|default:0 }}</span>
+                        </div>
+                    </div>
+                </a>
+                {% endfor %}
+            {% else %}
+                <div class="empty-state">
+                    <p>No recent plays yet. Start a game to see it listed here.</p>
+                </div>
+            {% endif %}
         </div>
     </section>
-    {% endif %}
-</div>
-
-<script>
-document.addEventListener('DOMContentLoaded', () => {
-    try {
-        const raw = sessionStorage.getItem('forYouGames');
-        if (!raw) {
-            console.log('No For You games in sessionStorage');
-            return;
-        }
+    
+    <!-- Recommended Section -->
+    <section class="games-section">
+        <div class="section-header">
+            <h2 class="section-title">Recommended</h2>
+            <a href="{% url 'games_hub' %}" class="section-link">Browse all games →</a>
+        </div>
         
-        const games = JSON.parse(raw || '[]');
-        if (!games || games.length === 0) {
-            console.log('For You games list is empty');
-            return;
-        }
-        
-        const sec = document.getElementById('gamesForYouSection');
-        const container = document.getElementById('gamesForYouContainer');
-        if (!sec || !container) {
-            console.warn('For You sections not found in DOM');
-            return;
-        }
-        
-        container.innerHTML = '';
-        let successCount = 0;
-        
-        games.forEach((g, index) => {
-            try {
-                // Use game URL directly from API response
-                const gameUrl = g.url || '{% url "games_hub" %}';
-                
-                const el = document.createElement('a');
-                el.href = gameUrl;
-                el.className = 'for-you-game-card';
-                el.title = `${g.name || 'Game'} - Recommended for you`;
-                el.innerHTML = `
-                    <div class="for-you-game-icon">
-                        ${g.emoji || '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-gamepad2-icon lucide-gamepad-2" style="color: var(--primary);"><line x1="6" x2="10" y1="11" y2="11"/><line x1="8" x2="8" y1="9" y2="13"/><line x1="15" x2="15.01" y1="12" y2="12"/><line x1="18" x2="18.01" y1="10" y2="10"/><path d="M17.32 5H6.68a4 4 0 0 0-3.978 3.59c-.006.052-.01.101-.017.152C2.604 9.416 2 14.456 2 16a3 3 0 0 0 3 3c1 0 1.5-.5 2-1l1.414-1.414A2 2 0 0 1 9.828 16h4.344a2 2 0 0 1 1.414.586L17 18c.5.5 1 1 2 1a3 3 0 0 0 3-3c0-1.545-.604-6.584-.685-7.258-.007-.05-.011-.1-.017-.151A4 4 0 0 0 17.32 5z"/></svg>'}
+        {% if recommended_games %}
+        <div class="recommended-grid">
+            {% for game in recommended_games %}
+            <a href="{{ game.get_absolute_url|default:'#' }}" class="game-card game-card-grid" style="text-decoration: none; color: inherit;">
+                <div class="game-image">
+                    <img src="{{ game.image.url|default:'https://images.unsplash.com/photo-1611996575749-79a3a250f948?w=400&h=400&fit=crop' }}" alt="{{ game.name }}">
+                    <div class="game-image-overlay"></div>
+                </div>
+                <h3 class="game-title truncate">{{ game.name }}</h3>
+                <div class="game-meta">
+                    <div class="game-meta-item">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"></path>
+                        </svg>
+                        <span>{{ game.likes_count|default:0 }}</span>
                     </div>
-                    <div class="for-you-game-label">${g.name || 'Game ' + (index + 1)}</div>
-                    <div class="for-you-game-tag">⭐ Recommended</div>
-                `;
-                container.appendChild(el);
-                successCount++;
-            } catch (itemErr) {
-                console.error('Error rendering game item:', itemErr);
-            }
-        });
-        
-        if (successCount > 0) {
-            sec.style.display = 'block';
-            console.log(`Successfully loaded ${successCount} For You games`);
-        }
-    } catch (e) {
-        console.warn('Error loading For You games:', e);
-    }
+                    <div class="game-meta-item primary">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path>
+                            <circle cx="9" cy="7" r="4"></circle>
+                            <path d="M22 21v-2a4 4 0 0 0-3-3.87"></path>
+                            <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+                        </svg>
+                        <span>{{ game.players_count|default:0 }}</span>
+                    </div>
+                </div>
+            </a>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="empty-state">
+            <p>No recommended games yet. Check back soon for curated picks.</p>
+        </div>
+        {% endif %}
+    </section>
+</div>
+{% endblock %}
 
-    // Error handling for game links
-    document.querySelectorAll('.game-card-link').forEach(link => {
-        link.addEventListener('click', (e) => {
-            const href = link.getAttribute('href');
-            if (!href || href === '#') {
-                e.preventDefault();
-                console.error('Game link is invalid');
-                alert('This game is currently unavailable. Please try another one.');
-            }
-        });
-    });
-
-    // Add smooth scroll behavior
-    if ('scrollBehavior' in document.documentElement.style) {
-        const scrollContainers = document.querySelectorAll('#gamesForYouContainer');
-        scrollContainers.forEach(container => {
-            container.addEventListener('wheel', (e) => {
-                if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) return;
-                e.preventDefault();
-                container.scrollLeft += e.deltaX || e.deltaY;
-            });
-        });
-    }
-});
-</script>
-
+{% block fab_button %}
+<!-- No FAB needed for games hub -->
 {% endblock %}

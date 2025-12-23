@@ -4,6 +4,20 @@ from django import forms
 from .models import Category, Comment, Post, Tag
 
 
+class MultipleFileInput(forms.FileInput):
+    allow_multiple_selected = True
+
+    def __init__(self, attrs=None, **kwargs):
+        if attrs is None:
+            attrs = {}
+        # Remove multiple to avoid error in super
+        attrs = attrs.copy()
+        attrs.pop('multiple', None)
+        super().__init__(attrs, **kwargs)
+        # Add multiple back
+        self.attrs['multiple'] = True
+
+
 class PostForm(forms.ModelForm):
     description = forms.CharField(
         required=True,
@@ -16,6 +30,10 @@ class PostForm(forms.ModelForm):
         queryset=Tag.objects.all(),
         required=False,
         widget=forms.SelectMultiple(attrs={"class": "form-multi-select"}),
+    )
+    images = forms.FileField(
+        required=False,
+        widget=MultipleFileInput(attrs={"accept": "image/*"}),
     )
     category = forms.CharField(
         required=True,

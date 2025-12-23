@@ -1,162 +1,856 @@
 {% extends "dashboardhome.html" %}
-{% load static %}
 
 {% block title %}Marketplace - Lupify{% endblock %}
 
-{% block content %}
-<div class="posts-center">
-<section class="feed">
-<div class="post-card post-card-intro">
-<div class="marketplace-home">
-  <!-- Hero section -->
-  <section style="background:linear-gradient(135deg,var(--primary) 0%, var(--primary-dark, #1864c3) 100%);color:white;padding:60px 20px;border-radius:16px;margin-bottom:40px;position:relative;overflow:hidden;">
-    <div style="position:absolute;top:0;left:0;right:0;bottom:0;background:radial-gradient(circle at 20% 50%, rgba(255,255,255,0.1) 0%, transparent 50%);pointer-events:none;"></div>
-    <div style="position:absolute;top:0;left:0;right:0;bottom:0;background:radial-gradient(circle at 80% 80%, rgba(255,255,255,0.05) 0%, transparent 50%);pointer-events:none;"></div>
-    <div style="max-width:800px;margin:0 auto;text-align:center;position:relative;z-index:1;">
-      <h1 style="font-size:3rem;font-weight:800;margin:0 0 16px;letter-spacing:-0.5px;text-shadow:0 2px 4px rgba(0,0,0,0.1);">Marketplace</h1>
-      <p style="font-size:1.2rem;margin:0;line-height:1.6;opacity:0.95;">Discover amazing projects, tools, templates, and more created by talented creators</p>
-      
-      <!-- Search bar -->
-      <form method="GET" style="max-width:600px;margin:24px auto 0;">
-        <div style="position:relative;display:flex;border-radius:12px;overflow:hidden;box-shadow:0 8px 24px rgba(0,0,0,0.15);background:rgba(255,255,255,0.1);backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,0.2);">
-          <input
-            type="text"
-            name="q"
-            value="{{ search }}"
-            placeholder="Search projects..."
-            style="flex:1;padding:14px 20px;border:none;background:rgba(255,255,255,0.9);color:var(--text-dark);font-size:1rem;outline:none;backdrop-filter:blur(10px);"
-          />
-          <button type="submit" style="background:rgba(255,255,255,0.2);color:white;padding:14px 24px;border:none;font-weight:700;cursor:pointer;transition:all 0.2s;backdrop-filter:blur(10px);border-left:1px solid rgba(255,255,255,0.2);" onmouseover="this.style.background='rgba(255,255,255,0.3)'" onmouseout="this.style.background='rgba(255,255,255,0.2)'">
-            Search
-          </button>
+{% block meta_description %}Discover amazing projects, tools, templates, and more created by talented creators{% endblock %}
+
+{% block extra_head %}
+<style>
+    /* ============================================
+       MARKETPLACE-SPECIFIC STYLES
+       ============================================ */
+    
+    /* Hero Section */
+    .hero-section {
+        position: relative;
+        overflow: hidden;
+        border-radius: 1rem;
+        padding: 2rem 3rem;
+        margin-bottom: 2.5rem;
+        background: linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(var(--primary-dark)) 100%);
+    }
+    
+    .hero-overlay {
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+    }
+    
+    .hero-content {
+        position: relative;
+        z-index: 10;
+        max-width: 42rem;
+        margin: 0 auto;
+        text-align: center;
+    }
+    
+    .hero-title {
+        font-size: 1.875rem;
+        font-weight: 800;
+        color: hsl(var(--primary-foreground));
+        margin-bottom: 1rem;
+        letter-spacing: -0.025em;
+    }
+    
+    .hero-description {
+        color: hsl(var(--primary-foreground) / 0.9);
+        font-size: 1rem;
+        margin-bottom: 2rem;
+    }
+    
+    .hero-search {
+        position: relative;
+        max-width: 32rem;
+        margin: 0 auto;
+    }
+    
+    .hero-search-wrapper {
+        display: flex;
+        border-radius: 0.75rem;
+        overflow: hidden;
+        box-shadow: var(--shadow-lg);
+        background: hsl(var(--primary-foreground) / 0.1);
+        backdrop-filter: blur(4px);
+        border: 1px solid hsl(var(--primary-foreground) / 0.2);
+    }
+    
+    .hero-search-input {
+        flex: 1;
+        height: 3rem;
+        padding: 0 1rem;
+        border: 0;
+        background: hsl(var(--primary-foreground) / 0.9);
+        color: hsl(var(--foreground));
+        font-size: 0.875rem;
+    }
+    
+    .hero-search-input:focus {
+        outline: none;
+        box-shadow: none;
+    }
+    
+    .hero-search-button {
+        height: 3rem;
+        padding: 0 1.5rem;
+        border: none;
+        border-left: 1px solid hsl(var(--primary-foreground) / 0.2);
+        background: hsl(var(--primary-foreground) / 0.2);
+        color: hsl(var(--primary-foreground));
+        font-weight: 700;
+        cursor: pointer;
+        transition: background 0.2s;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    
+    .hero-search-button:hover {
+        background: hsl(var(--primary-foreground) / 0.3);
+    }
+    
+    /* Featured Section */
+    .featured-section {
+        margin-bottom: 3rem;
+    }
+    
+    .featured-header {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        margin-bottom: 1.5rem;
+    }
+    
+    .featured-icon {
+        width: 1.25rem;
+        height: 1.25rem;
+        color: hsl(var(--primary));
+    }
+    
+    .featured-title {
+        font-size: 1.5rem;
+        font-weight: 800;
+        color: hsl(var(--foreground));
+    }
+    
+    /* Project Cards Grid */
+    .projects-grid {
+        display: grid;
+        grid-template-columns: repeat(1, minmax(0, 1fr));
+        gap: 1.5rem;
+    }
+    
+    @media (min-width: 640px) {
+        .projects-grid {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+        
+        .hero-title {
+            font-size: 2.25rem;
+        }
+        
+        .hero-description {
+            font-size: 1.125rem;
+        }
+    }
+    
+    @media (min-width: 1024px) {
+        .projects-grid {
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+        }
+        
+        .hero-title {
+            font-size: 3rem;
+        }
+    }
+    
+    @media (min-width: 1280px) {
+        .browse-grid {
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+        }
+    }
+    
+    /* Project Card */
+    .project-card {
+        display: block;
+        text-decoration: none;
+        transition: all 0.3s;
+    }
+    
+    .project-card:hover {
+        transform: translateY(-0.5rem);
+    }
+    
+    .project-card-inner {
+        background: hsl(var(--card));
+        border-radius: 1rem;
+        overflow: hidden;
+        border: 1px solid hsl(var(--border));
+        box-shadow: var(--shadow-card);
+        display: flex;
+        flex-direction: column;
+        height: 100%;
+        transition: all 0.3s;
+    }
+    
+    .project-card:hover .project-card-inner {
+        border-color: hsl(var(--primary) / 0.2);
+        box-shadow: var(--shadow-card-hover);
+    }
+    
+    .project-image-wrapper {
+        position: relative;
+        overflow: hidden;
+        height: 13rem;
+    }
+    
+    .featured-card .project-image-wrapper {
+        height: 13rem;
+    }
+    
+    .browse-card .project-image-wrapper {
+        height: 11rem;
+    }
+    
+    .project-image {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        transition: transform 0.3s;
+    }
+    
+    .project-card:hover .project-image {
+        transform: scale(1.05);
+    }
+    
+    .project-price {
+        position: absolute;
+        top: 0.75rem;
+        right: 0.75rem;
+        background: hsl(var(--primary-dark));
+        color: hsl(var(--primary-foreground));
+        padding: 0.375rem 0.75rem;
+        border-radius: 9999px;
+        font-size: 0.875rem;
+        font-weight: 700;
+        box-shadow: var(--shadow-primary);
+    }
+    
+    .project-content {
+        padding: 1.25rem;
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+    }
+    
+    .project-title {
+        font-weight: 700;
+        font-size: 1rem;
+        color: hsl(var(--card-foreground));
+        margin-bottom: 0.5rem;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        transition: color 0.2s;
+    }
+    
+    .project-card:hover .project-title {
+        color: hsl(var(--primary));
+    }
+    
+    .project-description {
+        color: hsl(var(--muted-foreground));
+        font-size: 0.875rem;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        flex: 1;
+        margin-bottom: 1rem;
+    }
+    
+    .project-footer {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding-top: 0.75rem;
+        border-top: 1px solid hsl(var(--border));
+    }
+    
+    .project-rating {
+        display: flex;
+        align-items: center;
+        gap: 0.375rem;
+    }
+    
+    .project-rating-icon {
+        width: 1rem;
+        height: 1rem;
+        color: hsl(var(--primary));
+        fill: hsl(var(--primary));
+    }
+    
+    .project-rating-value {
+        font-size: 0.875rem;
+        font-weight: 600;
+        color: hsl(var(--card-foreground));
+    }
+    
+    .project-sales {
+        font-size: 0.875rem;
+        color: hsl(var(--muted-foreground));
+    }
+    
+    /* Filter Bar */
+    .filter-bar {
+        background: hsl(var(--card));
+        border-radius: 0.75rem;
+        border: 1px solid hsl(var(--border));
+        padding: 1rem;
+        margin-bottom: 2rem;
+    }
+    
+    .filter-controls {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 1rem;
+    }
+    
+    .filter-select-wrapper {
+        position: relative;
+        min-width: 180px;
+    }
+    
+    .filter-select {
+        width: 100%;
+        height: 2.5rem;
+        padding: 0 2rem 0 0.75rem;
+        border-radius: calc(var(--radius) - 2px);
+        border: 1px solid hsl(var(--input));
+        background: hsl(var(--background));
+        color: hsl(var(--foreground));
+        font-size: 0.875rem;
+        cursor: pointer;
+        appearance: none;
+    }
+    
+    .filter-select:focus {
+        outline: none;
+        border-color: hsl(var(--primary));
+        box-shadow: 0 0 0 2px hsl(var(--primary) / 0.2);
+    }
+    
+    .filter-select-icon {
+        position: absolute;
+        right: 0.75rem;
+        top: 50%;
+        transform: translateY(-50%);
+        width: 1rem;
+        height: 1rem;
+        color: hsl(var(--muted-foreground));
+        pointer-events: none;
+    }
+    
+    .filter-count {
+        margin-left: auto;
+        font-size: 0.875rem;
+        color: hsl(var(--muted-foreground));
+    }
+    
+    .filter-count strong {
+        color: hsl(var(--foreground));
+    }
+    
+    /* Browse Section */
+    .browse-section {
+        margin-bottom: 2rem;
+    }
+    
+    .browse-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 1.5rem;
+    }
+    
+    .browse-title {
+        font-size: 1.5rem;
+        font-weight: 800;
+        color: hsl(var(--foreground));
+    }
+    
+    .browse-link {
+        display: flex;
+        align-items: center;
+        gap: 0.25rem;
+        font-size: 0.875rem;
+        font-weight: 600;
+        color: hsl(var(--primary));
+        text-decoration: none;
+        transition: color 0.2s;
+    }
+    
+    .browse-link:hover {
+        color: hsl(var(--primary-dark));
+    }
+    
+    .browse-link svg {
+        width: 1rem;
+        height: 1rem;
+    }
+    
+    .browse-grid {
+        display: grid;
+        grid-template-columns: repeat(1, minmax(0, 1fr));
+        gap: 1.5rem;
+    }
+    
+    @media (min-width: 640px) {
+        .browse-grid {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+    }
+    
+    @media (min-width: 1024px) {
+        .browse-grid {
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+        }
+    }
+    
+    /* Animation delays for staggered effect */
+    @keyframes fadeInUp {
+        from {
+            opacity: 0;
+            transform: translateY(10px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+    
+    .stagger-animation {
+        animation: fadeInUp 0.4s ease-out forwards;
+        opacity: 0;
+    }
+    
+    .stagger-animation:nth-child(1) { animation-delay: 0s; }
+    .stagger-animation:nth-child(2) { animation-delay: 0.1s; }
+    .stagger-animation:nth-child(3) { animation-delay: 0.2s; }
+    .stagger-animation:nth-child(4) { animation-delay: 0.15s; }
+    .stagger-animation:nth-child(5) { animation-delay: 0.2s; }
+    .stagger-animation:nth-child(6) { animation-delay: 0.25s; }
+    .stagger-animation:nth-child(7) { animation-delay: 0.3s; }
+    .stagger-animation:nth-child(8) { animation-delay: 0.35s; }
+    .stagger-animation:nth-child(9) { animation-delay: 0.4s; }
+</style>
+{% endblock %}
+
+{% block main_content %}
+{% csrf_token %}
+<div class="container" style="max-width: 80rem;">
+    <!-- Hero Section -->
+    <section class="hero-section">
+        <div class="hero-overlay">
+            <div style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: radial-gradient(circle at 20% 50%, rgba(255,255,255,0.1) 0%, transparent 50%);"></div>
+            <div style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: radial-gradient(circle at 80% 80%, rgba(255,255,255,0.05) 0%, transparent 50%);"></div>
         </div>
-      </form>
+        
+        <div class="hero-content">
+            <h1 class="hero-title">Marketplace</h1>
+            <p class="hero-description">Discover amazing projects, tools, templates, and more created by talented creators</p>
+            
+            <div class="hero-search">
+                <div class="hero-search-wrapper">
+                    <input type="text" class="hero-search-input" placeholder="Search projects..." id="heroSearchInput" value="{{ search }}">
+                    <button class="hero-search-button" id="heroSearchButton">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width: 1rem; height: 1rem; margin-right: 0.5rem;">
+                            <circle cx="11" cy="11" r="8"></circle>
+                            <path d="m21 21-4.3-4.3"></path>
+                        </svg>
+                        Search
+                    </button>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Featured Projects Section -->
+    <section class="featured-section">
+        <div class="featured-header">
+            <svg class="featured-icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"></path>
+                <path d="M20 3v4"></path>
+                <path d="M22 5h-4"></path>
+                <path d="M4 17v2"></path>
+                <path d="M5 18H3"></path>
+            </svg>
+            <h2 class="featured-title">Featured Projects</h2>
+        </div>
+
+        <div class="projects-grid">
+            {% if featured %}
+                {% for project in featured %}
+                <div class="stagger-animation">
+                    <a href="{% url 'marketplace:project_detail' slug=project.slug %}" class="project-card">
+                        <div class="project-card-inner featured-card">
+                            <div class="project-image-wrapper">
+                                {% if project.thumbnail %}
+                                <img src="{{ project.thumbnail.url }}" alt="{{ project.title }}" class="project-image">
+                                {% else %}
+                                <div class="project-image project-image-placeholder"></div>
+                                {% endif %}
+                                <div class="project-price">{% if project.is_free %}FREE{% else %}${{ project.price }}{% endif %}</div>
+                            </div>
+                            <div class="project-content">
+                                <h3 class="project-title">{{ project.title }}</h3>
+                                <p class="project-description">{{ project.short_description }}</p>
+                                <div class="project-footer">
+                                    <div class="project-rating">
+                                        <svg class="project-rating-icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                            <path d="M11.525 2.295a.53.53 0 0 1 .95 0l2.31 4.679a2.123 2.123 0 0 0 1.595 1.16l5.166.756a.53.53 0 0 1 .294.904l-3.736 3.638a2.123 2.123 0 0 0-.611 1.878l.882 5.14a.53.53 0 0 1-.771.56l-4.618-2.428a2.122 2.122 0 0 0-1.973 0L6.396 21.01a.53.53 0 0 1-.77-.56l.881-5.139a2.122 2.122 0 0 0-.611-1.879L2.16 9.795a.53.53 0 0 1 .294-.906l5.165-.755a2.122 2.122 0 0 0 1.597-1.16z"></path>
+                                        </svg>
+                                        <span class="project-rating-value">{{ project.rating_average|default:0|floatformat:1 }}</span>
+                                    </div>
+                                    <span class="project-sales">{{ project.sales_count }} sales</span>
+                                </div>
+                            </div>
+                        </div>
+                    </a>
+                </div>
+                {% endfor %}
+            {% else %}
+                <p style="color: hsl(var(--muted-foreground)); padding: 1rem;">No featured projects yet. Check back soon.</p>
+            {% endif %}
+        </div>
+    </section>
+
+    <!-- Filter Bar -->
+    <div class="filter-bar animate-fade-in">
+        <div class="filter-controls">
+            <div class="filter-select-wrapper">
+                <select class="filter-select" id="categoryFilter">
+                    <option value="" {% if not category %}selected{% endif %}>All Categories</option>
+                    {% for value, label in categories %}
+                    <option value="{{ value }}" {% if value == category %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+                <svg class="filter-select-icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="m6 9 6 6 6-6"></path>
+                </svg>
+            </div>
+
+            <div class="filter-select-wrapper">
+                <select class="filter-select" id="sortFilter">
+                    <option value="newest" {% if sort == 'newest' %}selected{% endif %}>Newest</option>
+                    <option value="popular" {% if sort == 'popular' %}selected{% endif %}>Most Popular</option>
+                    <option value="top_rated" {% if sort == 'top_rated' %}selected{% endif %}>Highest Rated</option>
+                    <option value="price_low" {% if sort == 'price_low' %}selected{% endif %}>Price: Low to High</option>
+                    <option value="price_high" {% if sort == 'price_high' %}selected{% endif %}>Price: High to Low</option>
+                </select>
+                <svg class="filter-select-icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="m6 9 6 6 6-6"></path>
+                </svg>
+            </div>
+
+            <span class="filter-count"><strong>{{ project_count }}</strong> projects</span>
+        </div>
     </div>
-  </section>
 
-  <!-- Featured projects -->
-  {% if featured %}
-  <section style="margin-bottom:60px;">
-    <h2 style="font-size:2rem;font-weight:800;margin:0 0 32px;color:var(--text-dark);">✨ Featured Projects</h2>
-    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:24px;">
-      {% for project in featured %}
-      <a href="{% url 'marketplace:project_detail' slug=project.slug %}" style="text-decoration:none;color:inherit;">
-        <div style="background:var(--card-bg);border-radius:16px;overflow:hidden;border:1px solid var(--border);box-shadow:var(--card-shadow);transition:all 0.3s cubic-bezier(0.4,0,0.2,1);height:100%;display:flex;flex-direction:column;" onmouseover="this.style.transform='translateY(-8px)';this.style.boxShadow='0 20px 40px rgba(31,156,238,0.2)'" onmouseout="this.style.transform='none';this.style.boxShadow='var(--card-shadow)'">
-          <div style="position:relative;overflow:hidden;height:200px;">
-            <img src="{{ project.thumbnail.url }}" alt="{{ project.title }}" style="width:100%;height:100%;object-fit:cover;transition:transform 0.3s ease;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
-            <div style="position:absolute;top:12px;left:12px;background:var(--primary-dark, #1864c3);color:white;padding:8px 16px;border-radius:12px;font-size:0.85rem;font-weight:700;box-shadow:0 4px 12px rgba(31,156,238,0.3);">
-              {% if project.is_free %}FREE{% else %}${{ project.price }}{% endif %}
-            </div>
-          </div>
-          <div style="padding:20px;flex:1;display:flex;flex-direction:column;">
-            <h3 style="font-weight:800;font-size:1.1rem;margin:0 0 10px;color:var(--text-dark);">{{ project.title }}</h3>
-            <p style="color:var(--secondary-text);font-size:0.9rem;margin:0 0 16px;line-height:1.5;flex:1;">{{ project.short_description|truncatewords:20 }}</p>
-            <div style="display:flex;align-items:center;gap:8px;font-weight:600;color:var(--primary);">
-              View Details <span>→</span>
-            </div>
-          </div>
-        </div>
-      </a>
-      {% endfor %}
-    </div>
-  </section>
-  {% endif %}
 
-  <!-- Filters and sorting -->
-  <section style="margin-bottom:40px;padding:24px;background:var(--card-bg);border-radius:12px;border:1px solid var(--border);">
-    <form method="GET" style="display:flex;flex-wrap:wrap;gap:16px;align-items:center;">
-      <!-- Category filter -->
-      <select name="category" onchange="this.form.submit()" style="padding:10px 16px;border-radius:8px;border:1px solid var(--border);background:var(--card-bg);color:var(--text-dark);font-weight:500;cursor:pointer;transition:all 0.2s;">
-        <option value="">All Categories</option>
-        {% for value, label in categories %}
-        <option value="{{ value }}" {% if category == value %}selected{% endif %}>
-          {{ label }}
-        </option>
-        {% endfor %}
-      </select>
-
-      <!-- Sort filter -->
-      <select name="sort" onchange="this.form.submit()" style="padding:10px 16px;border-radius:8px;border:1px solid var(--border);background:var(--card-bg);color:var(--text-dark);font-weight:500;cursor:pointer;transition:all 0.2s;">
-        <option value="newest" {% if sort == 'newest' %}selected{% endif %}>Newest</option>
-        <option value="popular" {% if sort == 'popular' %}selected{% endif %}>Most Popular</option>
-        <option value="top_rated" {% if sort == 'top_rated' %}selected{% endif %}>Top Rated</option>
-        <option value="price_low" {% if sort == 'price_low' %}selected{% endif %}>Price: Low to High</option>
-        <option value="price_high" {% if sort == 'price_high' %}selected{% endif %}>Price: High to Low</option>
-      </select>
-
-      <!-- Hidden search param -->
-      <input type="hidden" name="q" value="{{ search }}">
-
-      <!-- Results count -->
-      <span style="margin-left:auto;color:var(--secondary-text);font-size:0.95rem;font-weight:500;">
-        <strong style="color:var(--text-dark);">{{ projects.paginator.count }}</strong> project{{ projects.paginator.count|pluralize }}
-      </span>
-    </form>
-  </section>
-
-  <!-- Projects grid -->
-  <section style="margin-bottom:40px;">
-    <h2 style="font-size:2rem;font-weight:800;margin:0 0 32px;color:var(--text-dark);">Browse Projects</h2>
-    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:24px;">
-      {% for project in projects %}
-      <a href="{% url 'marketplace:project_detail' slug=project.slug %}" style="text-decoration:none;color:inherit;">
-        <div style="background:var(--card-bg);border-radius:16px;overflow:hidden;border:1px solid var(--border);box-shadow:var(--card-shadow);transition:all 0.3s cubic-bezier(0.4,0,0.2,1);height:100%;display:flex;flex-direction:column;" onmouseover="this.style.transform='translateY(-8px)';this.style.boxShadow='0 20px 40px rgba(31,156,238,0.2)'" onmouseout="this.style.transform='none';this.style.boxShadow='var(--card-shadow)'">
-          <div style="position:relative;overflow:hidden;height:180px;">
-            <img src="{{ project.thumbnail.url }}" alt="{{ project.title }}" style="width:100%;height:100%;object-fit:cover;transition:transform 0.3s ease;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
-            <div style="position:absolute;top:10px;right:10px;background:var(--primary-dark, #1864c3);color:white;padding:6px 14px;border-radius:20px;font-size:0.8rem;font-weight:700;box-shadow:0 4px 12px rgba(31,156,238,0.3);">
-              {% if project.is_free %}FREE{% else %}${{ project.price }}{% endif %}
-            </div>
-          </div>
-          <div style="padding:18px;flex:1;display:flex;flex-direction:column;">
-            <h3 style="font-weight:700;font-size:1rem;margin:0 0 8px;color:var(--text-dark);line-height:1.3;">{{ project.title }}</h3>
-            <p style="color:var(--secondary-text);font-size:0.85rem;margin:0 0 12px;line-height:1.4;flex:1;">{{ project.short_description|truncatewords:15 }}</p>
-            <div style="display:flex;justify-content:space-between;align-items:center;padding-top:12px;border-top:1px solid var(--border);">
-              <div style="display:flex;align-items:center;gap:6px;font-size:0.9rem;">
-                <span style="color:var(--primary-dark, #1864c3);font-size:1.1rem;filter:drop-shadow(0 1px 2px rgba(31,156,238,0.3));">★</span>
-                <span style="color:var(--text-dark);font-weight:600;">{{ project.rating_average }}</span>
-              </div>
-              <span style="color:var(--secondary-text);font-size:0.85rem;">{{ project.sales_count }} sales</span>
-            </div>
-          </div>
-        </div>
-      </a>
-      {% empty %}
-      <div style="grid-column:1/-1;text-align:center;padding:80px 20px;">
-        <div style="color:var(--secondary-text);">
-          <p style="font-size:1.2rem;margin:0 0 8px;font-weight:600;">No projects found</p>
-          <p style="margin:0;opacity:0.8;">Try adjusting your filters to find what you're looking for</p>
-        </div>
-      </div>
-      {% endfor %}
+<!-- Browse Projects Section -->
+<section class="browse-section">
+    <div class="browse-header">
+        <h2 class="browse-title">Browse Projects</h2>
+        <a href="{% url 'marketplace:home' %}" class="browse-link">
+            View all
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M5 12h14"></path>
+                <path d="m12 5 7 7-7 7"></path>
+            </svg>
+        </a>
     </div>
 
-      <!-- Pagination -->
-      {% if projects.has_other_pages %}
-      <div style="margin-top:32px;display:flex;justify-content:center;gap:8px;flex-wrap:wrap;">
+    <div class="browse-grid">
+        {% if projects %}
+            {% for project in projects %}
+            <div class="stagger-animation">
+                <a href="{% url 'marketplace:project_detail' slug=project.slug %}" class="project-card">
+                    <div class="project-card-inner browse-card">
+                        <div class="project-image-wrapper">
+                            {% if project.thumbnail %}
+                            <img src="{{ project.thumbnail.url }}" alt="{{ project.title }}" class="project-image">
+                            {% else %}
+                            <div class="project-image project-image-placeholder"></div>
+                            {% endif %}
+                            <div class="project-price">{% if project.is_free %}FREE{% else %}${{ project.price }}{% endif %}</div>
+                        </div>
+                        <div class="project-content">
+                            <h3 class="project-title">{{ project.title }}</h3>
+                            <p class="project-description">{{ project.short_description }}</p>
+                            <div class="project-footer">
+                                <div class="project-rating">
+                                    <svg class="project-rating-icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <path d="M11.525 2.295a.53.53 0 0 1 .95 0l2.31 4.679a2.123 2.123 0 0 0 1.595 1.16l5.166.756a.53.53 0 0 1 .294.904l-3.736 3.638a2.123 2.123 0 0 0-.611 1.878l.882 5.14a.53.53 0 0 1-.771.56l-4.618-2.428a2.122 2.122 0 0 0-1.973 0L6.396 21.01a.53.53 0 0 1-.77-.56l.881-5.139a2.122 2.122 0 0 0-.611-1.879L2.16 9.795a.53.53 0 0 1 .294-.906l5.165-.755a2.122 2.122 0 0 0 1.597-1.16z"></path>
+                                    </svg>
+                                    <span class="project-rating-value">{{ project.rating_average|default:0|floatformat:1 }}</span>
+                                </div>
+                                <span class="project-sales">{{ project.sales_count }} sales</span>
+                            </div>
+                        </div>
+                    </div>
+                </a>
+            </div>
+            {% endfor %}
+        {% else %}
+            <p style="color: hsl(var(--muted-foreground)); padding: 1rem;">No projects match your filters yet. Try another search.</p>
+        {% endif %}
+    </div>
+
+    {% if show_pagination and projects.has_other_pages %}
+    <div class="pagination-controls" style="display: flex; align-items: center; gap: 1rem; justify-content: center; margin-top: 2rem;">
         {% if projects.has_previous %}
-         <a href="?page={{ projects.previous_page_number }}&category={{ category }}&sort={{ sort }}&q={{ search }}" 
-            style="padding:8px 16px;border-radius:8px;background:var(--primary-dark, #1864c3);color:white;text-decoration:none;font-weight:600;transition:all 0.2s;box-shadow:0 4px 12px rgba(31,156,238,0.3);" onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 8px 20px rgba(31,156,238,0.4)'" onmouseout="this.style.transform='none';this.style.boxShadow='0 4px 12px rgba(31,156,238,0.3)'">
-           ← Previous
-         </a>
+        <a class="btn btn-ghost" href="?page={{ projects.previous_page_number }}{% if filter_query %}&{{ filter_query }}{% endif %}">Previous</a>
         {% endif %}
-        
-        <span style="padding:8px 16px;color:var(--text-dark);font-weight:500;">
-          Page {{ projects.number }} of {{ projects.paginator.num_pages }}
-        </span>
-        
+        <span class="pagination-info" style="color: hsl(var(--muted-foreground));">Page {{ projects.number }} of {{ projects.paginator.num_pages }}</span>
         {% if projects.has_next %}
-        <a href="?page={{ projects.next_page_number }}&category={{ category }}&sort={{ sort }}&q={{ search }}" 
-           style="padding:8px 16px;border-radius:8px;background:var(--primary-dark, #1864c3);color:white;text-decoration:none;font-weight:600;transition:all 0.2s;box-shadow:0 4px 12px rgba(31,156,238,0.3);" onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 8px 20px rgba(31,156,238,0.4)'" onmouseout="this.style.transform='none';this.style.boxShadow='0 4px 12px rgba(31,156,238,0.3)'">
-           Next →
-         </a>
+        <a class="btn btn-primary" href="?page={{ projects.next_page_number }}{% if filter_query %}&{{ filter_query }}{% endif %}">Next</a>
         {% endif %}
-      </div>
-      {% endif %}
     </div>
-  </section>
-</div>
-</div>
-</div>
+    {% endif %}
 </section>
+
 </div>
+{% endblock %}
+{% block fab_button %}
+<!-- Remove FAB for marketplace page -->
+{% endblock %}
+{% block extra_scripts %}
+<script>
+    /* ============================================
+       MARKETPLACE JAVASCRIPT
+       ============================================ */
+    
+    // Hero Search Functionality
+    const heroSearchInput = document.getElementById('heroSearchInput');
+    const heroSearchButton = document.getElementById('heroSearchButton');
+    
+    function performSearch() {
+        const query = heroSearchInput.value.trim();
+        if (query) {
+            // Navigate to marketplace with search query
+            const params = new URLSearchParams(window.location.search);
+            params.set('q', query);
+            params.set('page', '1'); // Reset to first page
+            window.location.href = `/marketplace/?${params.toString()}`;
+        }
+    }
+    
+    if (heroSearchButton) {
+        heroSearchButton.addEventListener('click', performSearch);
+    }
+    
+    if (heroSearchInput) {
+        heroSearchInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                performSearch();
+            }
+        });
+    }
+    
+    // Filter Functionality
+    const categoryFilter = document.getElementById('categoryFilter');
+    const sortFilter = document.getElementById('sortFilter');
+    
+    function applyFilters() {
+        const category = categoryFilter.value;
+        const sort = sortFilter.value;
+        
+        // Build URL with current search parameters
+        const params = new URLSearchParams(window.location.search);
+        
+        // Update or remove filter parameters
+        if (category) {
+            params.set('category', category);
+        } else {
+            params.delete('category');
+        }
+        
+        if (sort && sort !== 'newest') {
+            params.set('sort', sort);
+        } else {
+            params.delete('sort');
+        }
+        
+        // Reset to first page when filters change
+        params.set('page', '1');
+        
+        // Navigate to filtered results
+        window.location.href = `/marketplace/?${params.toString()}`;
+    }
+    
+    if (categoryFilter) {
+        categoryFilter.addEventListener('change', applyFilters);
+    }
+    
+    if (sortFilter) {
+        sortFilter.addEventListener('change', applyFilters);
+    }
+    
+    // Update active sidebar link
+    document.addEventListener('DOMContentLoaded', () => {
+        const sidebarLinks = document.querySelectorAll('.sidebar-link');
+        const currentPath = window.location.pathname;
+        
+        sidebarLinks.forEach(link => {
+            link.classList.remove('active');
+            if (link.getAttribute('href') === currentPath || 
+                (currentPath.includes('marketplace') && link.getAttribute('href').includes('marketplace'))) {
+                link.classList.add('active');
+            }
+        });
+    });
+    
+    // Smooth scroll to top when clicking logo
+    const logo = document.querySelector('.logo');
+    if (logo) {
+        logo.addEventListener('click', (e) => {
+            if (window.location.pathname === e.target.closest('a').getAttribute('href')) {
+                e.preventDefault();
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            }
+        });
+    }
+    
+    // Add loading state to project cards
+    document.querySelectorAll('.project-card').forEach(card => {
+        card.addEventListener('click', function(e) {
+            // Don't prevent default as we want navigation to work
+            // Just add a visual loading state
+            this.style.opacity = '0.7';
+        });
+    });
+    
+    // Lazy load images
+    if ('IntersectionObserver' in window) {
+        const imageObserver = new IntersectionObserver((entries, observer) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    const img = entry.target;
+                    img.src = img.dataset.src || img.src;
+                    img.classList.add('loaded');
+                    observer.unobserve(img);
+                }
+            });
+        });
+        
+        document.querySelectorAll('.project-image').forEach(img => {
+            imageObserver.observe(img);
+        });
+    }
+
+    // Utility function for AJAX requests with CSRF protection
+    function getCsrfToken() {
+        return document.querySelector('[name=csrfmiddlewaretoken]')?.value ||
+               document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') ||
+               '';
+    }
+
+    async function makeApiRequest(url, options = {}) {
+        const defaultOptions = {
+            headers: {
+                'X-CSRFToken': getCsrfToken(),
+                'Content-Type': 'application/json',
+            },
+            credentials: 'same-origin'
+        };
+        
+        const response = await fetch(url, { ...defaultOptions, ...options });
+        return response.json();
+    }
+
+    // Wishlist functionality
+    window.toggleWishlist = async function(projectId, button) {
+        try {
+            const isInWishlist = button.classList.contains('in-wishlist');
+            const url = isInWishlist 
+                ? `/marketplace/api/wishlist/remove/${projectId}/`
+                : `/marketplace/api/wishlist/add/${projectId}/`;
+            
+            button.disabled = true;
+            button.innerHTML = '<i class="loading-spinner"></i>';
+            
+            const result = await makeApiRequest(url, { method: 'POST' });
+            
+            if (result.success) {
+                button.classList.toggle('in-wishlist', !isInWishlist);
+                button.innerHTML = isInWishlist ? '♡ Add to Wishlist' : '♥ In Wishlist';
+            } else {
+                throw new Error(result.error || 'Failed to update wishlist');
+            }
+        } catch (error) {
+            console.error('Wishlist error:', error);
+            alert('Error updating wishlist. Please try again.');
+        } finally {
+            button.disabled = false;
+        }
+    };
+
+    // Purchase functionality
+    window.purchaseProject = async function(projectId, button) {
+        try {
+            button.disabled = true;
+            const originalText = button.innerHTML;
+            button.innerHTML = '<i class="loading-spinner"></i> Processing...';
+            
+            const result = await makeApiRequest(`/marketplace/api/purchase/${projectId}/`, {
+                method: 'POST'
+            });
+            
+            if (result.success) {
+                if (result.redirect) {
+                    window.location.href = result.redirect;
+                } else if (result.payment_url) {
+                    window.location.href = result.payment_url;
+                }
+            } else {
+                throw new Error(result.error || 'Purchase failed');
+            }
+        } catch (error) {
+            console.error('Purchase error:', error);
+            alert(error.message || 'Purchase failed. Please try again.');
+            button.disabled = false;
+            button.innerHTML = originalText;
+        }
+    };
+
+    // Review submission
+    window.submitReview = async function(projectId, formData) {
+        try {
+            const result = await makeApiRequest(`/marketplace/api/review/${projectId}/`, {
+                method: 'POST',
+                body: JSON.stringify(formData)
+            });
+            
+            if (result.success) {
+                alert(result.message);
+                location.reload(); // Refresh to show new review
+            } else {
+                throw new Error(result.error || 'Failed to submit review');
+            }
+        } catch (error) {
+            console.error('Review submission error:', error);
+            alert(error.message || 'Failed to submit review. Please try again.');
+        }
+    };
+    const browseLink = document.querySelector('.browse-link');
+    if (browseLink) {
+        browseLink.addEventListener('click', (event) => {
+            event.preventDefault();
+            const params = new URLSearchParams(window.location.search);
+            ['category', 'sort', 'q'].forEach((key) => params.delete(key));
+            params.set('page', '1');
+            const query = params.toString();
+            window.location.href = query ? `/marketplace/?${query}` : '/marketplace/';
+        });
+    }
+    document.querySelectorAll('.pagination-controls a').forEach((link) => {
+        link.addEventListener('click', () => {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        });
+    });
+</script>
 {% endblock %}

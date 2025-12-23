@@ -1,183 +1,475 @@
 {% extends "dashboardhome.html" %}
+{% load static %}
 
 {% block title %}Communities - Lupify{% endblock %}
 
-{% block content %}
-<div class="feed communities-page">
+{% block meta_description %}Discover and join gaming communities on Lupify{% endblock %}
 
-    <!-- Top Header + Create Button -->
-    <div class="communities-header">
-        <h2>Communities</h2>
-        {% if user.is_authenticated %}
-        <a href="{% url 'create_community' %}" class="create-community-btn">+ Create Community</a>
-        {% endif %}
+{% block extra_head %}
+<style>
+    /* Communities-specific styles */
+    .community-section {
+        margin-bottom: 2rem;
+        animation: fadeIn 0.3s ease-out;
+    }
+
+    .section-nav {
+        display: flex;
+        gap: 0.5rem;
+    }
+
+    .nav-btn {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 2rem;
+        height: 2rem;
+        border-radius: 9999px;
+        border: 1px solid hsl(var(--border) / 0.5);
+        background-color: hsl(var(--card) / 0.5);
+        backdrop-filter: blur(4px);
+        color: hsl(var(--foreground));
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+
+    .nav-btn:hover:not(:disabled) {
+        background-color: hsl(var(--card));
+    }
+
+    .nav-btn:disabled {
+        opacity: 0.3;
+        cursor: not-allowed;
+    }
+
+    .nav-btn svg {
+        width: 1rem;
+        height: 1rem;
+    }
+
+    .community-carousel {
+        display: flex;
+        gap: 1rem;
+        overflow-x: auto;
+        scroll-behavior: smooth;
+        padding-bottom: 0.5rem;
+        scrollbar-width: none;
+    }
+
+    .community-carousel::-webkit-scrollbar {
+        display: none;
+    }
+
+    .community-card {
+        width: 300px;
+        flex-shrink: 0;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        padding: 1rem;
+        border-radius: 0.75rem;
+        border: 1px solid hsl(var(--border));
+        background-color: hsl(var(--card));
+        box-shadow: var(--shadow-card);
+        transition: all 0.2s;
+        animation: fadeIn 0.3s ease-out;
+    }
+
+    .community-card:hover {
+        transform: translateY(-2px);
+        border-color: hsl(var(--primary) / 0.3);
+        box-shadow: var(--shadow-card-hover);
+    }
+
+    .community-card-content {
+        display: flex;
+        gap: 0.75rem;
+        margin-bottom: 1rem;
+    }
+
+    .community-info {
+        flex: 1;
+        min-width: 0;
+    }
+
+    .community-name {
+        font-size: 1rem;
+        font-weight: 600;
+        color: hsl(var(--foreground));
+        margin-bottom: 0.25rem;
+        transition: color 0.2s;
+    }
+
+    .community-card:hover .community-name {
+        color: hsl(var(--primary));
+    }
+
+    .community-members {
+        font-size: 0.75rem;
+        color: hsl(var(--muted-foreground));
+        margin-bottom: 0.5rem;
+    }
+
+    .community-description {
+        font-size: 0.875rem;
+        color: hsl(var(--muted-foreground));
+        line-height: 1.625;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+    }
+
+
+    .community-action-btn {
+        width: 100%;
+        padding: 0.625rem;
+        border-radius: 0.5rem;
+        font-size: 0.875rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s;
+        border: none;
+    }
+
+    .btn-join {
+        background-color: hsl(var(--primary));
+        color: hsl(var(--primary-foreground));
+    }
+
+    .btn-join:hover {
+        background-color: hsl(var(--primary-dark));
+    }
+
+    .btn-leave {
+        background-color: hsl(var(--destructive));
+        color: hsl(var(--destructive-foreground));
+    }
+
+    .btn-leave:hover {
+        background-color: hsl(var(--destructive) / 0.9);
+    }
+
+    /* Responsive adjustments */
+    @media (max-width: 767px) {
+        .fab-mobile {
+            display: flex;
+        }
+    }
+
+    @media (min-width: 768px) {
+        .fab-mobile {
+            display: none;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block main_content %}
+<div class="container">
+    <!-- Communities Header -->
+    <div class="section-header" style="margin-bottom: 1.5rem;">
+        <h1 style="font-size: 1.5rem; font-weight: 700;">Communities</h1>
+        <button class="btn btn-primary" onclick="window.location.href='{% url 'create_community' %}'">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M5 12h14"></path>
+                <path d="M12 5v14"></path>
+            </svg>
+            Create Community
+        </button>
     </div>
 
-    <!-- Horizontal Category Bubble Scroller (Ellipses) -->
-    <div class="community-bubble-scroll" style="margin-bottom:15px;">
-        <!-- ALL first -->
-        <div class="community-bubble" data-filter="all">
-            <div class="bubble-ellipse">All</div>
-        </div>
-
-        <!-- Then all categories -->
-        {% for code, name in categories %}
-        <div class="community-bubble" data-filter="{{ code }}">
-            <div class="bubble-ellipse">{{ name }}</div>
-        </div>
+    <!-- Category Filters -->
+    <div class="filter-wrapper">
+        <button class="filter-chip active" data-category="all">All</button>
+        {% for cat in category_filters %}
+        <button class="filter-chip" data-category="{{ cat.slug }}">{{ cat.name }}</button>
         {% endfor %}
     </div>
 
-    <!-- Community For You Section (removed) -->
+    <!-- Community Sections -->
+    {% for category, communities in communities_by_category.items %}
+    <section class="community-section" data-category="{{ category.slug }}" style="animation-delay: {% widthratio forloop.counter0 1 50 %}ms;">
+        <div class="section-header">
+            <h3 class="section-title">{{ category.name }}</h3>
+            <div class="section-nav">
+                <button class="nav-btn nav-prev" data-carousel="{{ category.slug }}" disabled>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="m15 18-6-6 6-6"></path>
+                    </svg>
+                </button>
+                <button class="nav-btn nav-next" data-carousel="{{ category.slug }}">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="m9 18 6-6-6-6"></path>
+                    </svg>
+                </button>
+            </div>
+        </div>
 
-    <!-- Category Blocks -->
-    {% for code, name in categories %}
-    <div class="community-category-block" data-category="{{ code }}">
-        <h3 class="category-title">{{ name }}</h3>
-        <div class="community-grid">
+        <div class="community-carousel" id="carousel-{{ category.slug }}">
             {% for community in communities %}
-                {% if community.category == code %}
-                <a href="{% url 'community_detail' community.id %}" class="community-card-link">
-                    <div class="community-card">
-                        <div class="community-info">
-                            <h4 class="community-name">{{ community.name }}</h4>
-                            <p class="community-members">{{ community.members.count }} members</p>
-                            {% if community.description %}
-                                <p class="community-desc">{{ community.description|truncatechars:100 }}</p>
-                            {% endif %}
-                        </div>
-                        {% if user.is_authenticated %}
-                        <a href="{% url 'toggle_join_community' community.id %}"
-                           class="join-btn {% if user in community.members.all %}leave{% endif %}">
-                            {% if user in community.members.all %}Leave{% else %}Join{% endif %}
-                        </a>
-                        {% endif %}
+            <div class="community-card" style="animation-delay: {% widthratio forloop.counter0 1 30 %}ms;">
+                <div class="community-card-content">
+                    <div class="community-info">
+                        <h4 class="community-name">{{ community.name }}</h4>
+                        <p class="community-members">{{ community.member_count|default:0 }} members</p>
+                        <p class="community-description">{{ community.description }}</p>
                     </div>
-                </a>
+                </div>
+
+                {% if community.is_member %}
+                <button class="community-action-btn btn-leave" 
+                        data-community-id="{{ community.id }}">
+                    Leave
+                </button>
+                {% else %}
+                <button class="community-action-btn btn-join" 
+                        data-community-id="{{ community.id }}">
+                    Join
+                </button>
                 {% endif %}
+            </div>
+            {% empty %}
+            <p style="color: hsl(var(--muted-foreground)); padding: 1rem;">No communities in this category yet.</p>
             {% endfor %}
         </div>
-    </div>
+    </section>
     {% endfor %}
 
+    <!-- Mobile FAB -->
+    <button class="fab fab-mobile" aria-label="Create community" onclick="window.location.href='{% url 'create_community' %}'">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M5 12h14"></path>
+            <path d="M12 5v14"></path>
+        </svg>
+    </button>
+
+    <!-- ===== INTERESTS ONBOARDING MODALS (FROM FILE A) ===== -->
+
+    <!-- Game Interests Modal -->
+    <div class="interests-modal" id="interestsModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);backdrop-filter:blur(4px);z-index:6000;justify-content:center;align-items:center;">
+        <div class="interests-modal-content" style="background:var(--card);border-radius:12px;padding:32px;max-width:600px;width:90%;box-shadow:0 20px 60px rgba(0,0,0,0.3);">
+            <h2 style="margin:0 0 12px;font-size:1.5rem;color:var(--foreground);">What games interest you?</h2>
+            <p style="margin:0 0 24px;color:var(--muted-foreground);">Help us personalize your recommendations by selecting your interests</p>
+            <div class="interests-grid" id="interestsGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:12px;margin-bottom:24px;">
+                <div class="interest-chip" data-category="word" style="padding:12px 16px;border-radius:8px;border:2px solid var(--border);cursor:pointer;transition:all 0.2s;text-align:center;font-weight:500;">Word Games</div>
+                <div class="interest-chip" data-category="puzzle" style="padding:12px 16px;border-radius:8px;border:2px solid var(--border);cursor:pointer;transition:all 0.2s;text-align:center;font-weight:500;">Puzzle Games</div>
+                <div class="interest-chip" data-category="strategy" style="padding:12px 16px;border-radius:8px;border:2px solid var(--border);cursor:pointer;transition:all 0.2s;text-align:center;font-weight:500;">Strategy Games</div>
+                <div class="interest-chip" data-category="casual" style="padding:12px 16px;border-radius:8px;border:2px solid var(--border);cursor:pointer;transition:all 0.2s;text-align:center;font-weight:500;">Casual Games</div>
+                <div class="interest-chip" data-category="trivia" style="padding:12px 16px;border-radius:8px;border:2px solid var(--border);cursor:pointer;transition:all 0.2s;text-align:center;font-weight:500;">Trivia</div>
+                <div class="interest-chip" data-category="educational" style="padding:12px 16px;border-radius:8px;border:2px solid var(--border);cursor:pointer;transition:all 0.2s;text-align:center;font-weight:500;">Educational</div>
+            </div>
+            <div class="interests-modal-actions" style="display:flex;justify-content:flex-end;">
+                <button class="btn btn-primary" id="saveInterestsBtn" disabled style="opacity:0.5;">Save Interests</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Blog Tags Modal -->
+    <div class="interests-modal" id="blogTagsModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);backdrop-filter:blur(4px);z-index:6000;justify-content:center;align-items:center;">
+        <div class="interests-modal-content" style="background:var(--card);border-radius:12px;padding:32px;max-width:600px;width:90%;box-shadow:0 20px 60px rgba(0,0,0,0.3);">
+            <h2 style="margin:0 0 12px;font-size:1.5rem;color:var(--foreground);">What blog topics interest you?</h2>
+            <p style="margin:0 0 24px;color:var(--muted-foreground);">Select at least 3 topics to personalize blog recommendations</p>
+            <div class="interests-grid" id="blogTagsGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:12px;margin-bottom:24px;"></div>
+            <div class="interests-modal-actions" style="display:flex;justify-content:flex-end;">
+                <button class="btn btn-primary" id="saveBlogTagsBtn" disabled style="opacity:0.5;">Save Preferences</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Community Tags Modal -->
+    <div class="interests-modal" id="communityTagsModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);backdrop-filter:blur(4px);z-index:6000;justify-content:center;align-items:center;">
+        <div class="interests-modal-content" style="background:var(--card);border-radius:12px;padding:32px;max-width:600px;width:90%;box-shadow:0 20px 60px rgba(0,0,0,0.3);">
+            <h2 style="margin:0 0 12px;font-size:1.5rem;color:var(--foreground);">What community topics interest you?</h2>
+            <p style="margin:0 0 24px;color:var(--muted-foreground);">Select at least 3 topics to personalize community recommendations</p>
+            <div class="interests-grid" id="communityTagsGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:12px;margin-bottom:24px;"></div>
+            <div class="interests-modal-actions" style="display:flex;justify-content:flex-end;">
+                <button class="btn btn-primary" id="saveCommunityTagsBtn" disabled style="opacity:0.5;">Save Preferences</button>
+            </div>
+        </div>
+    </div>
+
+    <style>
+    .interests-modal.show { display: flex !important; }
+    .interest-chip.selected { 
+        background: hsl(var(--primary)); 
+        color: hsl(var(--primary-foreground)); 
+        border-color: hsl(var(--primary)); 
+    }
+    .interest-chip:hover { 
+        border-color: hsl(var(--primary)); 
+        transform: translateY(-2px); 
+    }
+    </style>
 </div>
+{% endblock %}
 
-<style>
-.communities-page { padding: 20px; }
-
-/* Header */
-.communities-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 10px;
-}
-
-/* Create button */
-.create-community-btn {
-    background: var(--primary);
-    color: #fff;
-    padding: 10px 18px;
-    border-radius: 10px;
-    font-weight: 600;
-    text-decoration: none;
-    transition: 0.2s;
-}
-.create-community-btn:hover { opacity: 0.85; }
-
-/* COMMUNITY BUBBLE SCROLLER (ELLIPSES) */
-.community-bubble-scroll {
-    display: flex;
-    overflow-x: auto;
-    gap: 12px;
-    padding: 8px 0;
-    margin-bottom: 15px;
-    scrollbar-width: none;
-}
-.community-bubble-scroll::-webkit-scrollbar { display: none; }
-
-.community-bubble {
-    text-align: center;
-    flex-shrink: 0;
-    cursor: pointer;
-}
-
-.bubble-ellipse {
-    padding: 8px 18px;
-    background: var(--card-bg);
-    border: 1px solid var(--border-color);
-    border-radius: 50px; /* ellipse shape */
-    font-weight: 600;
-    cursor: pointer;
-    transition: 0.2s;
-    white-space: nowrap;
-}
-
-.bubble-ellipse:hover { border-color: var(--primary); }
-.bubble-ellipse.active {
-    background: var(--primary);
-    color: #fff;
-    border-color: var(--primary);
-}
-
-/* Category grid */
-.community-grid {
-    display: grid;
-    gap: 0px;
-    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-    margin-bottom: 30px;
-}
-
-.community-card-link { text-decoration: none; color: inherit; }
-
-.community-card {
-    background: var(--card-bg);
-    border: 1px solid var(--border-color);
-    padding: 15px;
-    border-radius: 12px;
-    transition: 0.2s;
-}
-.community-card:hover {
-    border-color: var(--primary);
-    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-}
-
-.join-btn {
-    display: block;
-    text-align: center;
-    padding: 8px;
-    background: var(--primary);
-    color: white;
-    border-radius: 8px;
-    text-decoration: none;
-    margin-top: 14px;
-    font-weight: 600;
-}
-.join-btn.leave { background: #d9534f; }
-
-/* Mobile tweaks */
-@media (max-width: 480px) {
-    .bubble-ellipse { padding: 6px 12px; font-size: 0.9rem; }
-}
-</style>
-
+{% block extra_scripts %}
 <script>
-document.querySelectorAll('.community-bubble').forEach(bubble => {
-    bubble.addEventListener('click', async () => {
-        // Remove active from all
-        document.querySelectorAll('.bubble-ellipse').forEach(el => el.classList.remove('active'));
-        // Add active to clicked
-        bubble.querySelector('.bubble-ellipse').classList.add('active');
+    const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
 
-        const filter = bubble.dataset.filter;
+    // Category filter functionality
+    const categoryBtns = document.querySelectorAll('.filter-chip');
+    const sections = document.querySelectorAll('.community-section');
 
-        document.querySelectorAll('.community-category-block').forEach(block => {
-            block.style.display = (filter === 'all' || block.dataset.category === filter) ? 'block' : 'none';
+    categoryBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+            // Update active state
+            categoryBtns.forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+
+            const category = btn.dataset.category;
+
+            // Filter sections
+            sections.forEach(section => {
+                if (category === 'all' || section.dataset.category === category) {
+                    section.style.display = 'block';
+                    section.style.animation = 'fadeIn 0.3s ease-out';
+                } else {
+                    section.style.display = 'none';
+                }
+            });
         });
     });
-});
 
-// Activate "All" category by default
-document.querySelector('.community-bubble[data-filter="all"] .bubble-ellipse').classList.add('active');
+    // Carousel navigation
+    const carousels = document.querySelectorAll('.community-carousel');
+
+    carousels.forEach(carousel => {
+        const categorySlug = carousel.id.replace('carousel-', '');
+        const prevBtn = document.querySelector(`.nav-prev[data-carousel="${categorySlug}"]`);
+        const nextBtn = document.querySelector(`.nav-next[data-carousel="${categorySlug}"]`);
+
+        if (!prevBtn || !nextBtn) return;
+
+        // Update button states
+        const updateNavButtons = () => {
+            const scrollLeft = carousel.scrollLeft;
+            const maxScroll = carousel.scrollWidth - carousel.clientWidth;
+
+            prevBtn.disabled = scrollLeft <= 0;
+            nextBtn.disabled = scrollLeft >= maxScroll - 1;
+        };
+
+        // Initial state
+        updateNavButtons();
+
+        // Scroll event
+        carousel.addEventListener('scroll', updateNavButtons);
+
+        // Navigation buttons
+        prevBtn.addEventListener('click', () => {
+            carousel.scrollBy({
+                left: -320,
+                behavior: 'smooth'
+            });
+        });
+
+        nextBtn.addEventListener('click', () => {
+            carousel.scrollBy({
+                left: 320,
+                behavior: 'smooth'
+            });
+        });
+    });
+
+    // Toggle membership
+    async function toggleMembership(communityId, joining) {
+        const btn = document.querySelector(`button[data-community-id="${communityId}"]`);
+        
+        if (!btn) return;
+
+        try {
+            const response = await fetch(`/communities/${communityId}/${joining ? 'join' : 'leave'}/`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': csrfToken,
+                    'Content-Type': 'application/json'
+                }
+            });
+
+            const data = await response.json();
+
+            if (data.status === 'success') {
+                // Update button
+                if (joining) {
+                    btn.textContent = 'Leave';
+                    btn.classList.remove('btn-join');
+                    btn.classList.add('btn-leave');
+                } else {
+                    btn.textContent = 'Join';
+                    btn.classList.remove('btn-leave');
+                    btn.classList.add('btn-join');
+                }
+
+                // Update member count
+                const card = btn.closest('.community-card');
+                const memberCount = card.querySelector('.community-members');
+                if (memberCount && data.member_count) {
+                    memberCount.textContent = `${data.member_count} members`;
+                }
+            }
+        } catch (error) {
+            console.error('Error toggling membership:', error);
+            alert('Failed to update membership. Please try again.');
+        }
+    }
+
+    // Make function globally accessible
+    window.toggleMembership = toggleMembership;
+
+    const membershipButtons = document.querySelectorAll('.community-action-btn');
+    membershipButtons.forEach((button) => {
+        button.addEventListener('click', () => {
+            const communityId = button.dataset.communityId;
+            if (!communityId) return;
+            const joining = button.classList.contains('btn-join');
+            toggleMembership(communityId, joining);
+        });
+    });
+
+    // Keyboard navigation for carousels
+    document.addEventListener('keydown', (e) => {
+        const activeCarousel = document.querySelector('.community-carousel:hover');
+        
+        if (!activeCarousel) return;
+
+        if (e.key === 'ArrowLeft') {
+            activeCarousel.scrollBy({
+                left: -320,
+                behavior: 'smooth'
+            });
+        } else if (e.key === 'ArrowRight') {
+            activeCarousel.scrollBy({
+                left: 320,
+                behavior: 'smooth'
+            });
+        }
+    });
+
+    // Touch swipe support for mobile
+    carousels.forEach(carousel => {
+        let startX = 0;
+        let scrollLeft = 0;
+        let isDown = false;
+
+        carousel.addEventListener('touchstart', (e) => {
+            isDown = true;
+            startX = e.touches[0].pageX - carousel.offsetLeft;
+            scrollLeft = carousel.scrollLeft;
+        });
+
+        carousel.addEventListener('touchmove', (e) => {
+            if (!isDown) return;
+            e.preventDefault();
+            const x = e.touches[0].pageX - carousel.offsetLeft;
+            const walk = (x - startX) * 2;
+            carousel.scrollLeft = scrollLeft - walk;
+        });
+
+        carousel.addEventListener('touchend', () => {
+            isDown = false;
+        });
+    });
 </script>
 {% endblock %}
